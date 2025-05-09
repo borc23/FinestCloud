@@ -335,6 +335,14 @@ export class TutorialManager {
             console.log("Tutorial: Marker cleaned up on endTutorial.");
         }
         
+        // Clear all polygons and panels when exiting the tutorial
+        if (window.clearAll && typeof window.clearAll === 'function') {
+            console.log("Tutorial: Clearing workspace on tutorial exit");
+            window.clearAll();
+        } else {
+            console.warn("Tutorial: window.clearAll function not available for cleanup");
+        }
+        
         this.tutorialActive = false;
         this.ui.hideAllElements();
         
