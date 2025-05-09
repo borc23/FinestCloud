@@ -1,0 +1,603 @@
+/* Popup Menu Styling */
+.popup-menu {
+  position: fixed;
+  left: calc(var(--sidebar-width) + 15px); /* Slightly closer */
+  top: calc(var(--navbar-height) + 15px); /* Slightly closer */
+  background: rgba(255, 255, 255, 0.97); /* Slightly less transparent */
+  backdrop-filter: blur(8px); /* Slightly less blur */
+  border-radius: 12px; /* Smaller radius */
+  padding: 18px; /* Reduced padding */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), /* Simplified shadow */
+              0 0 0 1px rgba(0, 0, 0, 0.05);
+  transform: translateY(-10px); /* Adjusted animation start */
+  opacity: 0;
+  animation: slideIn 0.3s ease-out forwards;
+  z-index: 1000;
+  width: 300px; /* Reduced width */
+  display: none;
+}
+
+@keyframes slideIn {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Reduced gap */
+}
+
+.popup-content h3 {
+  margin: 0 0 8px 0; /* Adjusted margin */
+  color: #1a1a1a;
+  font-size: 18px; /* Slightly smaller font */
+  font-weight: 600;
+  letter-spacing: -0.3px; /* Adjusted spacing */
+  border-bottom: 1px solid #eee; /* Thinner border */
+  padding-bottom: 10px; /* Reduced padding */
+}
+
+.popup-menu:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), /* Adjusted hover shadow */
+              0 0 0 1px rgba(0, 0, 0, 0.07);
+}
+
+.calibration-instructions {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  z-index: 10000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.measurement-dialog-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.measurement-dialog {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.measurement-dialog h3 {
+  margin-top: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.measurement-input {
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+}
+
+.measurement-input input {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.measurement-input label {
+  margin-left: 8px;
+  font-size: 16px;
+  color: #555;
+}
+
+.measurement-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.measurement-buttons button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: #4285F4;
+  color: white;
+  border: none;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #555;
+  border: 1px solid #ccc;
+}
+
+.resolution-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Allow clicks to pass through */
+  z-index: 9999;
+  display: flex;
+}
+
+.resolution-popup-content {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 320px;
+  max-width: 90%;
+  pointer-events: auto; /* Restore pointer events for the popup content */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.resolution-popup h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+}
+
+.step-instructions {
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #555;
+}
+
+.points-status {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.resolution-form {
+  margin-top: 15px;
+}
+
+.resolution-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.input-group {
+  display: flex;
+  margin: 10px 0;
+}
+
+.input-group input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px 0 0 4px;
+  font-size: 14px;
+}
+
+.input-group select {
+  width: 60px;
+  border: 1px solid #ccc;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background-color: #f5f5f5;
+  padding: 0 5px;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.button-group button {
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.resolution-btn-primary {
+  background-color: #4285F4;
+  color: white;
+  border: none;
+}
+
+.resolution-btn-primary:hover {
+  background-color: #3367d6;
+}
+
+.resolution-btn-secondary {
+  background-color: #f1f1f1;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.resolution-btn-secondary:hover {
+  background-color: #e4e4e4;
+}
+
+/* UPDATED: Custom Module Popup - Top Right Position */
+.custom-module-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 1000;
+    pointer-events: none; /* Allow clicks through the background */
+}
+
+.custom-module-popup .popup-content {
+    position: fixed;
+    top: calc(var(--navbar-height) + 15px); /* Consistent positioning */
+    right: 15px; /* Consistent positioning */
+    background: white;
+    padding: 18px; /* Reduced padding */
+    border-radius: 12px; /* Consistent radius */
+    width: 300px; /* Reduced width */
+    max-width: 90%;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Consistent shadow */
+    pointer-events: auto; /* Restore pointer events for the popup content */
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.custom-module-popup h3 {
+    margin-top: 0;
+    margin-bottom: 12px; /* Reduced margin */
+    color: #333;
+    font-size: 16px; /* Slightly smaller */
+}
+
+.custom-module-popup .input-group {
+    margin-bottom: 12px; /* Reduced margin */
+}
+
+.custom-module-popup .input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.custom-module-popup .input-group input {
+    width: 100%;
+    padding: 8px 10px; /* Adjusted padding */
+    border: 1px solid #ccc;
+    border-radius: 6px; /* Slightly smaller radius */
+    font-size: 14px;
+}
+
+.custom-module-popup .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px; /* Reduced gap */
+    margin-top: 10px; /* Reduced margin */
+}
+
+.custom-module-popup .button-group button {
+    padding: 7px 14px; /* Adjusted padding */
+    border-radius: 6px; /* Consistent radius */
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.custom-module-popup .save-custom-module {
+    background-color: #4285F4;
+    color: white;
+    border: none;
+}
+
+.custom-module-popup .save-custom-module:hover {
+    background-color: #3367d6;
+}
+
+.custom-module-popup .close-popup {
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+    color: #333;
+}
+
+.custom-module-popup .close-popup:hover {
+    background-color: #e4e4e4;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* UPDATED: Angle Input Popup - Top Right Position & No Dark Overlay */
+.angle-input-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  pointer-events: none; /* Allow clicks through the background */
+  z-index: 1001;
+  /* Removed backdrop-filter and background */
+}
+
+.angle-input-content {
+  position: fixed;
+  top: calc(var(--navbar-height) + 15px); /* Consistent positioning */
+  right: 15px; /* Consistent positioning */
+  background: white;
+  padding: 20px; /* Slightly reduced padding */
+  border-radius: 12px; /* Consistent radius */
+  width: 300px; /* Reduced width */
+  max-width: 90%;
+  max-height: calc(100vh - var(--navbar-height) - 30px); /* Adjusted max height */
+  overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Consistent shadow */
+  animation: fadeIn 0.3s ease-out forwards;
+  pointer-events: auto; /* Restore pointer events for the popup content */
+}
+
+.angle-input-content h3 {
+  margin: 0 0 6px 0; /* Reduced margin */
+  font-size: 20px; /* Slightly smaller */
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.angle-input-content p {
+  margin: 0 0 18px 0; /* Reduced margin */
+  color: var(--text-secondary);
+  font-size: 14px; /* Slightly smaller */
+}
+
+.angle-input-grid {
+  display: grid;
+  gap: 16px; /* Reduced gap */
+  margin: 18px 0; /* Reduced margin */
+}
+
+.angle-input-item {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Reduced gap */
+}
+
+.angle-input-item input {
+  flex: 1;
+  padding: 10px 14px; /* Adjusted padding */
+  border: 1px solid #ddd; /* Slightly lighter border */
+  border-radius: 6px; /* Consistent radius */
+  font-size: 15px; /* Slightly smaller */
+  transition: var(--transition);
+  box-shadow: none; /* Removed inner shadow */
+}
+
+.angle-input-item input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.15); /* Adjusted focus ring */
+  outline: none;
+}
+
+.angle-input-item input:hover {
+  border-color: #bbb; /* Adjusted hover border */
+}
+
+.angle-input-item label {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 15px; /* Slightly smaller */
+  min-width: 70px; /* Adjusted width */
+}
+
+.angle-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px; /* Reduced gap */
+  margin-top: 24px; /* Reduced margin */
+}
+
+.btn-primary, .btn-secondary { /* Applied to angle buttons */
+  padding: 10px 20px; /* Adjusted padding */
+  border-radius: 6px; /* Consistent radius */
+  font-size: 15px; /* Slightly smaller */
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(67, 97, 238, 0.25);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary-hover);
+  transform: translateY(-2px);
+}
+
+/* For the roof angle label badge */
+.angle-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  margin-right: 8px;
+  font-weight: bold;
+}
+
+/* Custom input styling */
+.angle-unit {
+  position: relative;
+}
+
+.angle-unit input {
+  padding-right: 35px; /* Adjusted padding for degree symbol */
+}
+
+.angle-unit::after {
+  content: "°";
+  position: absolute;
+  right: 12px; /* Adjusted position */
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 15px; /* Consistent size */
+  pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .angle-input-content,
+  .custom-module-popup .popup-content,
+  .resolution-popup-content {
+    padding: 15px; /* Further reduce padding */
+    top: calc(var(--navbar-height) + 10px); /* Adjust position */
+    right: 10px;
+    width: calc(100% - 20px); /* Use more width */
+    max-width: 300px; /* Keep max width */
+  }
+
+  .angle-input-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .angle-input-item label {
+    min-width: auto;
+  }
+
+  .angle-input-item input {
+    width: 100%;
+    padding: 9px 12px; /* Adjust padding */
+    font-size: 14px;
+  }
+
+  .angle-buttons {
+    flex-direction: column-reverse;
+    gap: 10px; /* Reduce gap */
+  }
+
+  .btn-primary, .btn-secondary { /* Applied to angle buttons */
+    padding: 9px 18px; /* Adjust padding */
+    font-size: 14px;
+    width: 100%;
+  }
+
+  .custom-module-popup .popup-content {
+    top: calc(var(--navbar-height) + 10px); /* Adjust position */
+    right: 10px;
+    width: calc(100% - 20px); /* Use more width */
+    max-width: 300px; /* Keep max width */
+  }
+
+  .resolution-popup-content {
+    top: calc(var(--navbar-height) + 10px); /* Adjust position */
+    right: 10px;
+    width: calc(100% - 20px); /* Use more width */
+    max-width: 300px; /* Keep max width */
+  }
+}
+
+/* Rotation Handle styles */
+.rotation-handle-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9990;
+  overflow: visible;
+}
+
+.rotation-handle {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  background-color: #4285F4;
+  border: 2px solid white;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: grab;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  z-index: 9991;
+  transform: translate(-50%, -50%);
+}
+
+.rotation-handle i {
+  color: white;
+  font-size: 14px;
+}
+
+.rotation-line {
+  position: absolute;
+  background-color: #4285F4;
+  height: 2px;
+  transform-origin: 0 50%;
+  pointer-events: none;
+  z-index: 9989;
+}
+
+.rotation-center {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #4285F4;
+  border: 1px solid white;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9990;
+  transform: translate(-50%, -50%);
+}

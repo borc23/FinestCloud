@@ -1,0 +1,330 @@
+/**
+ * Tutorial component styles
+ * Modern, minimalist styling for the guided onboarding experience
+ */
+
+/* Overlay that covers the entire page with transparent background (now fully transparent) */
+.tutorial-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: transparent;
+    z-index: 9998;
+    pointer-events: none; /* Allow clicks to pass through */
+}
+
+/* Highlight element that surrounds the target UI element */
+.tutorial-highlight {
+    position: fixed;
+    border-radius: 8px;
+    /* Remove dark overlay effect since we now have transparent overlay */
+    /* box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.7); */
+    z-index: 9999;
+    pointer-events: none;
+    border: 2px solid #4285F4;
+    box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); /* Add a glow effect instead */
+    animation: pulse-highlight 2s infinite;
+}
+
+/* New animation for highlight border glow */
+@keyframes pulse-highlight {
+    0% { box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); }
+    50% { box-shadow: 0 0 15px 4px rgba(66, 133, 244, 0.7); }
+    100% { box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); }
+}
+
+/* Module selector highlight during tutorial */
+.module-selector-highlight {
+    position: relative;
+    z-index: 10000 !important;
+}
+
+.module-selector-highlight::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 8px; /* Slightly larger than the button's border-radius */
+    border: 2px solid #4285F4;
+    box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5);
+    animation: pulse-module-selector 2s infinite;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Button/menu item highlight class for consistent tutorial highlighting */
+.button-highlight {
+    position: relative;
+    z-index: 10000 !important;
+}
+
+.button-highlight::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 8px; /* Slightly larger than typical button border-radius */
+    border: 2px solid #4285F4;
+    box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5);
+    animation: pulse-button-highlight 2s infinite;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Special highlight for search input with narrower border */
+#searchInput.button-highlight::after,
+.search-container.button-highlight::after,
+.search-bar.button-highlight::after {
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+}
+
+@keyframes pulse-button-highlight {
+    0% { box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 15px 4px rgba(66, 133, 244, 0.7); transform: scale(1.01); }
+    100% { box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); transform: scale(1); }
+}
+
+@keyframes pulse-module-selector {
+    0% { box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); transform: scale(1); }
+    50% { box-shadow: 0 0 15px 4px rgba(66, 133, 244, 0.7); transform: scale(1.02); }
+    100% { box-shadow: 0 0 10px 2px rgba(66, 133, 244, 0.5); transform: scale(1); }
+}
+
+/* Tooltip that displays the tutorial content */
+.tutorial-tooltip {
+    position: fixed;
+    width: 340px;
+    height: 330px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 10000 !important; /* Ensure highest z-index */
+    overflow: hidden;
+    pointer-events: all; /* Ensure tooltip receives clicks but can be overridden */
+    transition: opacity 0.3s ease; /* Smooth transition when showing/hiding */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Content area of the tooltip - make it click-through for polygon editing step */
+.tutorial-tooltip .tooltip-content {
+    padding: 20px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #bbbbbb #f1f1f1;
+    /* Calculate height to leave space for the fixed navigation bar at bottom */
+    height: calc(100% - 60px);
+    flex: 1;
+    /* Always enable scrolling for all tutorial steps */
+    pointer-events: auto;
+}
+
+/* Styling the scrollbar */
+.tooltip-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tooltip-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.tooltip-content::-webkit-scrollbar-thumb {
+    background: #bbbbbb;
+    border-radius: 10px;
+}
+
+.tooltip-content::-webkit-scrollbar-thumb:hover {
+    background: #888888;
+}
+
+/* Special handling for the polygon editing step - allow interaction with map elements underneath 
+   but still allow scrolling on the tooltip content itself */
+.polygon-editing-step .tooltip-content p,
+.polygon-editing-step .tooltip-content h3,
+.polygon-editing-step .tooltip-content div:not(.tooltip-nav) {
+    pointer-events: none; /* Make text elements non-interactive */
+}
+
+/* But ensure the scrollable area still works */
+.polygon-editing-step .tooltip-content {
+    pointer-events: auto;
+}
+
+/* Tooltip title styling */
+.tooltip-content h3 {
+    margin-top: 0;
+    color: #1a73e8;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* Tooltip paragraph styling */
+.tooltip-content p {
+    margin-bottom: 10px;
+    color: #202124;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-line; /* Preserve newlines in content */
+}
+
+/* Step indicator styling */
+.step-indicator {
+    font-size: 12px;
+    color: #5f6368;
+    margin-top: 15px;
+}
+
+/* Navigation buttons container - FIXED at the bottom */
+.tooltip-nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e8eaed;
+    pointer-events: auto !important; /* Always allow clicking on buttons */
+    width: 100%;
+    box-sizing: border-box;
+    height: 60px; /* Fixed height for nav bar */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 5; /* Higher than content */
+}
+
+/* Base button styles */
+.tooltip-nav button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+    pointer-events: auto !important; /* Ensure buttons are always clickable */
+}
+
+/* Skip button specific styles */
+.tooltip-skip {
+    background-color: transparent;
+    color: #5f6368;
+}
+
+.tooltip-skip:hover {
+    background-color: #f1f3f4;
+}
+
+/* Previous button specific styles */
+.tooltip-prev {
+    background-color: #f1f3f4;
+    color: #1a73e8;
+}
+
+.tooltip-prev:hover {
+    background-color: #e8eaed;
+}
+
+/* Next button specific styles */
+.tooltip-next {
+    background-color: #1a73e8;
+    color: white;
+}
+
+.tooltip-next:hover {
+    background-color: #1765cc;
+}
+
+/* Tutorial button styles */
+#tutorialBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#tutorialBtn i {
+    font-size: 16px;
+}
+
+/* Special message containers with consistent styling */
+.tutorial-panel-instruction,
+.tutorial-panel-edit-instruction,
+.tutorial-module-selection-instruction,
+.tutorial-confirm,
+.tutorial-success,
+.tutorial-final-instruction {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.tutorial-panel-instruction li,
+.tutorial-panel-edit-instruction li,
+.tutorial-module-selection-instruction li {
+    margin-bottom: 6px;
+}
+
+/* Tutorial message types */
+.tutorial-info-message {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.tutorial-success-message {
+    background-color: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.tutorial-warning-message {
+    background-color: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 600px) {
+    .tutorial-tooltip {
+        width: 280px;
+        height: 360px;
+    }
+    
+    .tooltip-content {
+        padding: 15px;
+        height: calc(100% - 50px); /* Adjusted for smaller nav height */
+    }
+    
+    .tooltip-nav {
+        padding: 10px 15px;
+        height: 50px; /* Smaller height for mobile */
+    }
+    
+    .tooltip-nav button {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+}

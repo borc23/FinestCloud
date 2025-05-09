@@ -1,12 +1,23 @@
 ---
-title: FinestCloud Solar Panel
-emoji: 🐢
-colorFrom: green
-colorTo: green
+title: Finestcloud
+emoji: 🌖
+colorFrom: blue
+colorTo: indigo
 sdk: docker
 pinned: false
 license: mit
-short_description: Solar Panel Planning WebApp
+short_description: solar-panel
 ---
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+# FinestCloud Flask
+
+Solar panel planning application with AI-powered roof detection.
+
+## Features
+- Roof detection from satellite imagery
+- Solar panel placement optimization
+- Interactive editing tools
+- Multiple panel module selection
+
+## API
+This application provides a Flask web interface and API endpoints for solar panel planning.

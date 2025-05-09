@@ -1,0 +1,118 @@
+/* Global Reset and Base Styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: 'Google Sans', 'Roboto', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-dark);
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.status-bar {
+  height: 36px;
+  background-color: var(--background-white);
+  border-top: 1px solid var(--text-light);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--text-medium);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 24px;
+}
+
+.status-item i {
+  font-size: 14px;
+  color: var(--primary-color);
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  width: 100%;
+}
+
+.spinner {
+  margin: 15px auto;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #searchInput {
+      width: 200px;
+  }
+
+  .navbar {
+      padding: 0 10px;
+  }
+
+  .nav-left {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  #searchInput {
+      width: 150px;
+  }
+  
+  .navbar {
+      padding: 0 10px;
+  }
+
+  .sidebar {
+      width: 50px; /* More compact sidebar */
+  }
+}

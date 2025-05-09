@@ -1,0 +1,28 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Models (large files)
+app/models/*.pt
+*.pth
+*.bin
+
+# Images (if not needed in version control)
+*.png
+*.jpg
+*.jpeg
+
+# Environment and IDE
+.env
+.venv
+env/
+venv/
+ENV/
+.idea/
+.vscode/
+
+# Logs and databases
+*.log
+*.sqlite
