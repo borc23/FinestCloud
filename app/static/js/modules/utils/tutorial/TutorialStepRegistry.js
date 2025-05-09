@@ -84,12 +84,11 @@ export class TutorialStepRegistry {
                     return this.setupPolygonDrawingStepListeners(manager);
                 }
             }),
-            
-            // Edit solar panels step - for solar panel editing features
+              // Edit solar panels step - for solar panel editing features
             TutorialStep.createHighlightStep({
                 title: "Edit Solar Panels",
                 content: "Wait for panels to be placed.\n\nNow you can work with the solar panels that were generated. Enter Edit Mode again:\n\n• Select panels individually by clicking on them\n• Multi-select panels by holding CTRL while clicking or multi select tool like with right click and drag functionality\n• Drag to move selected panels\n• Rotate panels using the rotation handle\n• Copy panels by selecting them and pressing CTRL+C, then click to place\n• Delete selected panels with the DELETE key",
-                target: '#panelEditActions',
+                target: 'button.menu-item[onclick="editImage()"]',
                 position: 'center',
                 action: () => {
                     return this.setupPanelEditingStepListeners(manager);
@@ -436,15 +435,13 @@ export class TutorialStepRegistry {
      */
     static setupPolygonDrawingStepListeners(manager) {
         return this._setupButtonClickListener('#generatePanelsBtn', manager);
-    }
-
-    /**
+    }    /**
      * Set up event listeners for panel editing step
      * @param {TutorialManager} manager - The tutorial manager
      * @returns {Function} Cleanup function to remove event listeners
      */
     static setupPanelEditingStepListeners(manager) {
-        return this._setupStandardStep('#panelEditActions', manager);
+        return this._setupButtonClickListener('button.menu-item[onclick="editImage()"]', manager);
     }
 
     /**
