@@ -1238,34 +1238,10 @@ export class TutorialStepRegistry {
             content: `
                 <p><strong>Congratulations!</strong></p>
                 <p>You've successfully completed the FinestCloud Solar tutorial. You now have all the skills needed to start designing your own solar installations.</p>
-                <p>Click Next to finish the tutorial and start exploring on your own!</p>
+                <p>Click Next to move to the final step!</p>
             `,
             className: 'tutorial-completion-message'
         });
-        
-        // Modify the next button to be more prominent
-        const nextButton = tooltipElement.querySelector('.tooltip-next');
-        if (nextButton) {
-            nextButton.textContent = 'Finish Tutorial';
-            nextButton.style.backgroundColor = '#4caf50';  // Green color
-            nextButton.style.fontWeight = 'bold';
-            nextButton.style.padding = '8px 20px';
-            
-            // Add pulse animation
-            if (!document.getElementById('pulse-button-style')) {
-                const style = document.createElement('style');
-                style.id = 'pulse-button-style';
-                style.innerHTML = `
-                    @keyframes pulse-button {
-                        0% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-                        50% { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-                        100% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-            nextButton.style.animation = 'pulse-button 2s infinite';
-        }
         
         // Keep the tutorial tooltip visible
         const tooltipMonitor = setInterval(() => {
