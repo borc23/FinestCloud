@@ -1,0 +1,98 @@
+<div class="sidebar">
+    <div class="sidebar-menu main-menu">
+        <button class="menu-item" onclick="uploadImage()">
+            <i class="fas fa-upload"></i>
+            <span>Upload</span>
+        </button>
+        <button class="menu-item" onclick="handleDetection()"> 
+            <i class="fas fa-home"></i>
+            <span>Select Area</span>
+        </button>
+        <button class="menu-item" id="generatePanelsBtn" onclick="generateSolarPanels()" style="display: none;">
+            <i class="fas fa-solar-panel"></i>
+            <span>Solar Panels</span>
+        </button>
+        <button class="menu-item" onclick="editImage()">
+            <i class="fas fa-pencil-alt"></i>
+            <span>Edit</span>
+        </button>
+    </div>
+    <div class="sidebar-menu bottom-menu">
+        <button class="menu-item" onclick="clearAll()">
+            <i class="fas fa-eraser"></i>
+            <span>Clear</span>
+        </button>
+    </div>
+</div>
+
+<div id="editModePopup" class="popup-menu">
+    <div class="popup-content">
+        <h3>Edit Mode Tools</h3>
+        <div class="polygon-type-toggle">
+            <span>Polygon Type:</span>
+            <div class="toggle-container">
+                <label class="switch">
+                    <input type="checkbox" id="polygonTypeToggle">
+                    <span class="slider-edit"></span>
+                </label>
+                <div class="toggle-labels">
+                    <span class="label-roof">Roof</span>
+                    <span class="label-object">Object</span>
+                </div>
+            </div>
+        </div>
+        <button id="createPolygonBtn">
+            <i class="fas fa-draw-polygon"></i> Create New Polygon
+        </button>        
+        <!-- Panel Edit Actions - Updated with info about rotation handle -->
+        <div id="panelEditActions" class="panel-edit-actions" style="display: none;">
+            <div class="rotation-info">
+                <i class="fas fa-info-circle"></i>
+                <span>Select panels to rotate them using the rotation handle.</span>
+            </div>
+            <!-- Copy and paste buttons -->
+            <div class="panel-edit-buttons">
+                <button id="copyPanelsBtn" class="btn-small">
+                    <i class="fas fa-copy"></i> Copy Selected Panels
+                </button>
+                <!-- Paste button removed - now only works with Ctrl+V -->
+            </div>
+            <!-- Buttons still exist in DOM but are hidden via JS -->
+            <button id="rotateLeftBtn" class="btn-secondary btn-small" style="display: none;">
+                <i class="fas fa-undo"></i> Rotate Left
+            </button>
+            <button id="rotateRightBtn" class="btn-secondary btn-small" style="display: none;">
+                <i class="fas fa-redo"></i> Rotate Right
+            </button>
+        </div>
+        <!-- End Panel Edit Actions -->
+    </div>
+</div>
+
+<template id="resolution-popup-template">
+    <div class="resolution-popup-content">
+      <h3>Calculate Resolution</h3>
+      <p class="step-instructions">Step 1: Click on two points on the image to measure a known distance</p>
+      <div class="points-status">
+        <span id="point1-status">Point 1: Not selected</span><br>
+        <span id="point2-status">Point 2: Not selected</span>
+      </div>
+      <div class="resolution-form" style="display: none;">
+        <label for="distance-input">Enter the real-world distance between the points:</label>
+        <div class="input-group">
+          <input type="number" id="distance-input" min="0.1" step="0.1" placeholder="Distance">
+          <select id="distance-unit">
+            <option value="cm">cm</option>
+            <option value="m" selected>m</option>
+            <option value="ft">ft</option>
+            <option value="in">in</option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button id="calculate-resolution-btn" class="resolution-btn-primary">Calculate</button>
+          <button id="cancel-resolution-btn" class="resolution-btn-secondary">Cancel</button>
+          <button id="reset-points-btn" class="resolution-btn-secondary">Reset Points</button>
+        </div>
+      </div>
+    </div>
+  </template>
