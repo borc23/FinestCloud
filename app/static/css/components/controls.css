@@ -415,10 +415,10 @@
 }
 
 .panel-count-slider .slider {
-  position: relative;
-  width: 100%;
+  position: relative;  width: 100%;
   margin: 0;
   -webkit-appearance: none;
+  appearance: none;
   height: 24px;
   background: transparent;
   z-index: 2;
@@ -426,6 +426,7 @@
 
 .panel-count-slider .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
+  appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -467,9 +468,9 @@
 .panel-edit-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-  padding-top: 16px;
+  gap: 10px; /* Tighter spacing */
+  margin-top: 12px; /* Reduced margin */
+  padding-top: 12px; /* Reduced padding */
   border-top: 1px solid #e0e0e0;
 }
 
@@ -478,28 +479,28 @@
   align-items: center;
   background: rgba(66, 133, 244, 0.1);
   border-left: 3px solid #4285F4;
-  padding: 10px 12px;
+  padding: 8px 10px; /* More compact padding */
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px; /* Smaller font */
   color: #444;
 }
 
 .rotation-info i {
   color: #4285F4;
-  margin-right: 8px;
-  font-size: 16px;
+  margin-right: 6px; /* Tighter spacing */
+  font-size: 14px; /* Smaller icon */
 }
 
 /* Panel edit buttons styling */
 .panel-edit-buttons {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px; /* Tighter spacing */
 }
 
 .btn-small {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 6px 10px; /* More compact padding */
+  font-size: 12px; /* Smaller font */
   border-radius: 4px;
   border: none;
   background-color: #f5f5f5;
@@ -550,11 +551,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 6px 0; /* More compact */
 }
 
 .polygon-type-toggle span {
-  font-size: 14px;
+  font-size: 13px; /* Smaller font */
   color: #666;
   font-weight: 500;
 }
@@ -563,15 +564,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px; /* Tighter spacing */
 }
 
 /* Switch Styling */
 .switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 26px;
+  width: 44px; /* Slightly smaller */
+  height: 22px; /* More compact */
 }
 
 .switch input {
@@ -587,70 +588,80 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #27ae60; /* Default red color for roof */
+  background: var(--roof-color); /* Default color for roof */
   transition: 0.3s;
-  border-radius: 34px;
+  border-radius: 30px; /* Adjusted for new size */
 }
 
 .switch .slider-edit:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
-  left: 3px;
-  bottom: 3px;
+  height: 18px; /* Adjusted for compact switch */
+  width: 18px; /* Adjusted for compact switch */
+  left: 2px;
+  bottom: 2px;
   background: white;
   transition: 0.3s;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Softer shadow */
 }
 
 .switch input:checked + .slider-edit {
-  background: #e74c3c; /* Red for object (checked state) */
+  background: var(--object-color); /* Red for object (checked state) */
 }
 
 .switch input:checked + .slider-edit:before {
-  transform: translateX(24px);
+  transform: translateX(22px); /* Adjusted for new size */
 }
 
 .switch:hover .slider-edit {
-  background: #219a52; /* Darker green on hover for roof */
+  background: var(--roof-color-selected); /* Darker green on hover for roof */
 }
 
 .switch input:checked:hover + .slider-edit {
-  background: #c0392b; /* Darker red on hover for object */
+  background: var(--object-color-selected); /* Darker red on hover for object */
+}
+
+.toggle-labels {
+  display: flex;
+  justify-content: space-around; /* Better spacing distribution */
+  width: 70px; /* Slightly wider for better spacing */
+  font-size: 11px; /* Smaller labels */
+  margin-top: 2px; /* Tighter spacing */
+  margin-left: auto;
+  margin-right: auto; /* Center the labels container */
 }
 
 .toggle-labels .label-roof {
-  color: #27ae60;
+  color: var(--roof-color);
   font-weight: 500;
 }
 
 .toggle-labels .label-object {
-  color: #e74c3c;
+  color: var(--object-color);
   font-weight: 500;
 }
 
 #createPolygonBtn {
-  background: linear-gradient(135deg, #27ae60, #219a52);
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+  background: linear-gradient(135deg, var(--roof-color), var(--roof-color-selected));
+  box-shadow: 0 3px 10px rgba(39, 174, 96, 0.2);
   color: white;
   border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 10px 16px; /* More compact padding */
+  border-radius: 7px; /* Slightly smaller radius */
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px; /* Slightly smaller font */
   font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px; /* Tighter gap */
   transition: all 0.3s ease;
 }
 
 #createPolygonBtn:hover {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, #219a52, #1e8449);
+  background: linear-gradient(135deg, var(--roof-color-selected), #1e8449);
   box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
 }
 
@@ -660,7 +671,7 @@
 }
 
 #createPolygonBtn i {
-  font-size: 16px;
+  font-size: 14px; /* Slightly smaller icon */
 }
 
 /* Rectangle Selection Tool styles */
@@ -690,4 +701,165 @@
 .selection-helper-tooltip i {
   font-size: 14px;
   color: #4285F4;
+}
+
+/* Roof Selection Side Panel */
+.roof-selection-panel {
+  position: fixed;
+  top: 0;
+  right: -400px; /* Start hidden off-screen */
+  width: 350px;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+  z-index: 10000;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.roof-selection-panel.active {
+  right: 0; /* Slide in */
+}
+
+.roof-selection-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+  position: relative;
+}
+
+.roof-selection-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  padding-right: 30px;
+}
+
+.roof-selection-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.roof-selection-content {
+  padding: 20px;
+  flex: 1;
+}
+
+.roof-selection-info {
+  padding: 12px;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #856404;
+  line-height: 1.4;
+}
+
+.roof-selection-controls {
+  margin-bottom: 20px;
+}
+
+.select-all-option {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: rgba(0, 123, 255, 0.05);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-all-option:hover {
+  background: rgba(0, 123, 255, 0.1);
+}
+
+.select-all-option input[type="checkbox"] {
+  margin-right: 10px;
+  transform: scale(1.1);
+}
+
+.selected-count {
+  font-weight: 600;
+  color: #007bff;
+}
+
+.roof-selection-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.roof-selection-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.roof-selection-btn.primary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+}
+
+.roof-selection-btn.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.roof-selection-btn.primary:disabled {
+  background: #dadce0;
+  color: #5f6368;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.roof-selection-btn.secondary {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.roof-selection-btn.secondary:hover {
+  background: #e9ecef;
+}
+
+/* Close button */
+.roof-selection-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roof-selection-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
 }
