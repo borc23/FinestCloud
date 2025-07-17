@@ -5,9 +5,26 @@
   --primary-light: #3b82f6;
   --success-color: #34a853;
   --warning-color: #f59e0b;
-  --danger-color: #ef4444;
-  --primary-blue: #4285f4;
+  --danger-color: #ef4444;  --primary-blue: #4285f4;
   --primary-green: #34a853;
+    /* Polygon Colors */
+  --roof-color: #27ae60;
+  --roof-color-selected: #219a52;
+  --roof-color-hover: #2ecc71;
+  --roof-fill-light: rgba(39, 174, 96, 0.2);
+  --roof-fill-selected: rgba(33, 154, 82, 0.4);
+  
+  --object-color: #e74c3c;
+  --object-color-selected: #c0392b;
+  --object-color-hover: #f56565;
+  --object-fill-light: rgba(231, 76, 60, 0.2);
+  --object-fill-selected: rgba(192, 57, 43, 0.4);
+  
+  --panel-stroke-color: #ffffff;
+  --panel-standard-color: #1a1a1a;
+  --panel-premium-color: #0d0d0d;
+  --panel-compact-color: #262626;
+  
   --text-dark: #1f2937;
   --text-medium: #4b5563;
   --text-light: #9ca3af;
