@@ -6,7 +6,6 @@ Routes are organized by functionality (detection, panel generation, utilities).
 """
 
 import logging
-import uuid
 
 import requests
 from flask import (Blueprint, Response, current_app, jsonify, render_template,
@@ -14,37 +13,28 @@ from flask import (Blueprint, Response, current_app, jsonify, render_template,
 
 from app.dataclasses.config import PanelModule
 from app.services import schemas
+from app.services.cache_service import CacheKeys, CacheManager
+from app.services.config_service import ConfigService
 from app.services.panel_service import PanelService
+from app.services.session_service import SessionService
 from app.utils.decorators import handle_exceptions
 from app.utils.detection import process_detection
 from app.utils.exceptions import APIRequestError, SessionDataError
+from app.utils.panel_helpers import (cache_generation_results,
+                                     create_panel_generator,
+                                     execute_panel_generation,
+                                     validate_cached_panels)
 from app.utils.utils import (CustomModuleResult, DetectionResult, ModuleResult,
                              PanelResult, ResetResult)
 
 logger = logging.getLogger(__name__)
 main = Blueprint("main", __name__)
 
-# Cache key patterns
-def get_cache_key(key_type: str) -> str:
-    """Generate a cache key for the current session."""
-    if 'session_id' not in session:
-        session['session_id'] = str(uuid.uuid4())
-    return f"{key_type}_{session['session_id']}"
 
-# Helper functions
-def ensure_session_initialized() -> str:
-    """Ensure session is initialized and return session ID."""
-    if 'session_id' not in session:
-        session['session_id'] = str(uuid.uuid4())
-    return session['session_id']
-
-def check_panels_exist() -> None:
-    """Check if panels exist in the current session."""
-    if 'session_id' not in session:
-        raise SessionDataError("No active session. Please generate panels first")
-    
-    if not session.get('has_panels', False):
-        raise SessionDataError("No panels generated. Please generate panels first")
+def get_cache_manager() -> CacheManager:
+    """Get cache manager instance for the current session."""
+    session_id = SessionService.ensure_initialized()
+    return CacheManager(current_app.cache, session_id)
 
 #
 # View Routes
@@ -52,14 +42,12 @@ def check_panels_exist() -> None:
 @main.route("/")
 def index() -> str:
     """Render the main map page."""
-    api_key = current_app.config.get("GOOGLE_MAPS_API_KEY")
-    if not api_key:
+    try:
+        api_key = ConfigService.get_google_maps_api_key()
+        return render_template("map.html", api_key=api_key)
+    except APIRequestError:
         logger.error("GOOGLE_MAPS_API_KEY not found in app config!")
-        return "Server configuration error: Missing API Key", 500 
-    return render_template(
-        "map.html",
-        api_key=api_key,
-    )
+        return "Server configuration error: Missing API Key", 500
 
 #
 # Detection Routes
@@ -76,8 +64,9 @@ def detect() -> Response:
         bounds=data["bounds"]
     )
 
-    ensure_session_initialized()
-    current_app.cache.delete(get_cache_key("image_shape"))
+    SessionService.ensure_initialized()
+    cache_manager = get_cache_manager()
+    cache_manager.delete(CacheKeys.IMAGE_SHAPE)
 
     result: DetectionResult = {
         "success": True, 
@@ -91,15 +80,16 @@ def detect() -> Response:
 def detect_image() -> Response:
     schema = schemas.DetectImageSchema()
     data = schema.load(request.get_json() or {})
-
+    image = data["image"]
     (roofs, objects), image_shape = process_detection(
         image_data=data["image"], 
         is_url=False, 
         bounds=data["bounds"]
     )
     
-    ensure_session_initialized()
-    current_app.cache.set(get_cache_key("image_shape"), image_shape)
+    SessionService.ensure_initialized()
+    cache_manager = get_cache_manager()
+    cache_manager.set(CacheKeys.IMAGE_SHAPE, image_shape)
 
     result: DetectionResult = {
         "success": True, 
@@ -116,39 +106,38 @@ def detect_image() -> Response:
 def generate_panels() -> Response:
     schema = schemas.GeneratePanelsSchema()
     data = schema.load(request.get_json() or {})
-
-    session_id = ensure_session_initialized()
+    
+    session_id = SessionService.ensure_initialized()
     logger.debug(f"Generating panels for session {session_id}")
 
-    custom_module = current_app.cache.get(get_cache_key("custom_module"))
-
-    generator = PanelService(
-        bounds=data["mapBounds"], 
-        resolution=data["resolution"], 
-        custom_module=custom_module
-    )
-    generator.set_module(data["module"])
-
-    image_shape = current_app.cache.get(get_cache_key("image_shape"))
-    dims = image_shape if image_shape else data["mapDimensions"]
-    # logging.info(f"==========================================================")
-    # logging.info(f"data[roofs]: {data['roofs']}")
-    # logging.info(f"==========================================================")
-    results = generator.generate_panels(
-        roofs=data["roofs"], 
-        objects=data["objects"], 
-        map_dimensions=dims, 
-        tune_params=True
-    )
+    cache_manager = get_cache_manager()
+    generator = create_panel_generator(data, cache_manager)
+    results = execute_panel_generation(generator, data, cache_manager)
     
-    cache = current_app.cache
-    cache.set(get_cache_key("all_panels"), results["roofs"])
-    cache.set(get_cache_key("max_panels"), results["max_panels"])
-    cache.set(get_cache_key("module"), data["module"])
-    cache.set(get_cache_key("resolution"), data["resolution"])
+    # Cache results for non-selective generation
+    cache_generation_results(cache_manager, results, data)
+    SessionService.mark_panels_generated()
 
-    session['has_panels'] = True
     logger.info(f"Panels generated and stored in cache for session {session_id}")
+
+    result: PanelResult = {"success": True, "results": results}
+    return jsonify(result)
+
+@main.route("/generate_panels_selective", methods=["POST"])
+@handle_exceptions
+def generate_panels_selective() -> Response:
+    """Generate panels on selected roofs only while preserving existing panels on other roofs."""
+    schema = schemas.GeneratePanelsSchema()
+    data = schema.load(request.get_json() or {})
+
+    session_id = SessionService.ensure_initialized()
+    logger.debug(f"Generating panels selectively for session {session_id}")
+
+    cache_manager = get_cache_manager()
+    generator = create_panel_generator(data, cache_manager)
+    results = execute_panel_generation(generator, data, cache_manager)
+    
+    logger.info(f"Selective panels generated for {len(data['roofs'])} roofs in session {session_id}")
 
     result: PanelResult = {"success": True, "results": results}
     return jsonify(result)
@@ -156,31 +145,25 @@ def generate_panels() -> Response:
 @main.route("/update_panel_count", methods=["POST"])
 @handle_exceptions
 def update_panel_count() -> Response:
-    check_panels_exist()
-    session_id = session['session_id']
+    SessionService.validate_panels_exist()
+    session_id = SessionService.get_session_id()
     logger.debug(f"Updating panel count for session {session_id}")
 
-    cache = current_app.cache
-    all_panels = cache.get(get_cache_key("all_panels"))
-    max_panels = cache.get(get_cache_key("max_panels"))
-    module_data = cache.get(get_cache_key("module"))
+    cache_manager = get_cache_manager()
+    all_panels, max_panels, module_data = validate_cached_panels(cache_manager)
 
-    if not all_panels or not max_panels:
-        session['has_panels'] = False
-        raise SessionDataError("No panels generated. Please generate panels first")
-
-    schema = schemas.UpdatePanelCountSchema()
+    # schema = schemas.UpdatePanelCountSchema()
     data = request.get_json()
     panel_count = int(data["panel_count"])
 
     if "resolution" in data:
         resolution = data["resolution"]
     else:
-        resolution = cache.get(get_cache_key("resolution"))
+        resolution = cache_manager.get(CacheKeys.RESOLUTION)
         if not resolution:
             raise SessionDataError("No resolution found in session. Please generate panels first")
 
-    custom_module = cache.get(get_cache_key("custom_module"))
+    custom_module = cache_manager.get(CacheKeys.CUSTOM_MODULE)
     generator = PanelService(
         bounds=data["mapBounds"],
         resolution=resolution,
@@ -197,15 +180,16 @@ def update_panel_count() -> Response:
 @main.route("/update_max_panel_count", methods=["POST"])
 @handle_exceptions
 def update_max_panel_count() -> Response:
-    check_panels_exist()
-    session_id = session['session_id']
+    SessionService.validate_panels_exist()
+    session_id = SessionService.get_session_id()
     logger.debug(f"Updating max panel count for session {session_id}")
 
-    cache = current_app.cache
-
+    cache_manager = get_cache_manager()
+    
     # Get the current values
-    all_panels = cache.get(get_cache_key("all_panels"))
-    current_max = cache.get(get_cache_key("max_panels"))
+    cached_data = cache_manager.get_multiple(CacheKeys.ALL_PANELS, CacheKeys.MAX_PANELS)
+    all_panels = cached_data[CacheKeys.ALL_PANELS]
+    current_max = cached_data[CacheKeys.MAX_PANELS]
 
     if not all_panels or not current_max:
         session['has_panels'] = False
@@ -216,7 +200,7 @@ def update_max_panel_count() -> Response:
     new_panel_count = data["max_panel_count"]
 
     # Update the max panels count in the cache
-    cache.set(get_cache_key("max_panels"), new_panel_count)
+    cache_manager.set(CacheKeys.MAX_PANELS, new_panel_count)
     logger.info(f"Max panel count updated to {new_panel_count} for session {session_id}")
 
     result = {
@@ -241,8 +225,9 @@ def custom_module() -> Response:
     specs = request.get_json()
     custom_module_data = PanelModule.create_custom(specs)
 
-    ensure_session_initialized()
-    current_app.cache.set(get_cache_key("custom_module"), custom_module_data)
+    SessionService.ensure_initialized()
+    cache_manager = get_cache_manager()
+    cache_manager.set(CacheKeys.CUSTOM_MODULE, custom_module_data)
     
     result: CustomModuleResult = {"success": True, "module": custom_module_data}
     return jsonify(result)
@@ -255,14 +240,11 @@ def custom_module() -> Response:
 def solar_api_proxy() -> Response:
     schema = schemas.SolarApiSchema()
     data = schema.load(request.args)
-        
+
     lat = data['latitude']
     lng = data['longitude']
-    
-    api_key = current_app.config.get("GOOGLE_MAPS_API_KEY")
-    if not api_key:
-        logger.error("GOOGLE_MAPS_API_KEY not found in app config during API proxy request!")
-        raise APIRequestError("Server configuration error: Missing API Key")
+
+    api_key = ConfigService.get_google_maps_api_key()
 
     api_url = "https://solar.googleapis.com/v1/buildingInsights:findClosest"
     params = {
@@ -271,7 +253,7 @@ def solar_api_proxy() -> Response:
         "requiredQuality": "MEDIUM",
         "key": api_key
     }
-    
+
     try:
         response = requests.get(api_url, params=params, timeout=10)
         response.raise_for_status()
@@ -284,21 +266,10 @@ def solar_api_proxy() -> Response:
 @handle_exceptions
 def reset_session() -> Response:
     if 'session_id' in session:
-        cache_keys = [
-            "image_shape",
-            "custom_module",
-            "all_panels",
-            "max_panels",
-            "module",
-            "resolution",
-        ]
+        cache_manager = get_cache_manager()
+        cache_manager.clear_all()
 
-        cache = current_app.cache
-        for key in cache_keys:
-            cache.delete(get_cache_key(key))
-
-    session['session_id'] = str(uuid.uuid4())
-    session['has_panels'] = False
+    SessionService.reset()
 
     result: ResetResult = {
         "success": True, 
