@@ -1,27 +1,199 @@
 .roof-live-stats {
-  position: absolute;
-  top: 80px;
-  right: 50px;
-  background: linear-gradient(135deg, #ffffff 0%, var(--background-light) 100%);
-  border-radius: 16px;
-  box-shadow: 0 8px 20px var(--shadow-light);
-  padding: 24px;
+  position: fixed; /* Changed to fixed for better positioning */
+  top: 70px;
+  right: 20px; /* Moved closer to right edge */
+  background: rgba(255, 255, 255, 0.55); /* Semi-transparent background */
+  border-radius: 12px;
+  box-shadow: 0 6px 16px var(--shadow-light);
+  padding: 16px;
   z-index: 10;
-  width: 360px;
-  backdrop-filter: blur(15px);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: min(280px, calc(100vw - 40px)); /* Adjusted for closer positioning */
+  max-width: 280px; /* Reduced maximum width */
+  max-height: calc(100vh - 140px); /* Adjusted height */
+  backdrop-filter: blur(20px); /* Enhanced backdrop blur for modern glass effect */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto; /* Allow scrolling if content is too tall */
+  overflow-x: hidden;
+}
+
+.roof-live-stats.minimized {
+  width: min(160px, calc(100vw - 100px)); /* More compact minimized width */
+  max-width: 160px;
+  padding: 12px;
+  transform: scale(0.9);
 }
 
 .roof-live-stats:hover {
   transform: translateY(-5px);
   box-shadow: 0 12px 30px var(--shadow-heavy);
+  background: rgba(255, 255, 255, 0.65); /* Slightly more opaque on hover */
+}
+
+.roof-live-stats.minimized:hover {
+  transform: translateY(-5px) scale(0.9);
+}
+
+/* Stats Header */
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(66, 133, 244, 0.1);
+}
+
+.stats-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stats-minimize-btn {
+  background: rgba(66, 133, 244, 0.1);
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #4285f4;
+  font-size: 12px;
+}
+
+.stats-minimize-btn:hover {
+  background: rgba(66, 133, 244, 0.2);
+  transform: scale(1.1);
+}
+
+.stats-minimize-btn:active {
+  transform: scale(0.95);
+}
+
+.stats-minimize-btn i {
+  transition: transform 0.3s ease;
+}
+
+.roof-live-stats.minimized .stats-minimize-btn i {
+  transform: rotate(180deg);
+}
+
+/* Pulse animation for active state */
+.stats-minimize-btn:hover::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 12px;
+  background: rgba(66, 133, 244, 0.1);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Smooth color transitions for summary values */
+.stats-summary-value {
+  transition: color 0.3s ease;
+}
+
+.stats-summary-item:hover .stats-summary-value {
+  color: #4285f4;
 }
 
 .roof-live-stats__items {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.roof-live-stats.minimized .roof-live-stats__items {
+  opacity: 0;
+  max-height: 0;
+  margin-top: -20px;
+  transform: translateY(-20px);
+}
+
+/* Minimized state summary */
+.stats-summary {
+  display: none;
+  text-align: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.roof-live-stats.minimized .stats-summary {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  animation: fadeInUp 0.4s ease 0.2s both;
+}
+
+.stats-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stats-summary-item:last-child {
+  border-bottom: none;
+}
+
+.stats-summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-summary-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .items__item {
@@ -32,20 +204,20 @@
 }
 
 .item-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.5px;
 }
 
 .progress {
   position: relative;
-  width: 100px;
-  height: 100px;
-  margin-bottom: 12px;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 8px;
 }
 
 .progress::before {
@@ -116,19 +288,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
   background: linear-gradient(135deg, #ffffff 0%, #f1f1f1 100%);
   border-radius: 50%;
   z-index: 2;
   font-weight: bold;
   color: var(--text-dark);
-  font-size: 18px;
-  box-shadow: inset 0 4px 10px var(--shadow-light);
+  font-size: 14px;
+  box-shadow: inset 0 3px 8px var(--shadow-light);
 }
 
 .progress-inner:hover {
-  box-shadow: inset 0 6px 14px var(--shadow-heavy);
+  box-shadow: inset 0 5px 12px var(--shadow-heavy);
   transform: translate(-50%, -50%) scale(1.05);
 }
 
@@ -142,27 +314,598 @@
 .progress-values div,
 .progress-values span {
   display: inline-block;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--tex);
 }
 
 @media (max-width: 768px) {
   .roof-live-stats {
-    top: 60px;
-    right: 20px;
-    width: 320px;
-    padding: 20px;
+    top: 50px;
+    right: 10px; /* Consistent right positioning on mobile */
+    width: min(260px, calc(100vw - 25px)); /* More compact mobile sizing */
+    max-width: calc(100vw - 25px);
+    max-height: calc(100vh - 100px);
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.9); /* Slightly more opaque on mobile for better readability */
+  }
+
+  .roof-live-stats.minimized {
+    width: min(140px, calc(100vw - 30px));
+    max-width: calc(100vw - 30px);
+    padding: 10px;
+  }
+
+  .stats-title {
+    font-size: 13px;
+  }
+
+  .stats-minimize-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
   }
 
   .progress {
-    width: 85px;
-    height: 85px;
+    width: 70px;
+    height: 70px;
   }
 
   .progress-inner {
+    width: 48px;
+    height: 48px;
+    font-size: 13px;
+  }
+
+  .financial-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .financial-item {
+    padding: 8px;
+  }
+
+  .stats-summary-item {
+    padding: 5px 0;
+  }
+
+  .stats-summary-label {
+    font-size: 10px;
+  }
+
+  .stats-summary-value {
+    font-size: 12px;
+  }
+}
+
+/* Additional responsive breakpoints for better scaling */
+
+/* Very small screens (mobile phones in portrait) */
+@media (max-width: 480px) {
+  .roof-live-stats {
+    top: 40px;
+    right: 8px;
+    left: 8px; /* Use full width on very small screens */
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 80px);
+    padding: 12px;
+  }
+
+  .roof-live-stats.minimized {
+    width: auto;
+    max-width: none;
+    padding: 10px;
+  }
+
+  .stats-title {
+    font-size: 12px;
+  }
+
+  .progress {
     width: 60px;
     height: 60px;
-    font-size: 16px;
+  }
+
+  .progress-inner {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+
+  .roof-live-stats__items {
+    gap: 8px;
+  }
+
+  .item-title {
+    font-size: 11px;
+  }
+}
+
+/* Large screens - keep it fixed to the right edge */
+@media (min-width: 1400px) {
+  .roof-live-stats {
+    right: 30px; /* Consistently positioned near right edge */
+    max-width: 300px; /* Slightly larger but still compact */
+  }
+}
+
+/* Very large screens */
+@media (min-width: 1800px) {
+  .roof-live-stats {
+    right: 40px; /* Consistently positioned near right edge */
+    max-width: 320px;
+    padding: 18px;
+  }
+
+  .roof-live-stats.minimized {
+    max-width: 180px;
+    padding: 14px;
+  }
+}
+
+/* Financial Analysis Section */
+.financial-info-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.roof-live-stats.minimized .financial-info-section {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  padding-top: 0;
+  transform: translateY(-20px);
+}
+
+.financial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.financial-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.financial-config-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.financial-config-btn:hover {
+  background: var(--background-light);
+  color: var(--primary-blue);
+  transform: scale(1.1);
+}
+
+.financial-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.financial-item {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 2px 6px var(--shadow-light);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.financial-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px var(--shadow-medium);
+}
+
+.financial-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.financial-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+/* Highlight positive values */
+.financial-item:nth-child(2) .financial-value, /* Annual savings */
+.financial-item:nth-child(4) .financial-value, /* ROI */
+.financial-item:nth-child(5) .financial-value, /* CO2 savings */
+.financial-item:nth-child(6) .financial-value { /* Subsidies */
+  color: var(--primary-green);
+}
+
+/* Highlight costs */
+.financial-item:nth-child(1) .financial-value, /* System cost */
+.financial-item:nth-child(3) .financial-value { /* Payback period */
+  color: var(--primary-blue);
+}
+
+/* Financial Configuration Popup Styles */
+.financial-config-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Lighter background for less opacity */
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(12px); /* Enhanced backdrop blur */
+  animation: fadeIn 0.3s ease;
+}
+
+.financial-config-content {
+  background: rgba(255, 255, 255, 0.9); /* Slightly more opaque for better readability */
+  border-radius: 12px; /* Smaller radius for compact design */
+  padding: 20px; /* Much smaller padding */
+  max-width: 380px; /* Much smaller width */
+  width: 85%;
+  max-height: 70vh; /* Reduced max height */
+  overflow-y: auto;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12), /* Softer, more subtle shadow */
+              0 0 0 1px rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(20px); /* Glass effect like other popups */
+  position: relative;
+  animation: slideIn 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass effect */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-30px) scale(0.95); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.financial-config-content h3 {
+  margin: 0 0 16px 0; /* Much smaller margin */
+  font-size: 18px; /* Smaller font size for minimalistic look */
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: center;
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.2px;
+}
+
+.config-section {
+  margin-bottom: 16px; /* Smaller spacing for compactness */
+}
+
+.config-section h4 {
+  margin: 0 0 12px 0; /* Smaller margin */
+  font-size: 13px; /* Smaller font size */
+  font-weight: 600;
+  color: #333;
+  padding-bottom: 4px; /* Smaller padding */
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.config-section h4::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 30px; /* Smaller accent line */
+  height: 1px;
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  border-radius: 1px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px; /* Even smaller gap */
+  margin-bottom: 12px; /* Smaller margin */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 4px; /* Smaller margin */
+  font-size: 12px; /* Smaller font size */
+}
+
+.form-group input,
+.form-group select {
+  padding: 8px 12px; /* Smaller padding */
+  border: 1px solid #e8e8e8;
+  border-radius: 6px; /* Smaller border radius */
+  font-size: 13px;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.9);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4285f4;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.08); /* Smaller focus ring */
+}
+
+.form-group small {
+  display: block;
+  margin-top: 3px; /* Reduced margin */
+  font-size: 11px; /* Smaller font size */
+  color: #666;
+  font-style: italic;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Smaller gap */
+  padding: 8px 12px; /* Smaller padding */
+  border-radius: 8px; /* Smaller radius */
+  background: #fafafa;
+  transition: background 0.2s ease;
+}
+
+.checkbox-item:hover {
+  background: #f0f0f0;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px; /* Smaller checkbox */
+  height: 16px;
+  accent-color: #4285f4;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  font-size: 12px; /* Smaller font */
+  color: #555;
+  cursor: pointer;
+  margin: 0;
+}
+
+.config-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px; /* Smaller gap */
+  margin-top: 16px; /* Much smaller margin */
+}
+
+.config-btn {
+  padding: 8px 16px; /* Smaller padding */
+  border: none;
+  border-radius: 6px; /* Smaller border radius */
+  font-size: 12px; /* Smaller font size */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px; /* Smaller minimum width */
+}
+
+.config-btn-primary {
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  color: white;
+  box-shadow: 0 3px 8px rgba(66, 133, 244, 0.25); /* Smaller shadow */
+}
+
+.config-btn-primary:hover {
+  transform: translateY(-1px); /* Reduced hover effect */
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.35);
+}
+
+.config-btn-secondary {
+  background: rgba(248, 249, 250, 0.9); /* Semi-transparent background */
+  color: #555;
+  border: 1px solid #e8e8e8; /* Thinner border */
+}
+
+.config-btn-secondary:hover {
+  background: rgba(232, 232, 232, 0.9);
+  transform: translateY(-1px); /* Consistent hover effect */
+}
+
+.popup-close {
+  position: absolute;
+  top: 12px; /* Smaller position for compact design */
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 20px; /* Smaller close button */
+  color: #999;
+  cursor: pointer;
+  padding: 4px; /* Smaller padding */
+  line-height: 1;
+  transition: all 0.2s ease;
+  border-radius: 4px; /* Smaller border radius */
+}
+
+.popup-close:hover {
+  color: #333;
+  background: rgba(240, 240, 240, 0.8);
+  transform: scale(1.05);
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .financial-config-content {
+    padding: 16px; /* Much smaller mobile padding */
+    margin: 10px;
+    max-width: none;
+    width: calc(100% - 20px); /* Smaller mobile margins */
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .config-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* Electrical System Section */
+.electrical-info-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  max-height: 1000px;
+  overflow: hidden;
+}
+
+.roof-live-stats.minimized .electrical-info-section {
+  opacity: 0 !important;
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  transform: translateY(-20px) !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.electrical-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.electrical-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.electrical-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.electrical-item {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  padding: 12px 10px;
+  text-align: center;
+  box-shadow: 0 2px 6px var(--shadow-light);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(111, 66, 193, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.electrical-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #6f42c1, #8b5fbf);
+  opacity: 0.8;
+}
+
+.electrical-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow-medium);
+  border-color: rgba(111, 66, 193, 0.2);
+}
+
+.electrical-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+}
+
+.electrical-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.2;
+}
+
+/* Enhanced electrical system values with improved theming */
+.electrical-item:nth-child(1) .electrical-value, /* Total Strings */
+.electrical-item:nth-child(2) .electrical-value, /* Inverter Count */
+.electrical-item:nth-child(3) .electrical-value, /* Inverter Size */
+.electrical-item:nth-child(4) .electrical-value, /* DC/AC Ratio */
+.electrical-item:nth-child(5) .electrical-value { /* Wire Length */
+  color: #6f42c1;
+  text-shadow: 0 1px 2px rgba(111, 66, 193, 0.1);
+}
+
+/* Responsive grid layout for electrical section */
+@media (max-width: 480px) {
+  .electrical-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .electrical-item {
+    padding: 10px 8px;
+  }
+  
+  .electrical-label {
+    font-size: 9px;
+  }
+  
+  .electrical-value {
+    font-size: 13px;
   }
 }
