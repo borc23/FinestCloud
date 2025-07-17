@@ -7,18 +7,21 @@ import numpy as np
 from app.dataclasses.config import PanelConfig, PanelModule, RoofData
 
 from .genetic_algorithm import PanelGeneticOptimizer
+from .string_calculator import StringCalculator
 
 
 class PanelService:
-    def __init__(self, bounds: Dict[str, float], resolution: float, custom_module=None):
+    def __init__(self, bounds: Dict[str, float], resolution: float, custom_module=None, edge_padding_cm: int = 20):
         self.bounds = bounds
         self.resolution = resolution
         self.custom_module = custom_module
+        self.edge_padding_cm = edge_padding_cm  # Store custom padding value
         self.config = PanelConfig()
         self.module_dict = PanelModule.STANDARD.value
         self.all_panels = []
         self.max_panels = 0
         self.genetic_optimizer = PanelGeneticOptimizer()
+        self.string_calculator = StringCalculator()
 
     def set_module(self, module_name: str):
         """Set panel module type."""
@@ -43,11 +46,19 @@ class PanelService:
         ]
         total_max_panels = sum(roof["panel_count"] for roof in all_roof_panels)
 
+        # Calculate electrical system design for maximum panels
+        electrical_system = None
+        if total_max_panels > 0:
+            electrical_system = self.string_calculator.calculate_system_design(
+                total_max_panels, self.module_dict["id"]
+            )
+
         self.all_panels, self.max_panels = all_roof_panels, total_max_panels
         return {
             "roofs": all_roof_panels,
             "max_panels": total_max_panels,
             "module": self.module_dict["id"],
+            "electrical_system": electrical_system.__dict__ if electrical_system else None,
         }
 
     def _generate_roof_panels(
@@ -68,13 +79,16 @@ class PanelService:
         )
         roof_panels = self._generate_panels_on_roof(
             roof_data, objects, map_dimensions, tune_params
-        )
+        )        
         return {
             "roof_id": roof_id,
             "panels": roof_panels,
             "panel_count": len(roof_panels),
             "module_type": self.module_dict["id"],
             "module_specs": self.module_dict,
+            "coords": roof["coords"],
+            "pitch": roof["pitch"],
+            "azimuth": roof["azimuth"],
         }
 
     def get_visible_panels(self, panel_count: int) -> Dict:
@@ -102,10 +116,18 @@ class PanelService:
             if remaining_count <= 0:
                 break
 
+        # Calculate electrical system design for selected panel count
+        electrical_system = None
+        if panel_count > 0:
+            electrical_system = self.string_calculator.calculate_system_design(
+                panel_count, self.module_dict["id"]
+            )
+
         return {
             "roofs": visible_roofs,
             "total_panels": panel_count,
             "total_power_w": panel_count * module_power,
+            "electrical_system": electrical_system.__dict__ if electrical_system else None,
         }
 
     def _generate_panels_on_roof(
@@ -138,7 +160,7 @@ class PanelService:
                 int(self.module_dict["height_cm"] / self.resolution),
             )
 
-        padding_px = int(self.config.edge_padding_cm / self.resolution)
+        padding_px = int(self.edge_padding_cm / self.resolution)
 
         best_panels = self.genetic_optimizer.optimize_panel_placement(
             mask=valid_area_mask,
