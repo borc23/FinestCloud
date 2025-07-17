@@ -83,16 +83,16 @@
 }
 
 .selected-polygon.roof {
-  stroke: #27ae60; /* Darker green for roof */
+  stroke: var(--roof-color-selected); /* Darker green for roof */
   stroke-width: 3;
-  fill: rgba(46, 204, 113, 0.2); /* Light green fill */
+  fill: var(--roof-fill-light); /* Light green fill */
   transition: all 0.3s ease;
 }
 
 .selected-polygon.object {
-  stroke: #e74c3c;
+  stroke: var(--object-color);
   stroke-width: 3;
-  fill: rgba(231, 76, 60, 0.2);
+  fill: var(--object-fill-light);
   transition: all 0.3s ease;
 }
 
