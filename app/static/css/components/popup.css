@@ -1,19 +1,20 @@
 /* Popup Menu Styling */
 .popup-menu {
   position: fixed;
-  left: calc(var(--sidebar-width) + 15px); /* Slightly closer */
-  top: calc(var(--navbar-height) + 15px); /* Slightly closer */
-  background: rgba(255, 255, 255, 0.97); /* Slightly less transparent */
-  backdrop-filter: blur(8px); /* Slightly less blur */
-  border-radius: 12px; /* Smaller radius */
-  padding: 18px; /* Reduced padding */
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), /* Simplified shadow */
+  left: calc(var(--sidebar-width) + 10px); /* Back to left side near sidebar */
+  top: calc(var(--navbar-height) + 10px); /* Consistent with navbar */
+  background: rgba(255, 255, 255, 0.85); /* Semi-transparent like stats popup */
+  backdrop-filter: blur(20px); /* Enhanced blur for modern glass effect */
+  border-radius: 12px; /* Consistent with stats popup */
+  padding: 16px; /* Consistent padding with stats popup */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1), /* Softer shadow like stats */
               0 0 0 1px rgba(0, 0, 0, 0.05);
-  transform: translateY(-10px); /* Adjusted animation start */
+  transform: translateY(-8px); /* Smoother animation */
   opacity: 0;
   animation: slideIn 0.3s ease-out forwards;
   z-index: 1000;
-  width: 300px; /* Reduced width */
+  width: 260px; /* Slightly wider for better usability */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth transitions */
   display: none;
 }
 
@@ -27,22 +28,24 @@
 .popup-content {
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Reduced gap */
+  gap: 10px; /* Even tighter spacing */
 }
 
 .popup-content h3 {
-  margin: 0 0 8px 0; /* Adjusted margin */
+  margin: 0 0 4px 0; /* Minimal margin */
   color: #1a1a1a;
-  font-size: 18px; /* Slightly smaller font */
+  font-size: 15px; /* Even more compact font size */
   font-weight: 600;
-  letter-spacing: -0.3px; /* Adjusted spacing */
-  border-bottom: 1px solid #eee; /* Thinner border */
-  padding-bottom: 10px; /* Reduced padding */
+  letter-spacing: -0.2px; /* Tight spacing */
+  border-bottom: 1px solid #eee; /* Clean separator */
+  padding-bottom: 6px; /* More compact padding */
 }
 
 .popup-menu:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), /* Adjusted hover shadow */
-              0 0 0 1px rgba(0, 0, 0, 0.07);
+  background: rgba(255, 255, 255, 0.95); /* Slightly more opaque on hover */
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), /* Enhanced hover shadow */
+              0 0 0 1px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px); /* Subtle lift on hover */
 }
 
 .calibration-instructions {
@@ -420,6 +423,54 @@
   min-width: 70px; /* Adjusted width */
 }
 
+/* Padding input section styling */
+.padding-input-section {
+  margin: 20px 0;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.padding-input-section label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.padding-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.padding-input {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 15px;
+  transition: var(--transition);
+  box-shadow: none;
+}
+
+.padding-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.15);
+  outline: none;
+}
+
+.padding-input:hover {
+  border-color: #bbb;
+}
+
+.padding-help {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .angle-buttons {
   display: flex;
   justify-content: flex-end;
@@ -474,21 +525,21 @@
 
 /* Custom input styling */
 .angle-unit {
+  display: flex;
+  align-items: center;
   position: relative;
 }
 
 .angle-unit input {
-  padding-right: 35px; /* Adjusted padding for degree symbol */
+  flex: 1;
+  padding-right: 30px; /* Make room for the degree symbol */
 }
 
-.angle-unit::after {
-  content: "°";
+.unit-label {
   position: absolute;
-  right: 12px; /* Adjusted position */
-  top: 50%;
-  transform: translateY(-50%);
+  right: 12px;
   color: var(--text-secondary);
-  font-size: 15px; /* Consistent size */
+  font-size: 14px;
   pointer-events: none;
 }
 
