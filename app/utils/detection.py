@@ -1,5 +1,3 @@
-import cv2
-
 from app.services.service_factory import ServiceFactory
 
 
@@ -14,6 +12,6 @@ def process_detection(image_data, is_url=True, bounds=None):
         else image_service.load_image_from_upload(image_data)
     )
 
-    cv2.imwrite("temp_image.jpg", image)
+    # cv2.imwrite("temp_image.jpg", image)
 
     return detection_service.detect_roofs(image, bounds or None), shape

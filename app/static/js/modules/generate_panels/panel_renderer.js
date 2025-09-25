@@ -90,8 +90,9 @@ export class PanelRenderer {
         // Use the roof's module type, or fall back to the current module
         const moduleType = roof.module_type || this.#currentModule;
         const moduleColor = this.#getModuleColor(moduleType);
-        
+
         roof.panels.forEach(panelCoords => {
+
           // Get panel options from StyleConfig if available
           let panelOptions = this.styleConfig?.PANEL_DEFAULT_OPTIONS || {
             strokeColor: '#ffffff',
@@ -100,7 +101,7 @@ export class PanelRenderer {
             fillOpacity: 0.85,
             zIndex: 1101
           };
-          
+
           const panelPolygon = new google.maps.Polygon({
             paths: panelCoords,
             ...panelOptions,

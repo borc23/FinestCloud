@@ -12,7 +12,6 @@ from typing import Any, Dict, Optional
 
 from flask import Flask, session
 from flask_caching import Cache
-from flask_talisman import Talisman  # Import Talisman
 
 from .utils.model_loader import initialize_models
 
@@ -96,7 +95,9 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         "UPLOAD_FOLDER": os.getenv("UPLOAD_FOLDER", "/tmp/uploads"),
         "MODELS_DIR": os.getenv("MODELS_DIR", "/tmp/models"),
         "MAX_CONTENT_LENGTH": 16 * 1024 * 1024,  # 16MB max upload
-        "GOOGLE_MAPS_API_KEY": os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyArFZ4SYEzNAsmUgD0ss-kEScpZSC-1jh0"),
+        "GOOGLE_MAPS_API_KEY": os.getenv(
+            "GOOGLE_MAPS_API_KEY", "AIzaSyArFZ4SYEzNAsmUgD0ss-kEScpZSC-1jh0"
+        ),
     }
 
     # Override with any passed configuration

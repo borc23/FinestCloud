@@ -30,7 +30,9 @@ class GeneratePanelsSchema(Schema):
     roofs = fields.List(fields.Dict(), required=True)
     objects = fields.List(fields.List(fields.Dict()), required=True)
     mapDimensions = fields.Dict(required=True)
-    edge_padding_cm = fields.Integer(required=False, validate=validate.Range(min=0, max=200), load_default=20)
+    edge_padding_cm = fields.Integer(
+        required=False, validate=validate.Range(min=0, max=200), load_default=20
+    )
     selected_roofs_only = fields.Boolean(required=False, load_default=False)
 
 

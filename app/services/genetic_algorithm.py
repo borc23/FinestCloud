@@ -42,7 +42,6 @@ class PanelGeneticOptimizer:
         self.metrics = OptimizationMetrics()
 
         self.logger = logging.getLogger(__name__)
-        # Only add handler if no handlers exist for the logger
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
@@ -51,7 +50,6 @@ class PanelGeneticOptimizer:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
-            # Prevent handler from being added to parent loggers
             self.logger.propagate = False
 
     def optimize_panel_placement(
@@ -82,9 +80,8 @@ class PanelGeneticOptimizer:
             List of optimally placed panels as arrays of corner coordinates
         """
         start_time = time.time()
-        self.metrics = OptimizationMetrics()  # Reset metrics
+        self.metrics = OptimizationMetrics()
 
-        # Track global best solution across all attempts
         global_best_solution = None
         global_best_fitness = 0
 
@@ -120,10 +117,8 @@ class PanelGeneticOptimizer:
 
             x, y, w, h = cv2.boundingRect(coords)
 
-            # Run optimization multiple times with different initial populations
-            for attempt in range(3):  # Try 3 different initial populations
+            for _ in range(3):
                 population = self._initialize_population(spacing)
-                # best_solution = None
                 best_fitness = 0
 
                 for generation in range(self.generations):
@@ -351,7 +346,6 @@ class PanelGeneticOptimizer:
             "Starting genetic algorithm parameter tuning with Bayesian Optimization..."
         )
 
-        # Initialize with parameters that tend to produce more panels
         self.population_size = 26
         self.generations = 12
         self.tournament_size = 4
@@ -383,15 +377,15 @@ class PanelGeneticOptimizer:
         best_panel_count = 0
         best_panel_params = None
 
-        # Test each configuration and use the one that produces the most panels
-        for config in grid_configs:
+        for i, config in enumerate(grid_configs):
             optimizer = PanelGeneticOptimizer(
                 population_size=int(config[0]),
-                generations=int(config[1]),
+                generations=max(3, int(config[1]) // 2),
                 tournament_size=int(config[2]),
                 crossover_rate=float(config[3]),
                 mutation_rate=float(config[4]),
                 elitism_count=int(config[5]),
+                early_stop_threshold=2,
             )
 
             panels = optimizer.optimize_panel_placement(
@@ -415,6 +409,12 @@ class PanelGeneticOptimizer:
                     "mutation_rate": float(config[4]),
                     "elitism_count": int(config[5]),
                 }
+
+                if i > 0 and panel_count > best_panel_count * 1.1:
+                    self.logger.info(
+                        f"Early termination: found significantly better config with {panel_count} panels"
+                    )
+                    break
 
         if best_panel_params:
             self.logger.info(

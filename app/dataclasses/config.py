@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
@@ -68,7 +67,7 @@ class PanelModule(Enum):
         for module in cls:
             if module.value["id"] == module_id:
                 return module
-        return cls.STANDARD 
+        return cls.STANDARD
 
 
 @dataclass

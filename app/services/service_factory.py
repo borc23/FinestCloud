@@ -11,6 +11,7 @@ MODEL_FILENAME = "v3.pt"
 _APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 LOCAL_MODEL_PATH = os.path.join(_APP_ROOT, "models", MODEL_FILENAME)
 
+
 class ServiceFactory:
     _detection_service = None
     _image_service = None
@@ -25,10 +26,14 @@ class ServiceFactory:
             else:
                 # Fallback to Hugging Face Hub ID if local file not found
                 # This part might be removed if you exclusively want to use the bundled model
-                logger.warning(f"Local model not found at {LOCAL_MODEL_PATH}. Attempting to use Hugging Face Hub ID Borc23/finestcloud-models/v3.pt.")
-                model_path_to_use = "Borc23/finestcloud-models/v3.pt" # Or "Borc23/finestcloud-models" if YOLO handles it
+                logger.warning(
+                    f"Local model not found at {LOCAL_MODEL_PATH}. Attempting to use Hugging Face Hub ID Borc23/finestcloud-models/v3.pt."
+                )
+                model_path_to_use = "Borc23/finestcloud-models/v3.pt"  # Or "Borc23/finestcloud-models" if YOLO handles it
 
-            logger.info(f"Initializing DetectionService with model path: {model_path_to_use}")
+            logger.info(
+                f"Initializing DetectionService with model path: {model_path_to_use}"
+            )
             cls._detection_service = DetectionService(model_path_to_use)
         return cls._detection_service
 

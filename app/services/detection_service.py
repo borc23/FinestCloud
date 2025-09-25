@@ -6,14 +6,18 @@ from ultralytics import YOLO  # type: ignore
 
 logger = logging.getLogger(__name__)
 
+
 class DetectionService:
     def __init__(self, model_path):
         try:
             logger.info(f"Attempting to load YOLO model from: {model_path}")
-            self.model = YOLO(model_path) # YOLO will handle local path or Hub ID
+            self.model = YOLO(model_path)  # YOLO will handle local path or Hub ID
             logger.info(f"YOLO model loaded successfully from: {model_path}")
         except Exception as e:
-            logger.error(f"Failed to load YOLO model from {model_path}. Error: {e}", exc_info=True)
+            logger.error(
+                f"Failed to load YOLO model from {model_path}. Error: {e}",
+                exc_info=True,
+            )
             raise
         self.cache = {}
 

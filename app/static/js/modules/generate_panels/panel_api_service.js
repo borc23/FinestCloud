@@ -40,7 +40,7 @@ export class PanelApiService {
 
         const response = await fetch('/update_panel_count', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'X-Request-ID': Date.now().toString()
           },
@@ -76,7 +76,7 @@ export class PanelApiService {
 
         const response = await fetch('/generate_panels', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'X-Request-ID': Date.now().toString()
           },
