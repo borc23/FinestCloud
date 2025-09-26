@@ -1,0 +1,442 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1500;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 400px;
+  z-index: 1600;
+  transition: transform var(--transition-normal) var(--spring);
+}
+
+.panel.right {
+  right: 0;
+  transform: translateX(0);
+  animation: slideInRight 0.3s ease-out;
+}
+
+.panel.left {
+  left: 0;
+  transform: translateX(0);
+  animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.panelContainer {
+  height: 100%;
+  background: var(--glass-white-strong);
+  backdrop-filter: blur(25px) saturate(200%);
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  box-shadow: var(--shadow-glass);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel.left .panelContainer {
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+}
+
+.closeButton {
+  position: absolute;
+  top: var(--space-6);
+  right: var(--space-6);
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--glass-dark);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 50%;
+  color: var(--text-glass);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.closeButton:hover {
+  background: rgba(0, 0, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.panelContent {
+  padding: var(--space-8) var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Panel Header */
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+  padding-right: var(--space-8); /* Account for close button */
+}
+
+.headerIcon {
+  width: 48px;
+  height: 48px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  box-shadow: var(--shadow-glow);
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1) 0;
+  letter-spacing: -0.02em;
+}
+
+.panelSubtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Upload Zone */
+.uploadZone {
+  background: var(--glass-white);
+  border: 2px dashed var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  text-align: center;
+  margin-bottom: var(--space-6);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.uploadZone:hover {
+  border-color: var(--primary-400);
+  background: rgba(99, 102, 241, 0.05);
+  transform: translateY(-2px);
+}
+
+.uploadIcon {
+  width: 64px;
+  height: 64px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4) auto;
+  font-size: 24px;
+  color: white;
+}
+
+.uploadZone p {
+  margin: 0 0 var(--space-4) 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Upload Options */
+.uploadOptions h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.formatTags {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.formatTag {
+  padding: var(--space-1) var(--space-3);
+  background: var(--glass-white);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+/* Tool Options */
+.toolOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.toolOptions .btn {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+/* Instructions */
+.instructions h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.instructions ol {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.instructions li {
+  margin-bottom: var(--space-2);
+}
+
+/* Panel Settings */
+.panelSettings {
+  margin-bottom: var(--space-6);
+}
+
+.settingGroup {
+  margin-bottom: var(--space-4);
+}
+
+.settingGroup label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.select {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--glass-white);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.select:focus {
+  border-color: var(--primary-400);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.slider {
+  width: calc(100% - 60px);
+  margin-right: var(--space-3);
+  vertical-align: middle;
+}
+
+/* Edit Tools */
+.editTools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+/* Edit Options */
+.editOptions {
+  margin-bottom: var(--space-6);
+}
+
+.toggleOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  background: var(--glass-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+}
+
+.toggleOption span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--glass-border);
+  transition: var(--transition-fast);
+  border-radius: 12px;
+}
+
+.toggleSlider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  transition: var(--transition-fast);
+  border-radius: 50%;
+  box-shadow: var(--shadow-subtle);
+}
+
+input:checked + .toggleSlider {
+  background: var(--primary-500);
+}
+
+input:checked + .toggleSlider:before {
+  transform: translateX(20px);
+}
+
+/* Metrics Grid */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.metric {
+  background: var(--glass-white);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.metricValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-600);
+  margin-bottom: var(--space-1);
+  letter-spacing: -0.02em;
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .panel {
+    width: 100vw;
+    bottom: 0;
+    top: auto;
+    height: 70vh;
+  }
+
+  .panel.right {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  .panel.left {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  @keyframes slideInUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .panelContainer {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .panel.left .panelContainer {
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .editTools {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .panelContent {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .panelHeader {
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .headerIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .panelTitle {
+    font-size: 1.25rem;
+  }
+
+  .uploadZone {
+    padding: var(--space-6);
+  }
+
+  .uploadIcon {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
