@@ -27,12 +27,6 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
 
   return (
     <div className={styles.toolStrip}>
-      {/* Brand */}
-      <div className={styles.brand}>
-        <div className={styles.brandIcon}>
-          <i className="fas fa-sun"></i>
-        </div>
-      </div>
 
       {/* Tools */}
       <div className={styles.toolsSection}>

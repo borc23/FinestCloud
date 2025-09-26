@@ -5,12 +5,15 @@ import MapContainer from '@/components/MapContainer'
 import FloatingSearch from '@/components/FloatingSearch'
 import StatsCards from '@/components/StatsCards'
 import LoadingSpinner from '@/components/LoadingSpinner'
+import Navbar from '@/components/Navbar'
 import { useState } from 'react'
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [activeTool, setActiveTool] = useState('select')
   const [showStats, setShowStats] = useState(false)
+  const [showToolStrip, setShowToolStrip] = useState(true)
+  const [showSearch, setShowSearch] = useState(true)
 
   const [stats] = useState({
     panelCount: 24,
@@ -24,16 +27,24 @@ export default function HomePage() {
   return (
     <div className="app-container">
       <div className="app-layout">
-        <ToolStrip
-          activeTool={activeTool}
-          onToolSelect={setActiveTool}
-          onStatsToggle={() => setShowStats(!showStats)}
+        <Navbar
+          onMenuToggle={() => setShowToolStrip(!showToolStrip)}
+          onSearch={() => setShowSearch(!showSearch)}
+          onSettings={() => setShowStats(!showStats)}
         />
 
         <div className="main-content">
           <MapContainer activeTool={activeTool} />
 
-          <FloatingSearch />
+          {showToolStrip && (
+            <ToolStrip
+              activeTool={activeTool}
+              onToolSelect={setActiveTool}
+              onStatsToggle={() => setShowStats(!showStats)}
+            />
+          )}
+
+          {showSearch && <FloatingSearch />}
 
           {showStats && (
             <StatsCards
