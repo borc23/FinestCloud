@@ -1,157 +1,295 @@
 .mapContainer {
-  flex: 1;
   position: relative;
+  height: 100vh;
+  width: 100%;
   overflow: hidden;
+  background: var(--pure-white);
 }
 
 .map {
   width: 100%;
   height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
+/* Tool-specific overlays */
+.uploadPrompt {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.promptCard {
+  background: var(--pure-white);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-floating);
+  text-align: center;
+  min-width: 320px;
+  pointer-events: auto;
+}
+
+.promptIcon {
+  width: 64px;
+  height: 64px;
+  background: var(--accent-light);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--spacing-lg);
+  color: var(--accent-primary);
+  font-size: 24px;
+}
+
+.promptCard h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-black);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.promptCard p {
+  font-size: var(--text-sm);
+  color: var(--text-gray);
+  margin: 0 0 var(--spacing-lg);
+  line-height: 1.5;
+}
+
+.toolHint {
+  position: absolute;
+  bottom: var(--spacing-2xl);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+.hintCard {
+  background: var(--pure-white);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-base) var(--spacing-lg);
+  box-shadow: var(--shadow-floating);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-base);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--light-gray);
+}
+
+.hintCard i {
+  color: var(--accent-primary);
+  font-size: 16px;
+}
+
+.hintCard span {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-black);
+}
+
+/* Drag and drop states */
+.dragOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(14, 165, 233, 0.05);
+  border: 3px dashed var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(4px);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.dragContent {
+  text-align: center;
+  background: var(--pure-white);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-floating);
+  border: 2px solid var(--accent-primary);
+}
+
+.dragContent i {
+  font-size: 48px;
+  color: var(--accent-primary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.dragContent h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-black);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.dragContent p {
+  font-size: var(--text-sm);
+  color: var(--text-gray);
+  margin: 0;
+}
+
+/* Image view mode */
 .imageView {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--background-light);
-  z-index: 10;
-}
-
-.dropZone {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 320px;
-  height: 200px;
-  border: 2px dashed var(--text-light);
-  border-radius: calc(var(--border-radius) * 2);
+  background: var(--off-white);
+  z-index: 150;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--background-white);
-  transition: var(--transition);
-  cursor: pointer;
+  flex-direction: column;
 }
 
-.dropZone:hover,
-.dropZone.dragOver {
-  border-color: var(--primary-color);
-  background: rgba(37, 99, 235, 0.05);
-}
-
-.dropZoneContent {
-  text-align: center;
-  color: var(--text-medium);
-}
-
-.dropZoneContent i {
-  font-size: 48px;
-  color: var(--text-light);
-  margin-bottom: calc(var(--grid-unit) * 2);
-}
-
-.dropZoneContent p {
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0;
+.imageViewHeader {
+  padding: var(--spacing-lg);
+  background: var(--pure-white);
+  border-bottom: 1px solid var(--light-gray);
+  box-shadow: var(--shadow-minimal);
 }
 
 .imageContainer {
-  width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--spacing-2xl);
 }
 
-.captureSquare {
-  position: absolute;
-  border: 3px solid var(--primary-color);
-  background: rgba(37, 99, 235, 0.1);
-  pointer-events: none;
-  z-index: 5;
-  display: none;
+.imagePlaceholder {
+  text-align: center;
+  color: var(--text-gray);
 }
 
-/* Stats Panel */
-.statsPanel {
-  position: absolute;
-  top: calc(var(--grid-unit) * 3);
-  right: calc(var(--grid-unit) * 3);
-  background: var(--background-white);
-  border-radius: calc(var(--border-radius) * 2);
-  padding: calc(var(--grid-unit) * 3);
-  box-shadow: var(--shadow-lg);
-  min-width: 280px;
-  z-index: 100;
+.imagePlaceholder i {
+  font-size: 64px;
+  margin-bottom: var(--spacing-lg);
+  color: var(--medium-gray);
 }
 
-.statsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: calc(var(--grid-unit) * 2);
-}
-
-.statsTitle {
-  font-size: 18px;
-  font-weight: 600;
+.imagePlaceholder p {
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
   margin: 0;
-  color: var(--text-dark);
 }
 
-.panelSlider {
+/* Floating map controls */
+.mapControls {
   position: absolute;
-  bottom: calc(var(--grid-unit) * 3);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--background-white);
-  border-radius: calc(var(--border-radius) * 2);
-  padding: calc(var(--grid-unit) * 2) calc(var(--grid-unit) * 3);
-  box-shadow: var(--shadow-lg);
+  bottom: var(--spacing-2xl);
+  right: var(--spacing-2xl);
   display: flex;
-  align-items: center;
-  gap: calc(var(--grid-unit) * 2);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   z-index: 100;
 }
 
-/* Responsive adjustments */
+.zoomControl {
+  width: 48px;
+  height: 48px;
+  background: var(--pure-white);
+  border: 1px solid var(--light-gray);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-floating);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-black);
+  font-size: 16px;
+  font-weight: var(--font-medium);
+  transition: all var(--transition-base);
+  backdrop-filter: blur(20px);
+  outline: none;
+}
+
+.zoomControl:hover {
+  background: var(--light-gray);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated);
+}
+
+.zoomControl:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-focus), var(--shadow-floating);
+}
+
+.zoomControl:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    border-color: var(--accent-primary);
+    background: rgba(14, 165, 233, 0.05);
+  }
+  50% {
+    border-color: var(--accent-hover);
+    background: rgba(14, 165, 233, 0.1);
+  }
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
-  .dropZone {
-    width: 280px;
-    height: 160px;
+  .promptCard {
+    min-width: 280px;
+    padding: var(--spacing-xl);
   }
 
-  .dropZoneContent i {
-    font-size: 36px;
+  .promptIcon {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
   }
 
-  .dropZoneContent p {
-    font-size: 13px;
+  .mapControls {
+    bottom: var(--spacing-xl);
+    right: var(--spacing-xl);
   }
 
-  .statsPanel {
-    top: calc(var(--grid-unit) * 2);
-    right: calc(var(--grid-unit) * 2);
-    min-width: 240px;
-    padding: calc(var(--grid-unit) * 2);
+  .zoomControl {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .toolHint {
+    bottom: calc(var(--spacing-2xl) + 120px); /* Above mobile controls */
   }
 }
 
 @media (max-width: 480px) {
-  .dropZone {
-    width: 240px;
-    height: 140px;
+  .promptCard {
+    min-width: 240px;
+    padding: var(--spacing-lg);
   }
 
-  .statsPanel {
-    position: fixed;
-    top: calc(var(--navbar-height) + var(--grid-unit) * 2);
-    right: calc(var(--grid-unit) * 1);
-    left: calc(var(--sidebar-width) + var(--grid-unit) * 1);
-    min-width: auto;
+  .promptIcon {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+
+  .dragContent {
+    padding: var(--spacing-lg);
+  }
+
+  .dragContent i {
+    font-size: 36px;
+  }
+
+  .zoomControl {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
   }
 }
