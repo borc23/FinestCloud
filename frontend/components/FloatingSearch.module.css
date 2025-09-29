@@ -327,7 +327,6 @@
   transition: background-color 0.15s ease;
 }
 
-/* Minimal hover - just subtle background change */
 .suggestion:hover {
   background: rgba(255, 255, 255, 0.06);
 }

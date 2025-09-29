@@ -20,6 +20,8 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showLocationFallback, setShowLocationFallback] = useState(false)
   const [fallbackLocation, setFallbackLocation] = useState('')
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const fallbackInputRef = useRef<HTMLInputElement>(null)
   const autocompleteService = useRef<any>(null)
@@ -97,7 +99,9 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      searchLocation(query.trim())
+      const location = query.trim()
+      searchLocation(location)
+      addToHistory(location)
       setSuggestions([])
       setIsFocused(false)
       inputRef.current?.blur()
@@ -110,6 +114,7 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     setSuggestions([])
     setIsFocused(false)
     searchLocation(address)
+    addToHistory(address)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -138,7 +143,9 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const handleFallbackSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (fallbackLocation.trim()) {
-      searchLocation(fallbackLocation.trim())
+      const location = fallbackLocation.trim()
+      searchLocation(location)
+      addToHistory(location)
       setShowLocationFallback(false)
       setFallbackLocation('')
     }
@@ -147,6 +154,43 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const handleFallbackCancel = () => {
     setShowLocationFallback(false)
     setFallbackLocation('')
+  }
+
+  const addToHistory = (location: string) => {
+    setSearchHistory(prev => {
+      // Remove if already exists to avoid duplicates
+      const filtered = prev.filter(item => item !== location)
+      // Add new location to the front
+      const newHistory = [location, ...filtered]
+      // Keep only the first 5 items
+      return newHistory.slice(0, 5)
+    })
+    // Set history index to 1 (previous location) when new location is added
+    // This way first click goes to the previous location, not current
+    setHistoryIndex(1)
+  }
+
+  const handleHistoryNavigation = () => {
+    if (searchHistory.length === 0) return
+
+    // Get current location from history
+    const currentLocation = searchHistory[historyIndex]
+
+    // Search the current location
+    searchLocation(currentLocation)
+    setQuery(currentLocation)
+
+    // Move to next index (circular)
+    setHistoryIndex(prev => {
+      const nextIndex = prev + 1
+      // If we reach the end, go back to 0
+      return nextIndex >= searchHistory.length ? 0 : nextIndex
+    })
+
+    // Close suggestions and unfocus
+    setSuggestions([])
+    setIsFocused(false)
+    inputRef.current?.blur()
   }
 
   return (
@@ -225,8 +269,9 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
 
             <button
               className={styles.quickAction}
-              title="Recent Searches"
-              onClick={() => console.log('Show recent searches')}
+              title={searchHistory.length > 1 && historyIndex < searchHistory.length ? `Go to: ${searchHistory[historyIndex]}` : searchHistory.length === 1 ? "Only one location in history" : "No search history"}
+              onClick={handleHistoryNavigation}
+              disabled={searchHistory.length <= 1}
             >
               <i className="fas fa-history"></i>
             </button>
