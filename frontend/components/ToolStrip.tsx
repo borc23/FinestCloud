@@ -18,8 +18,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
     { id: 'upload', icon: 'upload', label: 'Upload Image' },
     { id: 'select', icon: 'vector-square', label: 'Select Area' },
     { id: 'panels', icon: 'solar-panel', label: 'Generate Panels' },
-    { id: 'edit', icon: 'pen-to-square', label: 'Edit Mode' },
-    { id: 'analyze', icon: 'chart-line', label: 'Analysis' }
+    { id: 'edit', icon: 'pen-to-square', label: 'Edit Mode' }
   ]
 
   const allTools = [
@@ -34,8 +33,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
     if (toolIndex === -1) return { index: -1, section: null }
 
     return {
-      index: toolIndex < 5 ? toolIndex : toolIndex - 5,
-      section: toolIndex < 5 ? 'main' : 'bottom'
+      index: toolIndex < 4 ? toolIndex : toolIndex - 4,
+      section: toolIndex < 4 ? 'main' : 'bottom'
     }
   }
 
