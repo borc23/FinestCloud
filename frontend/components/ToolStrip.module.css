@@ -1,5 +1,5 @@
 .toolStrip {
-  --tool-size: 52px;
+  --tool-size: clamp(40px, 4vw, 52px);
   --tool-gap: var(--spacing-base);
   --container-padding: var(--spacing-lg);
   --bottom-section-gap: var(--spacing-xl);
@@ -9,10 +9,10 @@
   bottom: var(--spacing-lg);
   width: auto;
   height: auto;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px) saturate(180%) brightness(110%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(110%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-2xl);
   display: flex;
   flex-direction: column;
@@ -20,10 +20,8 @@
   padding: var(--spacing-lg);
   z-index: 900;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.15),
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 0 20px rgba(255, 255, 255, 0.1);
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   animation: slide-in-left 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   max-height: 70vh;
   overflow-y: auto;
@@ -70,9 +68,10 @@
 }
 
 .tool {
+  --base-size: 44px;
   position: relative;
-  width: var(--tool-size);
-  height: var(--tool-size);
+  width: max(var(--tool-size), var(--base-size));
+  height: max(var(--tool-size), var(--base-size));
   border: none;
   background: transparent;
   display: flex;
@@ -80,15 +79,17 @@
   justify-content: center;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 20px;
+  font-size: clamp(14px, 2.5vw, 20px);
   outline: none;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   z-index: 2;
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .tool:hover {
   color: rgba(255, 255, 255, 1);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tool:focus-visible {
@@ -98,24 +99,36 @@
 
 .frostedOverlay {
   position: absolute;
-  top: 0;
   left: 50%;
   width: calc(100% - var(--spacing-lg));
-  height: var(--tool-size, 52px);
-  max-width: 80px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.075));
-  backdrop-filter: blur(20px);
+  height: var(--tool-size);
+  max-width: clamp(64px, 8vw, 80px);
+  background: radial-gradient(
+    ellipse 80% 50% at 20% 20%, 
+    rgba(255, 255, 255, 0.15) 0%, 
+    transparent 70%
+  );
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-full); /* This creates the pill shape */
-  box-shadow:
-    0 3px 3px rgba(0, 0, 0, 0.01),
-    0 3px 3px rgba(0, 0, 0, 0.1),
-    0 2px 3px rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   pointer-events: none;
-  transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1;
+  transform: translateX(-50%);
+  top: calc(var(--container-padding) + (var(--tool-index, 0) * (var(--tool-size) + var(--tool-gap))));
 }
+
+.frostedOverlay[data-tool-section="bottom"] {
+  top: calc(var(--container-padding) + (5 * (var(--tool-size) + var(--tool-gap))) + var(--spacing-xl) + var(--spacing-lg) + (var(--tool-index, 0) * (var(--tool-size) + var(--tool-gap))));
+}
+
+.frostedOverlay[data-tool-index="0"] { --tool-index: 0; }
+.frostedOverlay[data-tool-index="1"] { --tool-index: 1; }
+.frostedOverlay[data-tool-index="2"] { --tool-index: 2; }
+.frostedOverlay[data-tool-index="3"] { --tool-index: 3; }
+.frostedOverlay[data-tool-index="4"] { --tool-index: 4; }
 
 
 .frostedOverlay::before {
@@ -125,10 +138,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background:
-    radial-gradient(ellipse 80% 40% at 20% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 30% at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.08) 50%, transparent 60%);
+  background: radial-gradient(
+    ellipse 80% 50% at 20% 20%, 
+    rgba(255, 255, 255, 0.15) 0%, 
+    transparent 70%
+  );
   border-radius: var(--radius-full);
   pointer-events: none;
 }
@@ -146,6 +160,9 @@
   border-radius: var(--radius-full);
   filter: blur(1px);
   pointer-events: none;
+  box-shadow: 
+    inset -10px -8px 0px -11px rgba(255, 255, 255, 0.9),
+    inset 0px -9px 0px -8px rgba(255, 255, 255, 0.8);
 }
 
 .bottomSection {
@@ -160,7 +177,7 @@
 @keyframes slide-in-left {
   0% {
     opacity: 0;
-    transform: translateY(30px) translateX(-30px) scale(0.9);
+    transform: translateY(20px) translateX(-20px) scale(0.95);
   }
   100% {
     opacity: 1;
@@ -168,33 +185,10 @@
   }
 }
 
-
-/* Responsive */
 @media (max-width: 768px) {
   .toolStrip {
-    --tool-size: 44px;
+    left: var(--spacing-base);
+    bottom: var(--spacing-base);
+    padding: var(--spacing-base);
   }
-
-  .tool {
-    font-size: 16px;
-  }
-
-  .frostedOverlay {
-    max-width: 70px;
-  }
-}
-
-@media (max-width: 480px) {
-  .toolStrip {
-    --tool-size: 40px;
-  }
-
-  .tool {
-    font-size: 14px;
-  }
-
-  .frostedOverlay {
-    max-width: 64px;
-  }
-
 }

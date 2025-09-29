@@ -26,33 +26,14 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
     { id: 'help', icon: 'question-circle', label: 'Help' }
   ]
 
-  const getOverlayPosition = (targetTool: string | null = null) => {
+  const getActiveToolData = (targetTool: string | null = null) => {
     const targetToolId = targetTool || activeTool
     const toolIndex = allTools.findIndex(tool => tool.id === targetToolId)
-    if (toolIndex === -1) return { transform: 'translateX(-50%) translateY(-100%)', opacity: 0 }
-
-    const toolSize = 52 // Tool button size
-    const toolGap = 16 // Gap between tools (var(--spacing-base))
-    const containerPadding = 24 // var(--spacing-lg)
-    const bottomSectionGap = 24 // Additional gap for bottom section (var(--spacing-xl))
-    const bottomSectionBorderPadding = 24 // var(--spacing-lg) for border padding
-
-    let yOffset = containerPadding // Start from container padding
-
-    if (toolIndex < 5) {
-      // Main tools section
-      yOffset += toolIndex * (toolSize + toolGap)
-    } else {
-      // Bottom section tools
-      const mainToolsHeight = 5 * (toolSize + toolGap) - toolGap // Remove last gap
-      const bottomSectionOffset = bottomSectionGap + bottomSectionBorderPadding
-      const bottomToolIndex = toolIndex - 5
-      yOffset += mainToolsHeight + bottomSectionOffset + (bottomToolIndex * (toolSize + toolGap))
-    }
+    if (toolIndex === -1) return { index: -1, section: null }
 
     return {
-      transform: `translateX(-50%) translateY(${yOffset}px)`,
-      opacity: 1
+      index: toolIndex < 5 ? toolIndex : toolIndex - 5,
+      section: toolIndex < 5 ? 'main' : 'bottom'
     }
   }
 
@@ -108,7 +89,10 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
       {/* Frosted Overlay */}
       <div
         className={styles.frostedOverlay}
-        style={getOverlayPosition(hoveredTool)}
+        data-active-tool={hoveredTool || activeTool}
+        data-tool-section={getActiveToolData(hoveredTool).section}
+        data-tool-index={getActiveToolData(hoveredTool).index}
+        style={{ opacity: getActiveToolData(hoveredTool).index === -1 ? 0 : 1 }}
       />
     </div>
   )
