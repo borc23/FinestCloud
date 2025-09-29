@@ -132,7 +132,7 @@
 }
 
 .frostedOverlay[data-tool-section="bottom"] {
-  top: calc(var(--container-padding) + (4 * (var(--tool-size) + var(--tool-gap))) + var(--spacing-xl) + var(--spacing-lg) + (var(--tool-index, 0) * (var(--tool-size) + var(--tool-gap))));
+  top: calc(var(--container-padding) + (4 * (var(--tool-size) + var(--tool-gap))) + var(--spacing-xl) + var(--spacing-base) + (var(--tool-index, 0) * (var(--tool-size) + var(--tool-gap))));
 }
 
 .frostedOverlay[data-tool-index="0"] { --tool-index: 0; }
@@ -181,7 +181,7 @@
   flex-direction: column;
   gap: var(--spacing-base);
   margin-top: var(--spacing-xl);
-  padding-top: var(--spacing-lg);
+  padding-top: var(--spacing-xl);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
