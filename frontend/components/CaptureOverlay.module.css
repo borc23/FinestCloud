@@ -2,83 +2,150 @@
   position: absolute;
   pointer-events: none;
   z-index: 1000;
-  transition: all 0.3s ease;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 8px 32px rgba(0, 122, 255, 0.15));
 }
 
 .captureSquare[data-processing="true"] {
-  opacity: 0.8;
+  transform: scale(1.02);
+  filter: drop-shadow(0 12px 40px rgba(0, 122, 255, 0.3));
 }
 
 .squareBorder {
   width: 100%;
   height: 100%;
-  border: 2px dashed rgba(34, 197, 94, 0.8);
-  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(0, 122, 255, 0.08) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   position: relative;
-  border-radius: 8px;
-  animation: pulse 2s infinite;
+  border-radius: 24px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  animation: liquidPulse 3s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.squareBorder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
 }
 
 .corner {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  border: 3px solid #22c55e;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 3px;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(0, 122, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(16px) saturate(200%);
+  -webkit-backdrop-filter: blur(16px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 16px rgba(0, 122, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cornerFloat 4s ease-in-out infinite;
+}
+
+.corner::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle,
+    rgba(0, 122, 255, 0.8) 0%,
+    rgba(0, 122, 255, 0.3) 100%
+  );
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: cornerPulse 2s ease-in-out infinite;
 }
 
 .corner[data-position="top-left"] {
-  top: -10px;
-  left: -10px;
-  border-right: none;
-  border-bottom: none;
+  top: -16px;
+  left: -16px;
+  animation-delay: 0s;
 }
 
 .corner[data-position="top-right"] {
-  top: -10px;
-  right: -10px;
-  border-left: none;
-  border-bottom: none;
+  top: -16px;
+  right: -16px;
+  animation-delay: 0.5s;
 }
 
 .corner[data-position="bottom-left"] {
-  bottom: -10px;
-  left: -10px;
-  border-right: none;
-  border-top: none;
+  bottom: -16px;
+  left: -16px;
+  animation-delay: 1s;
 }
 
 .corner[data-position="bottom-right"] {
-  bottom: -10px;
-  right: -10px;
-  border-left: none;
-  border-top: none;
+  bottom: -16px;
+  right: -16px;
+  animation-delay: 1.5s;
 }
 
 .processingOverlay {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 16px 24px;
-  border-radius: 8px;
+  transform: translate(-50%, -50%) scale(0.95);
+  background: linear-gradient(135deg,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(28, 28, 30, 0.9) 100%
+  );
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 20px 32px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-weight: 500;
+  gap: 16px;
+  font-weight: 600;
+  font-size: 15px;
   pointer-events: auto;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: processingFloat 2s ease-in-out infinite;
 }
 
 .spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #22c55e;
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top: 2px solid rgba(0, 122, 255, 0.8);
+  border-right: 2px solid rgba(0, 122, 255, 0.6);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: liquidSpin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  filter: drop-shadow(0 2px 8px rgba(0, 122, 255, 0.3));
 }
 
 .actionContainer {
@@ -87,56 +154,140 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 12px;
+  gap: 16px;
   z-index: 1001;
+  padding: 8px;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .detectButton {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: white;
-  border: none;
-  padding: 16px 32px;
-  border-radius: 12px;
+  background: linear-gradient(135deg,
+    #007AFF 0%,
+    #0051D0 100%
+  );
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 16px 28px;
+  border-radius: 16px;
   font-weight: 600;
   font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
-  transition: all 0.2s ease;
+  gap: 12px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 8px 32px rgba(0, 122, 255, 0.3),
+    0 2px 8px rgba(0, 122, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.detectButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.6s;
 }
 
 .detectButton:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow:
+    0 12px 40px rgba(0, 122, 255, 0.4),
+    0 4px 16px rgba(0, 122, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.detectButton:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .detectButton:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(-2px) scale(0.98);
 }
 
 .detectButton:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .cancelButton {
-  background: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
-  border: 2px solid rgba(107, 114, 128, 0.3);
+  background: linear-gradient(135deg,
+    rgba(142, 142, 147, 0.12) 0%,
+    rgba(142, 142, 147, 0.06) 100%
+  );
+  color: rgba(142, 142, 147, 0.9);
+  border: 1px solid rgba(142, 142, 147, 0.3);
   padding: 16px 24px;
-  border-radius: 12px;
+  border-radius: 16px;
   font-weight: 600;
   font-size: 16px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 4px 16px rgba(142, 142, 147, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.cancelButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.6s;
 }
 
 .cancelButton:hover:not(:disabled) {
-  background: rgba(107, 114, 128, 0.2);
-  border-color: rgba(107, 114, 128, 0.5);
+  background: linear-gradient(135deg,
+    rgba(142, 142, 147, 0.18) 0%,
+    rgba(142, 142, 147, 0.1) 100%
+  );
+  border-color: rgba(142, 142, 147, 0.4);
+  color: rgba(142, 142, 147, 1);
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 20px rgba(142, 142, 147, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.cancelButton:hover:not(:disabled)::before {
+  left: 100%;
 }
 
 .cancelButton:disabled {
@@ -145,22 +296,103 @@
 }
 
 .buttonSpinner {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border-top: 2px solid rgba(255, 255, 255, 0.9);
+  border-right: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: liquidSpin 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
 }
 
-@keyframes pulse {
+@keyframes liquidPulse {
   0%, 100% {
-    border-color: rgba(34, 197, 94, 0.8);
-    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(0, 122, 255, 0.08) 100%
+    );
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   }
   50% {
-    border-color: rgba(34, 197, 94, 1);
-    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
+    background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(0, 122, 255, 0.12) 100%
+    );
+    box-shadow:
+      0 12px 40px rgba(0, 122, 255, 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes cornerFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(2px) rotate(-1deg);
+  }
+}
+
+@keyframes cornerPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+@keyframes processingFloat {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(0.95) translateY(0px);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1) translateY(-2px);
+  }
+}
+
+@keyframes liquidSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(90deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1);
+  }
+  75% {
+    transform: rotate(270deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 
@@ -170,5 +402,42 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* iOS-style haptic feedback simulation */
+@media (prefers-reduced-motion: no-preference) {
+  .detectButton:active:not(:disabled),
+  .cancelButton:active:not(:disabled) {
+    animation: hapticTap 0.1s ease-out;
+  }
+}
+
+@keyframes hapticTap {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .actionContainer {
+    bottom: 80px;
+    gap: 12px;
+  }
+
+  .detectButton,
+  .cancelButton {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+
+  .corner {
+    width: 28px;
+    height: 28px;
+  }
+
+  .squareBorder {
+    border-radius: 20px;
   }
 }
