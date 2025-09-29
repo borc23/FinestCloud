@@ -7,35 +7,54 @@ interface ToolStripProps {
   activeTool: string
   onToolSelect: (tool: string) => void
   onStatsToggle: () => void
+  showPanelsTool?: boolean
 }
 
-export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: ToolStripProps) {
+export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const tools = [
+  const allToolsDefinition = [
     { id: 'upload', icon: 'upload', label: 'Upload Image' },
     { id: 'select', icon: 'vector-square', label: 'Select Area' },
     { id: 'panels', icon: 'solar-panel', label: 'Generate Panels' },
     { id: 'edit', icon: 'pen-to-square', label: 'Edit Mode' }
   ]
 
-  const allTools = [
-    ...tools,
+  const tools = allToolsDefinition.filter(tool =>
+    tool.id !== 'panels' || showPanelsTool
+  )
+
+  const bottomTools = [
     { id: 'settings', icon: 'cog', label: 'Settings' },
     { id: 'help', icon: 'question-circle', label: 'Help' }
   ]
 
+  const allTools = [...tools, ...bottomTools]
+
   const getActiveToolData = (targetTool: string | null = null) => {
     const targetToolId = targetTool || activeTool
-    const toolIndex = allTools.findIndex(tool => tool.id === targetToolId)
-    if (toolIndex === -1) return { index: -1, section: null }
 
-    return {
-      index: toolIndex < 4 ? toolIndex : toolIndex - 4,
-      section: toolIndex < 4 ? 'main' : 'bottom'
+    // Check if tool is in main tools section
+    const mainToolIndex = tools.findIndex(tool => tool.id === targetToolId)
+    if (mainToolIndex !== -1) {
+      return {
+        index: mainToolIndex,
+        section: 'main'
+      }
     }
+
+    // Check if tool is in bottom tools section
+    const bottomToolIndex = bottomTools.findIndex(tool => tool.id === targetToolId)
+    if (bottomToolIndex !== -1) {
+      return {
+        index: bottomToolIndex,
+        section: 'bottom'
+      }
+    }
+
+    return { index: -1, section: null }
   }
 
   const handleToolHover = useCallback((toolId: string | null) => {
@@ -140,7 +159,10 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
         data-active-tool={hoveredTool || activeTool}
         data-tool-section={getActiveToolData(hoveredTool).section}
         data-tool-index={getActiveToolData(hoveredTool).index}
-        style={{ opacity: getActiveToolData(hoveredTool).index === -1 ? 0 : 1 }}
+        style={{
+          opacity: getActiveToolData(hoveredTool).index === -1 ? 0 : 1,
+          '--main-tools-count': tools.length
+        } as React.CSSProperties}
       />
     </div>
   )

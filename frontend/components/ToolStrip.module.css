@@ -132,7 +132,7 @@
 }
 
 .frostedOverlay[data-tool-section="bottom"] {
-  top: calc(var(--container-padding) + (4 * (var(--tool-size) + var(--tool-gap))) + var(--spacing-xl) + var(--spacing-base) + (var(--tool-index, 0) * (var(--tool-size) + var(--tool-gap))));
+  top: calc(var(--container-padding) + (var(--main-tools-count, 4) * (var(--tool-size) + var(--tool-gap))) + var(--spacing-xl) + var(--spacing-base) + (var(--tool-index, 0) * (var(--tool-size) + var(--tool-gap))));
 }
 
 .frostedOverlay[data-tool-index="0"] { --tool-index: 0; }
@@ -195,6 +195,7 @@
     transform: translateY(-50%) translateX(0) scale(1);
   }
 }
+
 
 @media (max-width: 768px) {
   .toolStrip {
