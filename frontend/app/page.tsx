@@ -41,6 +41,7 @@ export default function HomePage() {
             activeTool={activeTool}
             onMapReady={setMap}
             onPanelsAvailable={handlePanelsAvailable}
+            onToolChange={setActiveTool}
           />
 
           {showToolStrip && (

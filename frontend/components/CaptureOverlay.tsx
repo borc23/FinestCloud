@@ -57,6 +57,8 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         if (document.activeElement instanceof HTMLButtonElement) {
           document.activeElement.blur()
         }
+        // Reset processing state when closing
+        setIsProcessing(false)
         onToggle()
       }
     }
@@ -69,6 +71,13 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isVisible, isProcessing, onToggle])
+
+  // Reset processing state when overlay becomes invisible
+  useEffect(() => {
+    if (!isVisible) {
+      setIsProcessing(false)
+    }
+  }, [isVisible])
 
   const getBounds = useCallback(async (): Promise<google.maps.LatLngBounds | null> => {
     if (!overlayRef.current || !map) {

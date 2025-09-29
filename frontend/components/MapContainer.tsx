@@ -17,9 +17,10 @@ interface MapContainerProps {
   activeTool: string
   onMapReady?: (map: any) => void
   onPanelsAvailable?: (available: boolean) => void
+  onToolChange?: (tool: string) => void
 }
 
-export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable }: MapContainerProps) {
+export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable, onToolChange }: MapContainerProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [isImageView, setIsImageView] = useState(false)
@@ -188,7 +189,10 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
       <CaptureOverlay
         isVisible={showCaptureOverlay}
         onCapture={handleDetection}
-        onToggle={() => setShowCaptureOverlay(false)}
+        onToggle={() => {
+          setShowCaptureOverlay(false)
+          onToolChange?.('')
+        }}
         map={map}
       />
 
