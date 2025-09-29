@@ -10,6 +10,7 @@ interface ToolStripProps {
 }
 
 export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: ToolStripProps) {
+  const [hoveredTool, setHoveredTool] = useState<string | null>(null)
 
   const tools = [
     { id: 'upload', icon: 'upload', label: 'Upload Image' },
@@ -26,8 +27,9 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
     { id: 'help', icon: 'question-circle', label: 'Help' }
   ]
 
-  const getOverlayPosition = () => {
-    const toolIndex = allTools.findIndex(tool => tool.id === activeTool)
+  const getOverlayPosition = (targetTool: string | null = null) => {
+    const targetToolId = targetTool || activeTool
+    const toolIndex = allTools.findIndex(tool => tool.id === targetToolId)
     if (toolIndex === -1) return { transform: 'translateX(-50%) translateY(-100%)', opacity: 0 }
 
     const toolSize = 52 // Tool button size
@@ -72,6 +74,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
             key={tool.id}
             className={styles.tool}
             onClick={() => handleToolClick(tool.id)}
+            onMouseEnter={() => setHoveredTool(tool.id)}
+            onMouseLeave={() => setHoveredTool(null)}
             aria-label={tool.label}
           >
             <i className={`fas fa-${tool.icon}`}></i>
@@ -84,6 +88,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
         <button
           className={styles.tool}
           onClick={() => handleToolClick('stats')}
+          onMouseEnter={() => setHoveredTool('stats')}
+          onMouseLeave={() => setHoveredTool(null)}
           aria-label="Toggle Stats"
         >
           <i className="fas fa-chart-bar"></i>
@@ -92,6 +98,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
         <button
           className={styles.tool}
           onClick={() => handleToolClick('settings')}
+          onMouseEnter={() => setHoveredTool('settings')}
+          onMouseLeave={() => setHoveredTool(null)}
           aria-label="Settings"
         >
           <i className="fas fa-cog"></i>
@@ -100,6 +108,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
         <button
           className={styles.tool}
           onClick={() => handleToolClick('help')}
+          onMouseEnter={() => setHoveredTool('help')}
+          onMouseLeave={() => setHoveredTool(null)}
           aria-label="Help"
         >
           <i className="fas fa-question-circle"></i>
@@ -109,7 +119,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
       {/* Frosted Overlay */}
       <div
         className={styles.frostedOverlay}
-        style={getOverlayPosition()}
+        style={getOverlayPosition(hoveredTool)}
       />
     </div>
   )
