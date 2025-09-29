@@ -253,64 +253,155 @@
 
 .suggestions {
   position: absolute;
-  top: 100%;
+  top: calc(100% - 2px);
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 0.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.15),
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 0 20px rgba(255, 255, 255, 0.1);
-  margin-top: var(--spacing-sm);
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 8px 25px rgba(0, 0, 0, 0.14),
+    0 3px 10px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  animation: slideDown var(--transition-base) ease-out;
+  animation: suggestionSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   z-index: 10000;
+  transform: translateY(-8px);
+  opacity: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestions::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.4) 20%, 
+    rgba(255, 255, 255, 0.6) 50%, 
+    rgba(255, 255, 255, 0.4) 80%, 
+    transparent 100%
+  );
+}
+
+@keyframes suggestionSlideIn {
+  0% {
+    transform: translateY(-12px) scale(0.95);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(2px) scale(1.01);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 .suggestion {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: var(--spacing-base);
-  padding: var(--spacing-base) var(--spacing-lg);
+  gap: 12px;
+  padding: 14px 18px;
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: all 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
   text-align: left;
+  position: relative;
+  transition: background-color 0.15s ease;
 }
 
+/* Minimal hover - just subtle background change */
 .suggestion:hover {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(20px);
-  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.suggestion:active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .suggestion:not(:last-child) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.suggestion:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50px;
+  right: 18px;
+  height: 0.5px;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.05) 0%, 
+    rgba(255, 255, 255, 0.15) 50%, 
+    rgba(255, 255, 255, 0.05) 100%
+  );
 }
 
 .suggestionIcon {
-  width: 16px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 12px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .suggestionText {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: rgba(255, 255, 255, 0.95);
-  line-height: 1.4;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  letter-spacing: -0.01em;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Focus states for accessibility */
+.suggestion:focus-visible {
+  outline: 2px solid rgba(0, 122, 255, 0.6);
+  outline-offset: -2px;
+  background: rgba(0, 122, 255, 0.08);
+}
+
+/* Enhanced mobile responsiveness */
+@media (max-width: 768px) {
+  .suggestion {
+    padding: 16px 20px;
+    gap: 14px;
+  }
+  
+  .suggestionText {
+    font-size: 16px;
+  }
+  
+  .suggestionIcon {
+    width: 20px;
+    height: 20px;
+    font-size: 15px;
+  }
 }
 
 .quickActions {
@@ -431,5 +522,200 @@
     width: 40px;
     height: 40px;
     font-size: 13px;
+  }
+}
+
+/* Fallback Location Modal */
+.fallbackOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: fadeIn 300ms ease-out;
+}
+
+.fallbackModal {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
+  -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 20px 60px rgba(0, 0, 0, 0.25),
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  padding: var(--spacing-2xl);
+  min-width: 400px;
+  max-width: 500px;
+  animation: slideUp 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Apple's light refraction effect */
+  overflow: hidden;
+  position: relative;
+}
+
+.fallbackModal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent
+  );
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.fallbackTitle {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  margin: 0 0 var(--spacing-base) 0;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.fallbackMessage {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  margin: 0 0 var(--spacing-xl) 0;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.fallbackForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.fallbackInput {
+  width: 100%;
+  padding: var(--spacing-base) var(--spacing-lg);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: rgba(255, 255, 255, 1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: all var(--transition-base);
+}
+
+.fallbackInput:focus {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.fallbackInput::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: var(--font-normal);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.fallbackButtons {
+  display: flex;
+  gap: var(--spacing-base);
+  justify-content: flex-end;
+}
+
+.fallbackCancel,
+.fallbackSubmit {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.fallbackCancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.fallbackCancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 1);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.fallbackSubmit {
+  background: rgba(0, 122, 255, 0.8);
+  color: rgba(255, 255, 255, 1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.fallbackSubmit:hover:not(:disabled) {
+  background: rgba(0, 122, 255, 1);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow:
+    0 8px 24px rgba(0, 122, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.fallbackSubmit:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .fallbackModal {
+    min-width: calc(100vw - var(--spacing-xl));
+    padding: var(--spacing-lg);
   }
 }

@@ -18,7 +18,10 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showLocationFallback, setShowLocationFallback] = useState(false)
+  const [fallbackLocation, setFallbackLocation] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const fallbackInputRef = useRef<HTMLInputElement>(null)
   const autocompleteService = useRef<any>(null)
   const geocoder = useRef<any>(null)
 
@@ -64,6 +67,33 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     })
   }
 
+  const getCurrentLocation = () => {
+    if (!map) return
+
+    if (!navigator.geolocation) {
+      setShowLocationFallback(true)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        const currentLocation = new window.google.maps.LatLng(latitude, longitude)
+        map.setCenter(currentLocation)
+        map.setZoom(20)
+      },
+      (error) => {
+        console.log('Geolocation failed, showing manual location input')
+        setShowLocationFallback(true)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    )
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
@@ -103,6 +133,20 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     setIsFocused(false)
     setSuggestions([])
     setQuery('')
+  }
+
+  const handleFallbackSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (fallbackLocation.trim()) {
+      searchLocation(fallbackLocation.trim())
+      setShowLocationFallback(false)
+      setFallbackLocation('')
+    }
+  }
+
+  const handleFallbackCancel = () => {
+    setShowLocationFallback(false)
+    setFallbackLocation('')
   }
 
   return (
@@ -147,19 +191,6 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
                 autoComplete="off"
               />
 
-              {query && (
-                <button
-                  type="button"
-                  className={styles.clearButton}
-                  onClick={() => {
-                    setQuery('')
-                    setSuggestions([])
-                    inputRef.current?.focus()
-                  }}
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              )}
             </div>
 
             {suggestions.length > 0 && isFocused && (
@@ -187,7 +218,7 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
             <button
               className={styles.quickAction}
               title="Use Current Location"
-              onClick={() => console.log('Get current location')}
+              onClick={getCurrentLocation}
             >
               <i className="fas fa-location-arrow"></i>
             </button>
@@ -201,6 +232,45 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
             </button>
           </div>
         </>
+      )}
+
+      {/* Location Fallback Modal */}
+      {showLocationFallback && (
+        <div className={styles.fallbackOverlay}>
+          <div className={styles.fallbackModal}>
+            <h3 className={styles.fallbackTitle}>Enter Your Location</h3>
+            <p className={styles.fallbackMessage}>
+              We couldn't detect your current location automatically. Please enter your address, city, or location:
+            </p>
+            <form onSubmit={handleFallbackSubmit} className={styles.fallbackForm}>
+              <input
+                ref={fallbackInputRef}
+                type="text"
+                className={styles.fallbackInput}
+                placeholder="Enter your address or city..."
+                value={fallbackLocation}
+                onChange={(e) => setFallbackLocation(e.target.value)}
+                autoFocus
+              />
+              <div className={styles.fallbackButtons}>
+                <button
+                  type="button"
+                  className={styles.fallbackCancel}
+                  onClick={handleFallbackCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.fallbackSubmit}
+                  disabled={!fallbackLocation.trim()}
+                >
+                  Go to Location
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )
