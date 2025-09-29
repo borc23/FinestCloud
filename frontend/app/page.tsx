@@ -3,7 +3,6 @@
 import ToolStrip from '@/components/ToolStrip'
 import MapContainer from '@/components/MapContainer'
 import FloatingSearch from '@/components/FloatingSearch'
-import StatsCards from '@/components/StatsCards'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Navbar from '@/components/Navbar'
 import { useState } from 'react'
@@ -11,19 +10,10 @@ import { useState } from 'react'
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [activeTool, setActiveTool] = useState('select')
-  const [showStats, setShowStats] = useState(false)
   const [showToolStrip, setShowToolStrip] = useState(true)
   const [showSearch, setShowSearch] = useState(true)
   const [map, setMap] = useState<any>(null)
 
-  const [stats] = useState({
-    panelCount: 24,
-    maxPanels: 32,
-    capacity: 9.6,
-    annualEnergy: 12800,
-    annualSavings: 1840,
-    co2Reduction: 4200
-  })
 
   return (
     <div className="app-container">
@@ -31,7 +21,7 @@ export default function HomePage() {
         <Navbar
           onMenuToggle={() => setShowToolStrip(!showToolStrip)}
           onSearch={() => setShowSearch(!showSearch)}
-          onSettings={() => setShowStats(!showStats)}
+          onSettings={() => {}}
         />
 
         <div className="main-content">
@@ -44,18 +34,12 @@ export default function HomePage() {
             <ToolStrip
               activeTool={activeTool}
               onToolSelect={setActiveTool}
-              onStatsToggle={() => setShowStats(!showStats)}
+              onStatsToggle={() => {}}
             />
           )}
 
           {showSearch && <FloatingSearch map={map} />}
 
-          {showStats && (
-            <StatsCards
-              stats={stats}
-              onClose={() => setShowStats(false)}
-            />
-          )}
         </div>
       </div>
 

@@ -22,7 +22,6 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
 
   const allTools = [
     ...tools,
-    { id: 'stats', icon: 'chart-bar', label: 'Stats' },
     { id: 'settings', icon: 'cog', label: 'Settings' },
     { id: 'help', icon: 'question-circle', label: 'Help' }
   ]
@@ -85,16 +84,6 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
 
       {/* Bottom Actions */}
       <div className={styles.bottomSection}>
-        <button
-          className={styles.tool}
-          onClick={() => handleToolClick('stats')}
-          onMouseEnter={() => setHoveredTool('stats')}
-          onMouseLeave={() => setHoveredTool(null)}
-          aria-label="Toggle Stats"
-        >
-          <i className="fas fa-chart-bar"></i>
-        </button>
-
         <button
           className={styles.tool}
           onClick={() => handleToolClick('settings')}
