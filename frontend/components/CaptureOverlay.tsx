@@ -48,6 +48,28 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
     }
   }, [isVisible, map]) // Remove updatePosition from dependencies
 
+  // Add ESC key handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isVisible && !isProcessing) {
+        event.preventDefault()
+        // Blur any focused button to prevent visual feedback
+        if (document.activeElement instanceof HTMLButtonElement) {
+          document.activeElement.blur()
+        }
+        onToggle()
+      }
+    }
+
+    if (isVisible) {
+      document.addEventListener('keydown', handleKeyDown)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isVisible, isProcessing, onToggle])
+
   const getBounds = useCallback(async (): Promise<google.maps.LatLngBounds | null> => {
     if (!overlayRef.current || !map) {
       return null
@@ -155,47 +177,42 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         data-processing={isProcessing}
       >
         <div className={styles.squareBorder}>
-          <div className={styles.corner} data-position="top-left" />
-          <div className={styles.corner} data-position="top-right" />
-          <div className={styles.corner} data-position="bottom-left" />
-          <div className={styles.corner} data-position="bottom-right" />
         </div>
 
         {isProcessing && (
           <div className={styles.processingOverlay}>
             <div className={styles.spinner} />
-            <span>Processing...</span>
+            <span>Processing</span>
           </div>
         )}
-      </div>
 
-      {/* Action Button */}
-      <div className={styles.actionContainer}>
+        {/* Action Button */}
+        <div className={styles.actionContainer}>
         <button
-          className={styles.detectButton}
+          className={styles.primaryButton}
           onClick={handleDetect}
           disabled={isProcessing}
+          aria-label={isProcessing ? "Processing" : "Start Capture"}
         >
           {isProcessing ? (
             <>
               <div className={styles.buttonSpinner} />
-              Processing...
+              Processing
             </>
           ) : (
-            <>
-              <i className="fas fa-search" />
-              Detect Roofs
-            </>
+            'Capture'
           )}
         </button>
 
         <button
-          className={styles.cancelButton}
+          className={styles.secondaryButton}
           onClick={onToggle}
           disabled={isProcessing}
+          aria-label="Cancel"
         >
           Cancel
         </button>
+        </div>
       </div>
     </>
   )
