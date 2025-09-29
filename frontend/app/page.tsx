@@ -14,6 +14,7 @@ export default function HomePage() {
   const [showStats, setShowStats] = useState(false)
   const [showToolStrip, setShowToolStrip] = useState(true)
   const [showSearch, setShowSearch] = useState(true)
+  const [map, setMap] = useState<any>(null)
 
   const [stats] = useState({
     panelCount: 24,
@@ -34,7 +35,10 @@ export default function HomePage() {
         />
 
         <div className="main-content">
-          <MapContainer activeTool={activeTool} />
+          <MapContainer
+            activeTool={activeTool}
+            onMapReady={setMap}
+          />
 
           {showToolStrip && (
             <ToolStrip
@@ -44,7 +48,7 @@ export default function HomePage() {
             />
           )}
 
-          {showSearch && <FloatingSearch />}
+          {showSearch && <FloatingSearch map={map} />}
 
           {showStats && (
             <StatsCards

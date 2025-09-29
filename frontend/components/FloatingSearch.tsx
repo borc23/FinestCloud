@@ -3,49 +3,79 @@
 import { useState, useRef, useEffect } from 'react'
 import styles from './FloatingSearch.module.css'
 
-export default function FloatingSearch() {
+declare global {
+  interface Window {
+    google: any
+  }
+}
+
+interface FloatingSearchProps {
+  map?: any
+}
+
+export default function FloatingSearch({ map }: FloatingSearchProps) {
   const [query, setQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
-  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<any[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // Mock suggestions - replace with actual Google Places API
-  const mockSuggestions = [
-    'San Francisco, CA, USA',
-    'Los Angeles, CA, USA',
-    'New York, NY, USA',
-    'Seattle, WA, USA',
-    'Austin, TX, USA'
-  ]
+  const autocompleteService = useRef<any>(null)
+  const geocoder = useRef<any>(null)
 
   useEffect(() => {
-    if (query.length > 2) {
-      const filtered = mockSuggestions.filter(suggestion =>
-        suggestion.toLowerCase().includes(query.toLowerCase())
+    if (window.google && window.google.maps) {
+      autocompleteService.current = new window.google.maps.places.AutocompleteService()
+      geocoder.current = new window.google.maps.Geocoder()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (query.length > 2 && autocompleteService.current) {
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: query,
+          types: ['address', 'establishment', 'geocode']
+        },
+        (predictions: any[], status: string) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSuggestions(predictions.slice(0, 5))
+          } else {
+            setSuggestions([])
+          }
+        }
       )
-      setSuggestions(filtered.slice(0, 5))
     } else {
       setSuggestions([])
     }
   }, [query])
 
+  const searchLocation = (address: string) => {
+    if (!geocoder.current || !map) return
+
+    geocoder.current.geocode({ address }, (results: any[], status: string) => {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location
+        map.setCenter(location)
+        map.setZoom(20)
+      }
+    })
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      console.log('Searching for:', query)
-      // Integrate with Google Places API
+      searchLocation(query.trim())
       setSuggestions([])
       setIsFocused(false)
       inputRef.current?.blur()
     }
   }
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion)
+  const handleSuggestionClick = (prediction: any) => {
+    const address = prediction.description
+    setQuery(address)
     setSuggestions([])
     setIsFocused(false)
-    console.log('Selected location:', suggestion)
-    // Trigger map navigation
+    searchLocation(address)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -92,19 +122,19 @@ export default function FloatingSearch() {
           )}
         </div>
 
-        {suggestions.length > 0 && (isFocused || suggestions.length > 0) && (
+        {suggestions.length > 0 && isFocused && (
           <div className={styles.suggestions}>
-            {suggestions.map((suggestion, index) => (
+            {suggestions.map((prediction, index) => (
               <button
-                key={index}
+                key={prediction.place_id || index}
                 type="button"
                 className={styles.suggestion}
-                onClick={() => handleSuggestionClick(suggestion)}
+                onClick={() => handleSuggestionClick(prediction)}
               >
                 <div className={styles.suggestionIcon}>
                   <i className="fas fa-map-marker-alt"></i>
                 </div>
-                <span className={styles.suggestionText}>{suggestion}</span>
+                <span className={styles.suggestionText}>{prediction.description}</span>
               </button>
             ))}
           </div>

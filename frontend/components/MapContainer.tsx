@@ -12,9 +12,10 @@ declare global {
 
 interface MapContainerProps {
   activeTool: string
+  onMapReady?: (map: any) => void
 }
 
-export default function MapContainer({ activeTool }: MapContainerProps) {
+export default function MapContainer({ activeTool, onMapReady }: MapContainerProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<any>(null)
   const [isImageView, setIsImageView] = useState(false)
@@ -51,6 +52,7 @@ export default function MapContainer({ activeTool }: MapContainerProps) {
 
         const googleMap = new window.google.maps.Map(mapRef.current, mapOptions)
         setMap(googleMap)
+        onMapReady?.(googleMap)
         console.log('Map initialized with enhanced settings')
       }
     }
