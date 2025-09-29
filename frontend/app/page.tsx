@@ -5,15 +5,19 @@ import MapContainer from '@/components/MapContainer'
 import FloatingSearch from '@/components/FloatingSearch'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Navbar from '@/components/Navbar'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTool, setActiveTool] = useState('select')
+  const [activeTool, setActiveTool] = useState('')
   const [showToolStrip, setShowToolStrip] = useState(true)
   const [showSearch, setShowSearch] = useState(true)
   const [map, setMap] = useState<any>(null)
   const [showPanelsTool, setShowPanelsTool] = useState(false)
+
+  const handlePanelsAvailable = useCallback((available: boolean) => {
+    setShowPanelsTool(available)
+  }, [])
 
   // Example: Show panels tool when image is uploaded and area is selected
   // This should be updated with proper logic based on application state
@@ -36,6 +40,7 @@ export default function HomePage() {
           <MapContainer
             activeTool={activeTool}
             onMapReady={setMap}
+            onPanelsAvailable={handlePanelsAvailable}
           />
 
           {showToolStrip && (

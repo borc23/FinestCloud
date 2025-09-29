@@ -282,6 +282,56 @@
   }
 }
 
+/* Error notification */
+.errorNotification {
+  position: fixed;
+  top: var(--spacing-2xl);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  animation: glass-fade-in 0.3s ease-out;
+}
+
+.errorCard {
+  background: rgba(239, 68, 68, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-base) var(--spacing-lg);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-base);
+  max-width: 400px;
+}
+
+.errorCard i {
+  color: white;
+  font-size: 16px;
+}
+
+.errorCard span {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: white;
+  flex: 1;
+}
+
+.errorClose {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.errorClose:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .promptCard {

@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import styles from './MapContainer.module.css'
+import CaptureOverlay from './CaptureOverlay'
+import { useDetection } from '../hooks/useDetection'
+import { usePolygons } from '../hooks/usePolygons'
 
 declare global {
   interface Window {
@@ -13,13 +16,62 @@ declare global {
 interface MapContainerProps {
   activeTool: string
   onMapReady?: (map: any) => void
+  onPanelsAvailable?: (available: boolean) => void
 }
 
-export default function MapContainer({ activeTool, onMapReady }: MapContainerProps) {
+export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable }: MapContainerProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const [map, setMap] = useState<any>(null)
+  const [map, setMap] = useState<google.maps.Map | null>(null)
   const [isImageView, setIsImageView] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
+
+  // Hooks for detection and polygon management
+  const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
+  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, hasRoofs } = usePolygons(map)
+
+  // Effect to handle panels tool visibility based on roof detection
+  useEffect(() => {
+    onPanelsAvailable?.(hasRoofs)
+  }, [hasRoofs, onPanelsAvailable])
+
+  // Effect to show/hide capture overlay based on active tool
+  useEffect(() => {
+    if (activeTool === 'select') {
+      setShowCaptureOverlay(true)
+    } else {
+      setShowCaptureOverlay(false)
+    }
+  }, [activeTool])
+
+  // Handle roof detection
+  const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
+    if (!map || !bounds) {
+      return
+    }
+
+    try {
+      const result = await detectRoofs(map, bounds)
+
+      if (result?.success) {
+        // Clear existing polygons
+        clearAllPolygons()
+
+        // Render new polygons
+        if (result.roofs) {
+          renderPolygons(result.roofs, true) // isRoof = true
+        }
+        if (result.objects) {
+          renderPolygons(result.objects, false) // isRoof = false
+        }
+
+        // Hide capture overlay after successful detection
+        setShowCaptureOverlay(false)
+      }
+    } catch (err) {
+      console.error('Detection failed:', err)
+    }
+  }, [map, detectRoofs, clearAllPolygons, renderPolygons])
 
   useEffect(() => {
     const initializeMap = () => {
@@ -132,11 +184,23 @@ export default function MapContainer({ activeTool, onMapReady }: MapContainerPro
         </div>
       )}
 
-      {activeTool === 'select' && (
-        <div className={styles.toolHint}>
-          <div className={styles.hintCard}>
-            <i className="fas fa-vector-square"></i>
-            <span>Click and drag to select roof areas</span>
+      {/* Capture Overlay for roof detection */}
+      <CaptureOverlay
+        isVisible={showCaptureOverlay}
+        onCapture={handleDetection}
+        onToggle={() => setShowCaptureOverlay(false)}
+        map={map}
+      />
+
+      {/* Error notification */}
+      {detectionError && (
+        <div className={styles.errorNotification}>
+          <div className={styles.errorCard}>
+            <i className="fas fa-exclamation-triangle"></i>
+            <span>{detectionError}</span>
+            <button onClick={clearError} className={styles.errorClose}>
+              <i className="fas fa-times"></i>
+            </button>
           </div>
         </div>
       )}
