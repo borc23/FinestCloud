@@ -67,6 +67,16 @@
   flex: 1;
 }
 
+.toolWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--tool-gap) / 2);
+  margin: calc(-1 * var(--tool-gap) / 2);
+  border-radius: var(--radius-lg);
+}
+
 .tool {
   --base-size: 44px;
   position: relative;
@@ -190,5 +200,17 @@
     left: var(--spacing-base);
     bottom: var(--spacing-base);
     padding: var(--spacing-base);
+  }
+
+  .toolWrapper {
+    padding: calc(var(--tool-gap) / 1.5);
+    margin: calc(-1 * var(--tool-gap) / 1.5);
+  }
+}
+
+@media (max-width: 480px) {
+  .toolWrapper {
+    padding: var(--tool-gap);
+    margin: calc(-1 * var(--tool-gap));
   }
 }

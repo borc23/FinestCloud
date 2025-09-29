@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import styles from './ToolStrip.module.css'
 
 interface ToolStripProps {
@@ -11,6 +11,8 @@ interface ToolStripProps {
 
 export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const tools = [
     { id: 'upload', icon: 'upload', label: 'Upload Image' },
@@ -37,6 +39,31 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
     }
   }
 
+  const handleToolHover = useCallback((toolId: string | null) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+
+    if (toolId) {
+      setHoveredTool(toolId)
+    } else {
+      // Delay clearing hover state to prevent flicker when moving between tools
+      hoverTimeoutRef.current = setTimeout(() => {
+        setHoveredTool(null)
+      }, 100)
+    }
+  }, [])
+
+  const handleContainerMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredTool(null)
+    }, 150)
+  }, [])
+
   const handleToolClick = (toolId: string) => {
     if (toolId === 'stats') {
       onStatsToggle()
@@ -45,45 +72,67 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle }: T
     }
   }
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
+
   return (
-    <div className={styles.toolStrip}>
+    <div
+      ref={containerRef}
+      className={styles.toolStrip}
+      onMouseLeave={handleContainerMouseLeave}
+    >
       {/* Tools */}
       <div className={styles.toolsSection}>
         {tools.map((tool, index) => (
-          <button
+          <div
             key={tool.id}
-            className={styles.tool}
-            onClick={() => handleToolClick(tool.id)}
-            onMouseEnter={() => setHoveredTool(tool.id)}
-            onMouseLeave={() => setHoveredTool(null)}
-            aria-label={tool.label}
+            className={styles.toolWrapper}
+            onMouseEnter={() => handleToolHover(tool.id)}
           >
-            <i className={`fas fa-${tool.icon}`}></i>
-          </button>
+            <button
+              className={styles.tool}
+              onClick={() => handleToolClick(tool.id)}
+              aria-label={tool.label}
+            >
+              <i className={`fas fa-${tool.icon}`}></i>
+            </button>
+          </div>
         ))}
       </div>
 
       {/* Bottom Actions */}
       <div className={styles.bottomSection}>
-        <button
-          className={styles.tool}
-          onClick={() => handleToolClick('settings')}
-          onMouseEnter={() => setHoveredTool('settings')}
-          onMouseLeave={() => setHoveredTool(null)}
-          aria-label="Settings"
+        <div
+          className={styles.toolWrapper}
+          onMouseEnter={() => handleToolHover('settings')}
         >
-          <i className="fas fa-cog"></i>
-        </button>
+          <button
+            className={styles.tool}
+            onClick={() => handleToolClick('settings')}
+            aria-label="Settings"
+          >
+            <i className="fas fa-cog"></i>
+          </button>
+        </div>
 
-        <button
-          className={styles.tool}
-          onClick={() => handleToolClick('help')}
-          onMouseEnter={() => setHoveredTool('help')}
-          onMouseLeave={() => setHoveredTool(null)}
-          aria-label="Help"
+        <div
+          className={styles.toolWrapper}
+          onMouseEnter={() => handleToolHover('help')}
         >
-          <i className="fas fa-question-circle"></i>
-        </button>
+          <button
+            className={styles.tool}
+            onClick={() => handleToolClick('help')}
+            aria-label="Help"
+          >
+            <i className="fas fa-question-circle"></i>
+          </button>
+        </div>
       </div>
 
       {/* Frosted Overlay */}
