@@ -586,11 +586,11 @@ a {
 @keyframes float-in {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-20px) scale(0.95);
+    transform: translateX(-20px) translateY(-20px) scale(0.95);
   }
   100% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateX(0) translateY(0) scale(1);
   }
 }
 
