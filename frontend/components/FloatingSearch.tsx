@@ -33,11 +33,14 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
       autocompleteService.current.getPlacePredictions(
         {
           input: query,
-          types: ['address', 'establishment', 'geocode']
+          types: ['geocode']
         },
         (predictions: any[], status: string) => {
+          console.log('Places API response:', { status, predictions })
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setSuggestions(predictions.slice(0, 5))
+            const newSuggestions = predictions.slice(0, 5)
+            setSuggestions(newSuggestions)
+            console.log('Setting suggestions:', newSuggestions)
           } else {
             setSuggestions([])
           }
@@ -124,6 +127,7 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
 
         {suggestions.length > 0 && isFocused && (
           <div className={styles.suggestions}>
+            {console.log('Rendering suggestions:', { suggestionsLength: suggestions.length, isFocused, suggestions })}
             {suggestions.map((prediction, index) => (
               <button
                 key={prediction.place_id || index}
