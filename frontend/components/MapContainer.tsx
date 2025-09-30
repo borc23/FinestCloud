@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import styles from './MapContainer.module.css'
 import CaptureOverlay from './CaptureOverlay'
+import EditModeIndicator from './EditModeIndicator'
 import { useDetection } from '../hooks/useDetection'
 import { usePolygons } from '../hooks/usePolygons'
+import { useEditMode } from '../hooks/useEditMode'
+import { usePolygonManager } from '../hooks/usePolygonManager'
 
 declare global {
   interface Window {
@@ -31,6 +34,18 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
   const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
   const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, hasRoofs } = usePolygons(map)
 
+  // Edit mode hook
+  const { editState, toggleEditMode, selectPolygon, clearSelection, deleteSelected } = useEditMode(map)
+
+  // Polygon manager hook
+  const { updateAllPolygons } = usePolygonManager({
+    map,
+    isEditMode: editState.isEditMode,
+    selectedPolygons: editState.selectedPolygons,
+    isCtrlPressed: editState.isCtrlPressed,
+    onSelectPolygon: selectPolygon
+  })
+
   // Effect to handle panels tool visibility based on roof detection
   useEffect(() => {
     onPanelsAvailable?.(hasRoofs)
@@ -44,6 +59,29 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
       setShowCaptureOverlay(false)
     }
   }, [activeTool])
+
+  // Effect to toggle edit mode based on active tool
+  useEffect(() => {
+    if (activeTool === 'edit') {
+      if (!editState.isEditMode) {
+        toggleEditMode()
+      }
+    } else {
+      if (editState.isEditMode) {
+        toggleEditMode()
+      }
+    }
+  }, [activeTool])
+
+  // Update polygons when edit mode or selection changes
+  useEffect(() => {
+    if (roofPolygons.length > 0) {
+      updateAllPolygons(roofPolygons, true)
+    }
+    if (objectPolygons.length > 0) {
+      updateAllPolygons(objectPolygons, false)
+    }
+  }, [editState.isEditMode, editState.selectedPolygons, roofPolygons, objectPolygons, updateAllPolygons])
 
   // Handle roof detection
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
@@ -194,6 +232,12 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
           onToolChange?.('')
         }}
         map={map}
+      />
+
+      {/* Edit Mode Indicator */}
+      <EditModeIndicator
+        isActive={editState.isEditMode}
+        selectedCount={editState.selectedPolygons.size}
       />
 
       {/* Error notification */}
