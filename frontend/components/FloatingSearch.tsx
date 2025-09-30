@@ -273,6 +273,14 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
             >
               <i className="fas fa-history"></i>
             </button>
+
+            <button
+              className={styles.quickAction}
+              title="Collapse search"
+              onClick={handleCollapseClick}
+            >
+              <i className="fas fa-times"></i>
+            </button>
           </div>
         </>
       )}
