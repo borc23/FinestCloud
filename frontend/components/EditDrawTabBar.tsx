@@ -20,18 +20,18 @@ export default function EditDrawTabBar({
       {/* Drawing Type Toggle - only shown when Draw tab is active */}
       {activeTab === 'draw' && (
         <div className={styles.drawingTypeToggle}>
-          <button
-            className={`${styles.typeButton} ${styles.roofButton} ${drawingType === 'roof' ? styles.typeActive : ''}`}
-            onClick={() => onDrawingTypeChange('roof')}
+          <div
+            className={`${styles.toggleSwitch} ${drawingType === 'roof' ? styles.roofActive : styles.objectActive}`}
+            onClick={() => onDrawingTypeChange(drawingType === 'roof' ? 'object' : 'roof')}
           >
-            Roof
-          </button>
-          <button
-            className={`${styles.typeButton} ${styles.objectButton} ${drawingType === 'object' ? styles.typeActive : ''}`}
-            onClick={() => onDrawingTypeChange('object')}
-          >
-            Object
-          </button>
+            <div className={`${styles.typeButton} ${drawingType === 'roof' ? styles.roofActive : styles.objectActive}`}>
+              {drawingType === 'roof' ? 'Roof' : 'Object'}
+            </div>
+            <div className={styles.toggleLabels}>
+              <span className={`${styles.toggleText} ${styles.roofLabel} ${drawingType === 'roof' ? styles.hidden : ''}`}>Roof</span>
+              <span className={`${styles.toggleText} ${styles.objectLabel} ${drawingType === 'object' ? styles.hidden : ''}`}>Object</span>
+            </div>
+          </div>
         </div>
       )}
 

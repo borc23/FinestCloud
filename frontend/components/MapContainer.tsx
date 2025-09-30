@@ -93,7 +93,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (isDrawing) {
         stopDrawing()
       }
-      onToolChange?.('edit')
+      // Don't change the toolbar active tool - keep it as 'edit'
     } else if (tab === 'draw') {
       // Switch to draw mode
       if (!editState.isEditMode) {
@@ -103,9 +103,9 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (!isDrawing) {
         startDrawing(drawingTypeSelection)
       }
-      onToolChange?.('draw')
+      // Don't change the toolbar active tool - keep it as 'edit'
     }
-  }, [editState.isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing, onToolChange])
+  }, [editState.isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
 
   const handleDrawingTypeChange = useCallback((type: 'roof' | 'object') => {
     setDrawingTypeSelection(type)
@@ -126,7 +126,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (isDrawing) {
         stopDrawing()
       }
-    } else if (activeTool === '') {
+    } else if (activeTool !== 'edit') {
+      // Exit edit mode when switching to any other tool (capture, etc.)
       if (editState.isEditMode) {
         toggleEditMode()
       }

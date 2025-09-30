@@ -88,16 +88,9 @@
 
 /* Drawing Type Toggle */
 .drawingTypeToggle {
+  position: relative;
   display: flex;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 16px;
-  padding: 4px;
-  gap: 4px;
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.15),
-    0 6px 20px rgba(0, 0, 0, 0.3);
+  align-items: center;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -112,43 +105,99 @@
   }
 }
 
-.typeButton {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
+.toggleSwitch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 240px;
+  height: 44px;
+  padding: 4px;
+  border-radius: 22px;
+  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(26, 26, 26, 1));
+  box-shadow:
+    1px 1px 0.25px -0.25px inset rgba(38, 38, 38, 1),
+    2px 2px 0.25px -2px inset rgba(77, 77, 77, 1),
+    -1px -1px 0.25px -0.25px inset rgba(38, 38, 38, 1),
+    -2px -2px 0.25px -2px inset rgba(77, 77, 77, 1),
+    0 0 1px 1px inset rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  color: white;
-  background: transparent;
-  min-width: 90px;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: -0.3px;
 }
 
-.typeButton:active {
-  transform: scale(0.96);
+.typeButton {
+  position: absolute;
+  width: 116px;
+  height: 36px;
+  top: 4px;
+  left: 4px;
+  border: none;
+  border-radius: 20px;
+  background: rgba(31, 31, 31, 1);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 9px 4px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  color: rgba(191, 191, 191, 1);
+  z-index: 2;
 }
 
-.roofButton:hover:not(.typeActive) {
-  background: rgba(52, 199, 89, 0.15);
+.typeButton.roofActive {
+  transform: translateX(0);
+  background: rgba(48, 209, 88, 0.2);
 }
 
-.objectButton:hover:not(.typeActive) {
-  background: rgba(255, 69, 58, 0.15);
+.typeButton.objectActive {
+  transform: translateX(116px);
+  background: rgba(255, 69, 58, 0.2);
 }
 
-.roofButton.typeActive {
-  background: #34c759;
-  box-shadow:
-    0 0 0 0.5px rgba(52, 199, 89, 0.3),
-    0 2px 12px rgba(52, 199, 89, 0.5);
+.toggleSwitch:active .typeButton {
+  transform: translateX(0) scale(0.98);
 }
 
-.objectButton.typeActive {
-  background: #ff453a;
-  box-shadow:
-    0 0 0 0.5px rgba(255, 69, 58, 0.3),
-    0 2px 12px rgba(255, 69, 58, 0.5);
+.toggleSwitch:active .typeButton.objectActive {
+  transform: translateX(116px) scale(0.98);
+}
+
+.toggleLabels {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.toggleText {
+  flex: 1;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  transition: opacity 0.2s ease;
+  padding: 9px 4px;
+}
+
+.toggleText.roofLabel {
+  color: rgba(48, 209, 88, 1);
+}
+
+.toggleText.objectLabel {
+  color: rgba(255, 69, 58, 1);
+}
+
+.toggleText.hidden {
+  opacity: 0;
 }

@@ -207,15 +207,6 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
         <>
           <form onSubmit={handleSubmit} className={styles.searchForm}>
             <div className={`${styles.searchWrapper} ${styles.expanded} ${isFocused ? styles.focused : ''}`}>
-              <button
-                type="button"
-                className={styles.collapseButton}
-                onClick={handleCollapseClick}
-                title="Collapse search"
-              >
-                <i className="fas fa-times"></i>
-              </button>
-
               <div className={styles.searchIcon}>
                 <i className="fas fa-search"></i>
               </div>
@@ -224,7 +215,7 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
                 ref={inputRef}
                 type="text"
                 className={styles.searchInput}
-                placeholder="Search location or address..."
+                placeholder="Search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => setIsFocused(true)}
@@ -233,6 +224,16 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
                 autoComplete="off"
               />
 
+              {query && (
+                <button
+                  type="button"
+                  className={styles.clearButton}
+                  onClick={() => setQuery('')}
+                  title="Clear text"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              )}
             </div>
 
             {suggestions.length > 0 && isFocused && (
