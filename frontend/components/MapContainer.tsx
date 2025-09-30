@@ -32,7 +32,7 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
 
   // Hooks for detection and polygon management
   const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
-  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, hasRoofs } = usePolygons(map)
+  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, hasRoofs } = usePolygons(map)
 
   // Edit mode hook
   const { editState, toggleEditMode, selectPolygon, clearSelection, deleteSelected } = useEditMode(map)
@@ -43,7 +43,8 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
     isEditMode: editState.isEditMode,
     selectedPolygons: editState.selectedPolygons,
     isCtrlPressed: editState.isCtrlPressed,
-    onSelectPolygon: selectPolygon
+    onSelectPolygon: selectPolygon,
+    removeClickListener
   })
 
   // Effect to handle panels tool visibility based on roof detection

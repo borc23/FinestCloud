@@ -16,6 +16,8 @@ interface UsePolygonsReturn {
   renderPolygons: (polygonData: RoofModel[], isRoof: boolean) => void
   clearAllPolygons: () => void
   togglePolygonVisibility: (visible: boolean) => void
+  removePolygonListeners: (polygon: google.maps.Polygon) => void
+  removeClickListener: (polygon: google.maps.Polygon) => void
   hasRoofs: boolean
 }
 
@@ -59,7 +61,7 @@ const POLYGON_STYLES = {
 export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   const [roofPolygons, setRoofPolygons] = useState<google.maps.Polygon[]>([])
   const [objectPolygons, setObjectPolygons] = useState<google.maps.Polygon[]>([])
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const polygonListenersRef = useRef<Map<google.maps.Polygon, google.maps.MapsEventListener[]>>(new Map())
 
   const convertCoordinatesToLatLng = useCallback((coords: CoordinateModel[]): google.maps.LatLng[] => {
     return coords
@@ -75,22 +77,27 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     const hoverStyle = isRoof ? POLYGON_STYLES.roof.hover : POLYGON_STYLES.object.hover
     const defaultStyle = isRoof ? POLYGON_STYLES.roof.default : POLYGON_STYLES.object.default
 
-    polygon.addListener('mouseover', () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current)
+    const listeners: google.maps.MapsEventListener[] = []
+
+    // Hover effects - simple and efficient
+    const mouseoverListener = polygon.addListener('mouseover', () => {
+      // Don't apply hover effect if polygon is selected (draggable means selected)
+      if (!polygon.getDraggable?.()) {
+        polygon.setOptions(hoverStyle)
       }
-      polygon.setOptions(hoverStyle)
     })
 
-    polygon.addListener('mouseout', () => {
-      hoverTimeoutRef.current = setTimeout(() => {
+    const mouseoutListener = polygon.addListener('mouseout', () => {
+      // Don't revert hover effect if polygon is selected
+      if (!polygon.getDraggable?.()) {
         polygon.setOptions(defaultStyle)
-      }, 100)
+      }
     })
 
-    polygon.addListener('click', (event: google.maps.MapMouseEvent) => {
+    // Click to zoom - this gets removed in edit mode
+    const clickListener = polygon.addListener('click', (event: google.maps.MapMouseEvent) => {
       if (event.latLng && currentMap) {
-        // Fit bounds to clicked polygon
+        // Fit bounds to clicked polygon (only when NOT in edit mode)
         const bounds = new google.maps.LatLngBounds()
         const path = polygon.getPath()
 
@@ -102,6 +109,13 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
         }
       }
     })
+
+    listeners.push(mouseoverListener, mouseoutListener, clickListener)
+
+    // Store listeners so they can be removed later
+    // Store click listener separately so it can be removed independently
+    polygonListenersRef.current.set(polygon, listeners)
+    ;(polygon as any).__clickListener = clickListener
   }, [])
 
   const renderPolygons = useCallback((polygonData: RoofModel[], isRoof: boolean) => {
@@ -137,6 +151,12 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   const clearPolygonGroup = useCallback((polygons: google.maps.Polygon[]) => {
     polygons.forEach(polygon => {
       if (polygon) {
+        // Remove listeners first
+        const listeners = polygonListenersRef.current.get(polygon)
+        if (listeners) {
+          listeners.forEach(listener => google.maps.event.removeListener(listener))
+          polygonListenersRef.current.delete(polygon)
+        }
         polygon.setMap(null)
       }
     })
@@ -175,9 +195,12 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current)
-      }
+      // Clear all listeners
+      polygonListenersRef.current.forEach((listeners) => {
+        listeners.forEach(listener => google.maps.event.removeListener(listener))
+      })
+      polygonListenersRef.current.clear()
+
       // Clear polygons directly to avoid dependency issues
       setRoofPolygons(prevRoof => {
         prevRoof.forEach(polygon => polygon.setMap(null))
@@ -190,6 +213,24 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     }
   }, [])
 
+  const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
+    const listeners = polygonListenersRef.current.get(polygon)
+    if (listeners) {
+      listeners.forEach(listener => google.maps.event.removeListener(listener))
+      polygonListenersRef.current.delete(polygon)
+      delete (polygon as any).__clickListener
+    }
+  }, [])
+
+  const removeClickListener = useCallback((polygon: google.maps.Polygon) => {
+    // Only remove the click listener (for edit mode), keep hover effects
+    const clickListener = (polygon as any).__clickListener
+    if (clickListener) {
+      google.maps.event.removeListener(clickListener)
+      delete (polygon as any).__clickListener
+    }
+  }, [])
+
   const hasRoofs = roofPolygons.length > 0
 
   return {
@@ -198,6 +239,8 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     renderPolygons,
     clearAllPolygons,
     togglePolygonVisibility,
+    removePolygonListeners,
+    removeClickListener,
     hasRoofs
   }
 }

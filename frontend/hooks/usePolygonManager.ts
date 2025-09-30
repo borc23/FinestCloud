@@ -7,6 +7,7 @@ interface PolygonManagerProps {
   selectedPolygons: Set<google.maps.Polygon>
   isCtrlPressed: boolean
   onSelectPolygon: (polygon: google.maps.Polygon, ctrlKey: boolean) => void
+  removeClickListener: (polygon: google.maps.Polygon) => void
 }
 
 export function usePolygonManager({
@@ -14,7 +15,8 @@ export function usePolygonManager({
   isEditMode,
   selectedPolygons,
   isCtrlPressed,
-  onSelectPolygon
+  onSelectPolygon,
+  removeClickListener: removePolygonClickListener
 }: PolygonManagerProps) {
   const polygonListenersRef = useRef<Map<google.maps.Polygon, google.maps.MapsEventListener[]>>(new Map())
 
@@ -48,10 +50,14 @@ export function usePolygonManager({
 
     const listeners: google.maps.MapsEventListener[] = []
 
-    // Click listener
+    // Click listener - prevent event propagation to stop map from moving
     listeners.push(
       polygon.addListener('click', (e: google.maps.MapMouseEvent) => {
-        e.stop?.()
+        if (e.stop) e.stop()
+        if (e.domEvent) {
+          e.domEvent.stopPropagation?.()
+          e.domEvent.preventDefault?.()
+        }
         onSelectPolygon(polygon, isCtrlPressed)
       })
     )
@@ -73,7 +79,11 @@ export function usePolygonManager({
     // Double-click for vertex addition
     listeners.push(
       polygon.addListener('dblclick', (e: any) => {
-        e.stop?.()
+        if (e.stop) e.stop()
+        if (e.domEvent) {
+          e.domEvent.stopPropagation?.()
+          e.domEvent.preventDefault?.()
+        }
         if (selectedPolygons.has(polygon) && e.vertex !== undefined) {
           const path = polygon.getPath()
           path.insertAt(e.vertex + 1, e.latLng)
@@ -108,6 +118,7 @@ export function usePolygonManager({
   }, [isEditMode, isCtrlPressed, onSelectPolygon, selectedPolygons])
 
   const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
+    // Remove listeners added by this manager
     const listeners = polygonListenersRef.current.get(polygon)
     if (listeners) {
       listeners.forEach(listener => {
@@ -122,10 +133,13 @@ export function usePolygonManager({
       removePolygonListeners(polygon)
       updatePolygonState(polygon, isRoof)
       if (isEditMode) {
+        // Remove the click listener from usePolygons (keeps hover effects)
+        removePolygonClickListener(polygon)
+        // Add edit mode listeners
         addPolygonListeners(polygon, isRoof)
       }
     })
-  }, [isEditMode, addPolygonListeners, removePolygonListeners, updatePolygonState])
+  }, [isEditMode, addPolygonListeners, removePolygonListeners, updatePolygonState, removePolygonClickListener])
 
   // Cleanup on unmount
   useEffect(() => {
