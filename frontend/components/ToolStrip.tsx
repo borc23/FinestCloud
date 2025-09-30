@@ -16,6 +16,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const containerRef = useRef<HTMLDivElement>(null)
 
   const allToolsDefinition = [
+    { id: 'tab', icon: 'list', label: 'Tab', isFixed: true },
     { id: 'upload', icon: 'upload', label: 'Upload Image' },
     { id: 'select', icon: 'vector-square', label: 'Select Area' },
     { id: 'panels', icon: 'solar-panel', label: 'Generate Panels' },
@@ -27,8 +28,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   )
 
   const bottomTools = [
-    { id: 'settings', icon: 'cog', label: 'Settings' },
-    { id: 'help', icon: 'question-circle', label: 'Help' }
+    { id: 'search', icon: 'search', label: 'Search', isFixed: true }
   ]
 
   const allTools = [...tools, ...bottomTools]
@@ -36,21 +36,18 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const getActiveToolData = (targetTool: string | null = null) => {
     const targetToolId = targetTool || activeTool
 
-    // Check if tool is in main tools section
-    const mainToolIndex = tools.findIndex(tool => tool.id === targetToolId)
-    if (mainToolIndex !== -1) {
-      return {
-        index: mainToolIndex,
-        section: 'main'
-      }
+    // Skip fixed tools (first and last)
+    if (targetToolId === 'tab' || targetToolId === 'search') {
+      return { index: -1, section: null }
     }
 
-    // Check if tool is in bottom tools section
-    const bottomToolIndex = bottomTools.findIndex(tool => tool.id === targetToolId)
-    if (bottomToolIndex !== -1) {
+    // Check if tool is in main tools section (excluding first tab icon)
+    const mainToolIndex = tools.findIndex(tool => tool.id === targetToolId && !tool.isFixed)
+    if (mainToolIndex !== -1) {
+      // Subtract 1 to account for the first fixed icon
       return {
-        index: bottomToolIndex,
-        section: 'bottom'
+        index: mainToolIndex - 1,
+        section: 'main'
       }
     }
 
@@ -126,31 +123,21 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
 
       {/* Bottom Actions */}
       <div className={styles.bottomSection}>
-        <div
-          className={styles.toolWrapper}
-          onMouseEnter={() => handleToolHover('settings')}
-        >
-          <button
-            className={styles.tool}
-            onClick={() => handleToolClick('settings')}
-            aria-label="Settings"
+        {bottomTools.map((tool) => (
+          <div
+            key={tool.id}
+            className={styles.toolWrapper}
+            onMouseEnter={() => handleToolHover(tool.id)}
           >
-            <i className="fas fa-cog"></i>
-          </button>
-        </div>
-
-        <div
-          className={styles.toolWrapper}
-          onMouseEnter={() => handleToolHover('help')}
-        >
-          <button
-            className={styles.tool}
-            onClick={() => handleToolClick('help')}
-            aria-label="Help"
-          >
-            <i className="fas fa-question-circle"></i>
-          </button>
-        </div>
+            <button
+              className={styles.tool}
+              onClick={() => handleToolClick(tool.id)}
+              aria-label={tool.label}
+            >
+              <i className={`fas fa-${tool.icon}`}></i>
+            </button>
+          </div>
+        ))}
       </div>
 
       {/* Frosted Overlay */}
