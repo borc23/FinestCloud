@@ -1,102 +1,28 @@
 .searchContainer {
   position: fixed;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
+  top: calc(35px + 44px + 30px);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-base);
+  width: calc(100% - 104px - 8px);
+  max-width: calc(556px - 104px - 8px);
 }
 
-.searchCircle {
-  width: 56px;
-  height: 56px;
-  border: none;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(7px) saturate(200%) brightness(1.1);
-  -webkit-backdrop-filter: blur(7px) saturate(200%) brightness(1.1);
-  border: 0.5px solid rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  /* Apple's shadow system - external and internal */
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 8px 32px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 0 20px rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 18px;
-  transition: all 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
-  transform-origin: center;
-  animation: fadeInScale 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  /* Isolation for better layering */
-  isolation: isolate;
-}
-
-/* Apple's lensing effect - creates light concentration */
-.searchCircle::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  right: -1px;
-  bottom: -1px;
-  border-radius: 50%;
-  /* Light refraction gradient */
-  background: conic-gradient(
-    from 45deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.15) 25%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.1) 75%,
-    transparent 100%
-  );
-  opacity: 0;
-  transition: opacity 300ms ease;
-  z-index: -1;
-}
-
-/* Dynamic material thickness on hover */
-.searchCircle:hover {
-  /* Thicker glass material properties */
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(4px) saturate(200%) brightness(1.15);
-  -webkit-backdrop-filter: blur(4px) saturate(200%) brightness(1.15);
-  transform: translateY(-1px) scale(1.02);
-  /* Deeper shadows for thicker material */
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.2),
-    0 6px 24px rgba(0, 0, 0, 0.12),
-    0 12px 48px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 0 30px rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 1);
-}
-
-.searchCircle:hover::before {
-  opacity: 1;
-}
-
-.searchCircle:active {
-  transform: translateY(0) scale(0.98);
-  transition: all 150ms ease-out;
-}
 
 .searchForm {
   position: relative;
+  width: 100%;
 }
 
 .searchWrapper {
   position: relative;
   display: flex;
   align-items: center;
-  width: 286px;
-  height: 48px;
+  width: 100%;
+  height: 44px;
   border-radius: 1000px;
   background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(26, 26, 26, 1));
   box-shadow:
@@ -104,7 +30,9 @@
     2px 2px 0.25px -2px inset rgba(77, 77, 77, 1),
     -1px -1px 0.25px -0.25px inset rgba(38, 38, 38, 1),
     -2px -2px 0.25px -2px inset rgba(77, 77, 77, 1),
-    0 0 1px 1px inset rgba(0, 0, 0, 0.1);
+    0 0 1px 1px inset rgba(0, 0, 0, 0.1),
+    -0.5px -0.5px 0px 0px rgba(255, 255, 255, 0.2),
+    0.5px 0.5px 0px 0px rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   transition: all 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -153,34 +81,10 @@
 }
 
 .searchWrapper.expanded {
-  width: 286px;
+  width: 100%;
   background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(26, 26, 26, 1));
-  animation: expandFromCircle 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.collapseButton {
-  position: absolute;
-  right: var(--spacing-base);
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 12px;
-  transition: all 200ms ease;
-  z-index: 2;
-}
-
-.collapseButton:hover {
-  background: rgba(255, 255, 255, 0.25);
-  color: rgba(255, 255, 255, 1);
-  transform: scale(1.1);
-}
 
 .searchWrapper.compact {
   width: 280px;
@@ -459,32 +363,6 @@
   }
 }
 
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes expandFromCircle {
-  from {
-    width: 56px;
-    border-radius: 50%;
-    transform: scale(1);
-  }
-  50% {
-    border-radius: 28px;
-  }
-  to {
-    width: 286px;
-    border-radius: 1000px;
-    transform: scale(1);
-  }
-}
 
 /* Responsive */
 @media (max-width: 768px) {

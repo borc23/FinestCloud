@@ -16,7 +16,6 @@ interface FloatingSearchProps {
 export default function FloatingSearch({ map }: FloatingSearchProps) {
   const [query, setQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showLocationFallback, setShowLocationFallback] = useState(false)
   const [fallbackLocation, setFallbackLocation] = useState('')
@@ -26,6 +25,11 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const fallbackInputRef = useRef<HTMLInputElement>(null)
   const autocompleteService = useRef<any>(null)
   const geocoder = useRef<any>(null)
+
+  // Auto-focus when component mounts
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     if (window.google && window.google.maps) {
@@ -119,23 +123,8 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     if (e.key === 'Escape') {
       setSuggestions([])
       setIsFocused(false)
-      setIsExpanded(false)
       inputRef.current?.blur()
     }
-  }
-
-  const handleExpandClick = () => {
-    setIsExpanded(true)
-    setTimeout(() => {
-      inputRef.current?.focus()
-    }, 150)
-  }
-
-  const handleCollapseClick = () => {
-    setIsExpanded(false)
-    setIsFocused(false)
-    setSuggestions([])
-    setQuery('')
   }
 
   const handleFallbackSubmit = (e: React.FormEvent) => {
@@ -193,97 +182,75 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
 
   return (
     <div className={styles.searchContainer}>
-      {!isExpanded ? (
-        // Collapsed circle state
-        <button
-          className={styles.searchCircle}
-          onClick={handleExpandClick}
-          title="Search locations"
-        >
-          <i className="fas fa-search"></i>
-        </button>
-      ) : (
-        // Expanded search state
-        <>
-          <form onSubmit={handleSubmit} className={styles.searchForm}>
-            <div className={`${styles.searchWrapper} ${styles.expanded} ${isFocused ? styles.focused : ''}`}>
-              <div className={styles.searchIcon}>
-                <i className="fas fa-search"></i>
-              </div>
+      <form onSubmit={handleSubmit} className={styles.searchForm}>
+        <div className={`${styles.searchWrapper} ${styles.expanded} ${isFocused ? styles.focused : ''}`}>
+          <div className={styles.searchIcon}>
+            <i className="fas fa-search"></i>
+          </div>
 
-              <input
-                ref={inputRef}
-                type="text"
-                className={styles.searchInput}
-                placeholder="Search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                onKeyDown={handleKeyDown}
-                autoComplete="off"
-              />
+          <input
+            ref={inputRef}
+            type="text"
+            className={styles.searchInput}
+            placeholder="Search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+          />
 
-              {query && (
-                <button
-                  type="button"
-                  className={styles.clearButton}
-                  onClick={() => setQuery('')}
-                  title="Clear text"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              )}
-            </div>
-
-            {suggestions.length > 0 && isFocused && (
-              <div className={styles.suggestions}>
-                {suggestions.map((prediction, index) => (
-                  <button
-                    key={prediction.place_id || index}
-                    type="button"
-                    className={styles.suggestion}
-                    onClick={() => handleSuggestionClick(prediction)}
-                  >
-                    <div className={styles.suggestionIcon}>
-                      <i className="fas fa-map-marker-alt"></i>
-                    </div>
-                    <span className={styles.suggestionText}>{prediction.description}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </form>
-
-          {/* Quick Actions */}
-          <div className={styles.quickActions}>
+          {query && (
             <button
-              className={styles.quickAction}
-              title="Use Current Location"
-              onClick={getCurrentLocation}
-            >
-              <i className="fas fa-location-arrow"></i>
-            </button>
-
-            <button
-              className={styles.quickAction}
-              title={searchHistory.length > 1 && historyIndex < searchHistory.length ? `Go to: ${searchHistory[historyIndex]}` : searchHistory.length === 1 ? "Only one location in history" : "No search history"}
-              onClick={handleHistoryNavigation}
-              disabled={searchHistory.length <= 1}
-            >
-              <i className="fas fa-history"></i>
-            </button>
-
-            <button
-              className={styles.quickAction}
-              title="Collapse search"
-              onClick={handleCollapseClick}
+              type="button"
+              className={styles.clearButton}
+              onClick={() => setQuery('')}
+              title="Clear text"
             >
               <i className="fas fa-times"></i>
             </button>
+          )}
+        </div>
+
+        {suggestions.length > 0 && isFocused && (
+          <div className={styles.suggestions}>
+            {suggestions.map((prediction, index) => (
+              <button
+                key={prediction.place_id || index}
+                type="button"
+                className={styles.suggestion}
+                onClick={() => handleSuggestionClick(prediction)}
+              >
+                <div className={styles.suggestionIcon}>
+                  <i className="fas fa-map-marker-alt"></i>
+                </div>
+                <span className={styles.suggestionText}>{prediction.description}</span>
+              </button>
+            ))}
           </div>
-        </>
-      )}
+        )}
+      </form>
+
+      {/* Quick Actions - Hidden for now */}
+      {/* <div className={styles.quickActions}>
+        <button
+          className={styles.quickAction}
+          title="Use Current Location"
+          onClick={getCurrentLocation}
+        >
+          <i className="fas fa-location-arrow"></i>
+        </button>
+
+        <button
+          className={styles.quickAction}
+          title={searchHistory.length > 1 && historyIndex < searchHistory.length ? `Go to: ${searchHistory[historyIndex]}` : searchHistory.length === 1 ? "Only one location in history" : "No search history"}
+          onClick={handleHistoryNavigation}
+          disabled={searchHistory.length <= 1}
+        >
+          <i className="fas fa-history"></i>
+        </button>
+      </div> */}
 
       {/* Location Fallback Modal */}
       {showLocationFallback && (

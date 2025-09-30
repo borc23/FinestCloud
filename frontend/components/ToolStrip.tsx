@@ -12,6 +12,7 @@ interface ToolStripProps {
 
 export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -80,7 +81,9 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   }, [])
 
   const handleToolClick = (toolId: string) => {
-    if (toolId === 'stats') {
+    if (toolId === 'tab') {
+      setIsExpanded(!isExpanded)
+    } else if (toolId === 'stats') {
       onStatsToggle()
     } else {
       onToolSelect(toolId)
@@ -99,7 +102,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   return (
     <div
       ref={containerRef}
-      className={styles.toolStrip}
+      className={`${styles.toolStrip} ${isExpanded ? styles.expanded : ''}`}
       onMouseLeave={handleContainerMouseLeave}
     >
       {/* Tools */}
@@ -116,6 +119,9 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
               aria-label={tool.label}
             >
               <i className={`fas fa-${tool.icon}`}></i>
+              {isExpanded && !tool.isFixed && (
+                <span className={styles.toolLabel}>{tool.label}</span>
+              )}
             </button>
           </div>
         ))}
@@ -135,6 +141,9 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
               aria-label={tool.label}
             >
               <i className={`fas fa-${tool.icon}`}></i>
+              {isExpanded && !tool.isFixed && (
+                <span className={styles.toolLabel}>{tool.label}</span>
+              )}
             </button>
           </div>
         ))}
