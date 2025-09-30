@@ -25,15 +25,19 @@
 /* Main Tab Bar */
 .tabBar {
   display: flex;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 20px;
-  padding: 8px;
-  gap: 4px;
+  height: 62px;
+  padding: 4px;
+  gap: 0;
+  border-radius: 1000px;
+  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(26, 26, 26, 1));
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.15),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+    1px 1px 0.25px -0.25px inset rgba(38, 38, 38, 1),
+    2px 2px 0.25px -2px inset rgba(77, 77, 77, 1),
+    -1px -1px 0.25px -0.25px inset rgba(38, 38, 38, 1),
+    -2px -2px 0.25px -2px inset rgba(77, 77, 77, 1),
+    0 0 1px 1px inset rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .tab {
@@ -41,21 +45,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 12px 24px;
+  gap: 2px;
+  padding: 0;
   border: none;
-  border-radius: 14px;
+  border-radius: 27px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  min-width: 80px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
+  width: 74.98px;
+  height: 54px;
+  flex-shrink: 0;
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .tab:active {
@@ -63,20 +68,22 @@
 }
 
 .tabActive {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: white !important;
+  background: rgba(120, 120, 128, 0.32) !important;
+  color: rgba(0, 145, 255, 1) !important;
 }
 
 .icon {
-  width: 24px;
-  height: 24px;
-  stroke-width: 2.5;
+  width: 28px;
+  height: 28px;
+  stroke-width: 2;
 }
 
 .label {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.1px;
+  text-align: center;
+  line-height: 12px;
 }
 
 /* Drawing Type Toggle */
