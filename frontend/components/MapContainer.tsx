@@ -4,10 +4,13 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import styles from './MapContainer.module.css'
 import CaptureOverlay from './CaptureOverlay'
 import EditModeIndicator from './EditModeIndicator'
+import DrawingToolbar from './DrawingToolbar'
 import { useDetection } from '../hooks/useDetection'
 import { usePolygons } from '../hooks/usePolygons'
 import { useEditMode } from '../hooks/useEditMode'
 import { usePolygonManager } from '../hooks/usePolygonManager'
+import { useDrawingMode } from '../hooks/useDrawingMode'
+import { StyleConfig } from '../utils/styleConfig'
 
 declare global {
   interface Window {
@@ -19,11 +22,11 @@ declare global {
 interface MapContainerProps {
   activeTool: string
   onMapReady?: (map: any) => void
-  onPanelsAvailable?: (available: boolean) => void
   onToolChange?: (tool: string) => void
+  onPanelsAvailable?: (available: boolean) => void
 }
 
-export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable, onToolChange }: MapContainerProps) {
+export default function MapContainer({ activeTool, onMapReady, onToolChange, onPanelsAvailable }: MapContainerProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [isImageView, setIsImageView] = useState(false)
@@ -32,10 +35,26 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
 
   // Hooks for detection and polygon management
   const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
-  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, hasRoofs } = usePolygons(map)
+  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, hasPolygons } = usePolygons(map)
 
   // Edit mode hook
   const { editState, toggleEditMode, selectPolygon, clearSelection, deleteSelected } = useEditMode(map)
+
+  // Handle polygon creation from drawing
+  const handlePolygonComplete = useCallback((path: google.maps.LatLng[], isRoof: boolean) => {
+    if (!map) return
+
+    // Convert path to coordinate format and render using the standard rendering function
+    const coords = path.map(p => ({ lat: p.lat(), lng: p.lng() }))
+    renderPolygons([{ coords }], isRoof)
+  }, [map, renderPolygons])
+
+  // Drawing mode hook
+  const { isDrawing, drawingType, pointCount, startDrawing, stopDrawing, completePolygon } = useDrawingMode({
+    map,
+    isEditMode: editState.isEditMode,
+    onPolygonComplete: handlePolygonComplete
+  })
 
   // Polygon manager hook
   const { updateAllPolygons } = usePolygonManager({
@@ -47,10 +66,10 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
     removeClickListener
   })
 
-  // Effect to handle panels tool visibility based on roof detection
+  // Effect to handle panels tool visibility based on polygon presence
   useEffect(() => {
-    onPanelsAvailable?.(hasRoofs)
-  }, [hasRoofs, onPanelsAvailable])
+    onPanelsAvailable?.(hasPolygons)
+  }, [hasPolygons, onPanelsAvailable])
 
   // Effect to show/hide capture overlay based on active tool
   useEffect(() => {
@@ -83,6 +102,16 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
       updateAllPolygons(objectPolygons, false)
     }
   }, [editState.isEditMode, editState.selectedPolygons, roofPolygons, objectPolygons, updateAllPolygons])
+
+  // Disable polygon clickability when drawing
+  useEffect(() => {
+    const allPolygons = [...roofPolygons, ...objectPolygons]
+    allPolygons.forEach(polygon => {
+      if (polygon) {
+        polygon.setOptions({ clickable: !isDrawing })
+      }
+    })
+  }, [isDrawing, roofPolygons, objectPolygons])
 
   // Handle roof detection
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
@@ -237,8 +266,19 @@ export default function MapContainer({ activeTool, onMapReady, onPanelsAvailable
 
       {/* Edit Mode Indicator */}
       <EditModeIndicator
-        isActive={editState.isEditMode}
+        isActive={editState.isEditMode && !isDrawing}
         selectedCount={editState.selectedPolygons.size}
+      />
+
+      {/* Drawing Toolbar */}
+      <DrawingToolbar
+        isVisible={editState.isEditMode}
+        isDrawing={isDrawing}
+        drawingType={drawingType}
+        pointCount={pointCount}
+        onStartDrawing={startDrawing}
+        onCancelDrawing={stopDrawing}
+        onCompleteDrawing={completePolygon}
       />
 
       {/* Error notification */}

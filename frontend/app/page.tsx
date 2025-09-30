@@ -15,18 +15,6 @@ export default function HomePage() {
   const [map, setMap] = useState<any>(null)
   const [showPanelsTool, setShowPanelsTool] = useState(false)
 
-  const handlePanelsAvailable = useCallback((available: boolean) => {
-    setShowPanelsTool(available)
-  }, [])
-
-  // Example: Show panels tool when image is uploaded and area is selected
-  // This should be updated with proper logic based on application state
-  // useEffect(() => {
-  //   if (hasUploadedImage && hasSelectedArea) {
-  //     setShowPanelsTool(true)
-  //   }
-  // }, [hasUploadedImage, hasSelectedArea])
-
   return (
     <div className="app-container">
       <div className="app-layout">
@@ -40,8 +28,8 @@ export default function HomePage() {
           <MapContainer
             activeTool={activeTool}
             onMapReady={setMap}
-            onPanelsAvailable={handlePanelsAvailable}
             onToolChange={setActiveTool}
+            onPanelsAvailable={setShowPanelsTool}
           />
 
           {showToolStrip && (
@@ -54,29 +42,6 @@ export default function HomePage() {
           )}
 
           {showSearch && <FloatingSearch map={map} />}
-
-          {/* Debug: Toggle Panels Tool Visibility */}
-          <button
-            onClick={() => setShowPanelsTool(!showPanelsTool)}
-            style={{
-              position: 'fixed',
-              bottom: '20px',
-              right: '20px',
-              padding: '12px 20px',
-              backgroundColor: showPanelsTool ? '#10b981' : '#6b7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              zIndex: 1000
-            }}
-          >
-            {showPanelsTool ? 'Hide' : 'Show'} Panels Tool
-          </button>
-
         </div>
       </div>
 

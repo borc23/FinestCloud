@@ -19,6 +19,7 @@ interface UsePolygonsReturn {
   removePolygonListeners: (polygon: google.maps.Polygon) => void
   removeClickListener: (polygon: google.maps.Polygon) => void
   hasRoofs: boolean
+  hasPolygons: boolean
 }
 
 const POLYGON_STYLES = {
@@ -232,6 +233,7 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   }, [])
 
   const hasRoofs = roofPolygons.length > 0
+  const hasPolygons = roofPolygons.length > 0 || objectPolygons.length > 0
 
   return {
     roofPolygons,
@@ -241,6 +243,7 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     togglePolygonVisibility,
     removePolygonListeners,
     removeClickListener,
-    hasRoofs
+    hasRoofs,
+    hasPolygons
   }
 }
