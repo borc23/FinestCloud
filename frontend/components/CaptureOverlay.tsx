@@ -13,6 +13,7 @@ interface CaptureOverlayProps {
 export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: CaptureOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const isMountedRef = useRef(true)
 
   const updatePosition = useCallback(() => {
     if (!overlayRef.current || !map) return
@@ -46,7 +47,7 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         listeners.forEach(listener => google.maps.event.removeListener(listener))
       }
     }
-  }, [isVisible, map]) // Remove updatePosition from dependencies
+  }, [isVisible, map, updatePosition])
 
   // Add ESC key handler
   useEffect(() => {
@@ -79,13 +80,23 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
     }
   }, [isVisible])
 
+  // Track component mount/unmount
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
   const getBounds = useCallback(async (): Promise<google.maps.LatLngBounds | null> => {
-    if (!overlayRef.current || !map) {
+    if (!overlayRef.current || !map || !isMountedRef.current) {
       return null
     }
 
+    let overlay: google.maps.OverlayView | null = null
+
     try {
-      const overlay = new google.maps.OverlayView()
+      overlay = new google.maps.OverlayView()
       overlay.draw = function() {}
       overlay.setMap(map)
 
@@ -93,15 +104,34 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
       return new Promise((resolve, reject) => {
         let attempts = 0
         const maxAttempts = 40 // 2 seconds max wait
+        let timeoutId: NodeJS.Timeout | null = null
+
+        const cleanup = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+          if (overlay) {
+            try {
+              overlay.setMap(null)
+            } catch (cleanupError) {
+              console.warn('Overlay cleanup warning:', cleanupError)
+            }
+          }
+        }
 
         const checkProjection = () => {
-          const projection = overlay.getProjection()
+          if (!isMountedRef.current) {
+            cleanup()
+            reject(new Error('Component unmounted'))
+            return
+          }
+
+          const projection = overlay!.getProjection()
           if (projection) {
             try {
               const mapContainer = map.getDiv()
               const containerRect = mapContainer.getBoundingClientRect()
               const squareRect = overlayRef.current!.getBoundingClientRect()
-
 
               const topLeft = new google.maps.Point(
                 squareRect.left - containerRect.left,
@@ -119,59 +149,50 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
               bounds.extend(topLeftLatLng)
               bounds.extend(bottomRightLatLng)
 
-
-              // Clean up overlay properly using a setTimeout to avoid timing issues
-              setTimeout(() => {
-                try {
-                  overlay.setMap(null)
-                } catch (cleanupError) {
-                  console.warn('Overlay cleanup warning:', cleanupError)
-                }
-              }, 10)
-
+              cleanup()
               resolve(bounds)
             } catch (projectionError) {
-              // Still try to clean up
-              setTimeout(() => {
-                try {
-                  overlay.setMap(null)
-                } catch (cleanupError) {
-                  // Ignore cleanup errors
-                }
-              }, 10)
+              cleanup()
               reject(projectionError)
             }
           } else {
             attempts++
             if (attempts >= maxAttempts) {
-              try {
-                overlay.setMap(null)
-              } catch (cleanupError) {
-                // Ignore cleanup errors
-              }
+              cleanup()
               reject(new Error('Timeout waiting for Google Maps projection'))
             } else {
-              setTimeout(checkProjection, 50)
+              timeoutId = setTimeout(checkProjection, 50)
             }
           }
         }
         checkProjection()
       })
     } catch (error) {
+      if (overlay) {
+        try {
+          overlay.setMap(null)
+        } catch (cleanupError) {
+          // Ignore cleanup errors
+        }
+      }
       return null
     }
   }, [map])
 
   const handleDetect = async () => {
-    if (isProcessing) return
+    if (isProcessing || !isMountedRef.current) return
 
     setIsProcessing(true)
 
     try {
       const bounds = await getBounds()
-      await onCapture(bounds)
+      if (isMountedRef.current) {
+        await onCapture(bounds)
+      }
     } finally {
-      setIsProcessing(false)
+      if (isMountedRef.current) {
+        setIsProcessing(false)
+      }
     }
   }
 
