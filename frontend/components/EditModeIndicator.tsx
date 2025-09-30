@@ -12,16 +12,9 @@ export default function EditModeIndicator({ isActive, selectedCount }: EditModeI
 
   return (
     <div className={styles.indicator}>
-      <div className={styles.content}>
-        <i className="fas fa-pen-to-square"></i>
-        <span className={styles.text}>Edit Mode</span>
-        {selectedCount > 0 && (
-          <span className={styles.badge}>{selectedCount} selected</span>
-        )}
-      </div>
-      <div className={styles.hint}>
-        <span>Press ESC to deselect • Del to delete • Ctrl+Click for multi-select</span>
-      </div>
+      {selectedCount > 0 && (
+        <span className={styles.count}>{selectedCount}</span>
+      )}
     </div>
   )
 }

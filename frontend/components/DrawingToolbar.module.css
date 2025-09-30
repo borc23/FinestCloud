@@ -1,187 +1,151 @@
 .toolbar {
   position: fixed;
-  top: 80px;
+  top: 20px;
   right: 20px;
   z-index: 1000;
-  animation: slideIn 0.3s ease-out;
+  animation: fadeIn 0.2s ease-out;
 }
 
-@keyframes slideIn {
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: scale(1);
   }
 }
 
-.container {
-  background: rgba(10, 10, 10, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-  min-width: 280px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-}
-
-.header {
+/* iOS Segmented Control */
+.segmentedControl {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-.header i {
-  font-size: 20px;
-  color: #10b981;
-}
-
-.header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
+.segment {
+  padding: 8px 20px;
   border: none;
   border-radius: 8px;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   color: white;
+  background: transparent;
+  position: relative;
+  min-width: 90px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.3px;
 }
 
-.button i {
-  font-size: 18px;
+.segment:active {
+  transform: scale(0.96);
 }
 
-.roofButton {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+.roofSegment:hover {
+  background: rgba(52, 199, 89, 0.15);
 }
 
-.roofButton:hover {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+.objectSegment:hover {
+  background: rgba(255, 69, 58, 0.15);
 }
 
-.objectButton {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+.roofSegment:active {
+  background: #34c759;
+  box-shadow:
+    0 0 0 0.5px rgba(52, 199, 89, 0.3),
+    0 2px 8px rgba(52, 199, 89, 0.4);
 }
 
-.objectButton:hover {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+.objectSegment:active {
+  background: #ff453a;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 69, 58, 0.3),
+    0 2px 8px rgba(255, 69, 58, 0.4);
 }
 
-.statusIndicator {
+/* Drawing Controls */
+.drawingControls {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 20px;
+  padding: 8px 8px 8px 16px;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-.pulse {
-  width: 10px;
-  height: 10px;
-  background: #10b981;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.2);
-  }
-}
-
-.pointCount {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 13px;
+.counter {
+  font-size: 17px;
   font-weight: 600;
   color: white;
-}
-
-.hint {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.hint p {
-  margin: 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.5;
+  min-width: 20px;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.4px;
 }
 
 .actions {
   display: flex;
-  gap: 10px;
-}
-
-.actionButton {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 12px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.actionButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.cancelButton,
+.doneButton {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.3px;
 }
 
 .cancelButton {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.cancelButton:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.5);
-}
-
-.completeButton {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: rgba(255, 255, 255, 0.12);
   color: white;
 }
 
-.completeButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+.cancelButton:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.cancelButton:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.doneButton {
+  background: #0a84ff;
+  color: white;
+}
+
+.doneButton:hover:not(:disabled) {
+  background: #0077ed;
+}
+
+.doneButton:active:not(:disabled) {
+  transform: scale(0.96);
+  background: #006edb;
+}
+
+.doneButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

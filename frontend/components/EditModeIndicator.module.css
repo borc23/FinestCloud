@@ -1,60 +1,41 @@
 .indicator {
   position: fixed;
-  top: 80px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(10, 10, 10, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 16px 24px;
   z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  animation: slideDown 0.3s ease-out;
+  animation: fadeIn 0.2s ease-out;
 }
 
-@keyframes slideDown {
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
+    transform: translateX(-50%) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) scale(1);
   }
 }
 
-.content {
-  display: flex;
+.count {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 16px;
   color: white;
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.content i {
-  color: #10b981;
-  font-size: 18px;
-}
-
-.text {
+  font-size: 15px;
   font-weight: 600;
-}
-
-.badge {
-  background: #10b981;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.hint {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 12px;
-  text-align: center;
-  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }

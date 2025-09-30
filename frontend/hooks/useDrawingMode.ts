@@ -39,68 +39,73 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
 
   const createMarker = useCallback((position: google.maps.LatLng, isFirst: boolean) => {
     if (!map) return null
+    const color = typeRef.current === 'roof' ? '#34c759' : '#ff453a'
     return new google.maps.Marker({
       position,
       map,
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: isFirst ? 8 : 6,
-        fillColor: isFirst ? '#10b981' : '#ffffff',
+        scale: isFirst ? 10 : 7,
+        fillColor: isFirst ? color : '#ffffff',
         fillOpacity: 1,
-        strokeColor: '#000000',
-        strokeWeight: 2
+        strokeColor: isFirst ? '#ffffff' : color,
+        strokeWeight: isFirst ? 3 : 2.5,
+        strokeOpacity: 1
       },
       clickable: isFirst,
-      zIndex: 2000
+      zIndex: 2000,
+      optimized: false
     })
   }, [map])
 
   const createLine = useCallback((start: google.maps.LatLng, end: google.maps.LatLng) => {
     if (!map) return null
+    const color = typeRef.current === 'roof' ? '#34c759' : '#ff453a'
     return new google.maps.Polyline({
       path: [start, end],
       map,
-      strokeColor: getColor(),
-      strokeWeight: 2,
-      strokeOpacity: 0.8,
+      strokeColor: color,
+      strokeWeight: 3,
+      strokeOpacity: 0.9,
       clickable: false,
       zIndex: 1500
     })
-  }, [map, getColor])
+  }, [map])
 
   const updateTempLine = useCallback((mousePos: google.maps.LatLng) => {
     if (!map || pathRef.current.length === 0) return
     if (tempLineRef.current) tempLineRef.current.setMap(null)
     const lastPoint = pathRef.current[pathRef.current.length - 1]
+    const color = typeRef.current === 'roof' ? '#34c759' : '#ff453a'
     tempLineRef.current = new google.maps.Polyline({
       path: [lastPoint, mousePos],
       map,
-      strokeColor: getColor(),
-      strokeWeight: 2,
+      strokeColor: color,
+      strokeWeight: 3,
       strokeOpacity: 0.5,
       clickable: false,
-      zIndex: 1500
+      zIndex: 1500,
+      icons: [{
+        icon: {
+          path: 'M 0,-1 0,1',
+          strokeOpacity: 0.5,
+          scale: 3
+        },
+        offset: '0',
+        repeat: '12px'
+      }]
     })
-  }, [map, getColor])
+  }, [map])
 
   const completePolygon = useCallback(() => {
     if (pathRef.current.length < 3) return
     const path = [...pathRef.current]
     const isRoof = typeRef.current === 'roof'
     onPolygonComplete(path, isRoof)
+    // Clear markers and lines but keep drawing mode active
     cleanup()
-    setIsDrawing(false)
-    setDrawingType(null)
-    typeRef.current = null
-    if (map) {
-      map.setOptions({
-        draggable: !isEditMode,
-        scrollwheel: !isEditMode,
-        gestureHandling: isEditMode ? 'none' : 'auto',
-        disableDoubleClickZoom: isEditMode
-      })
-    }
-  }, [map, isEditMode, onPolygonComplete, cleanup])
+    // Don't exit drawing mode - user stays in the same drawing type
+  }, [onPolygonComplete, cleanup])
 
   const addPoint = useCallback((latLng: google.maps.LatLng) => {
     if (!map) return

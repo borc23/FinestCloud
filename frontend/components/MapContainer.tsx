@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import styles from './MapContainer.module.css'
 import CaptureOverlay from './CaptureOverlay'
-import EditModeIndicator from './EditModeIndicator'
-import DrawingToolbar from './DrawingToolbar'
+import EditDrawTabBar from './EditDrawTabBar'
 import { useDetection } from '../hooks/useDetection'
 import { usePolygons } from '../hooks/usePolygons'
 import { useEditMode } from '../hooks/useEditMode'
@@ -32,6 +31,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [isImageView, setIsImageView] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
+  const [activeTab, setActiveTab] = useState<'edit' | 'draw'>('edit')
+  const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
 
   // Hooks for detection and polygon management
   const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
@@ -80,15 +81,57 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [activeTool])
 
-  // Effect to toggle edit mode based on active tool
-  useEffect(() => {
-    if (activeTool === 'edit') {
+  // Handle tab changes
+  const handleTabChange = useCallback((tab: 'edit' | 'draw') => {
+    setActiveTab(tab)
+    if (tab === 'edit') {
+      // Switch to edit mode
       if (!editState.isEditMode) {
         toggleEditMode()
       }
-    } else {
+      // Stop any active drawing
+      if (isDrawing) {
+        stopDrawing()
+      }
+      onToolChange?.('edit')
+    } else if (tab === 'draw') {
+      // Switch to draw mode
+      if (!editState.isEditMode) {
+        toggleEditMode() // Draw mode requires edit mode to be active
+      }
+      // Start drawing with the selected type
+      if (!isDrawing) {
+        startDrawing(drawingTypeSelection)
+      }
+      onToolChange?.('draw')
+    }
+  }, [editState.isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing, onToolChange])
+
+  const handleDrawingTypeChange = useCallback((type: 'roof' | 'object') => {
+    setDrawingTypeSelection(type)
+    // If already drawing, switch to the new type
+    if (isDrawing) {
+      stopDrawing()
+      startDrawing(type)
+    }
+  }, [isDrawing, stopDrawing, startDrawing])
+
+  // Effect to toggle edit mode based on active tool (from toolbar)
+  useEffect(() => {
+    if (activeTool === 'edit') {
+      setActiveTab('edit')
+      if (!editState.isEditMode) {
+        toggleEditMode()
+      }
+      if (isDrawing) {
+        stopDrawing()
+      }
+    } else if (activeTool === '') {
       if (editState.isEditMode) {
         toggleEditMode()
+      }
+      if (isDrawing) {
+        stopDrawing()
       }
     }
   }, [activeTool])
@@ -264,22 +307,15 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         map={map}
       />
 
-      {/* Edit Mode Indicator */}
-      <EditModeIndicator
-        isActive={editState.isEditMode && !isDrawing}
-        selectedCount={editState.selectedPolygons.size}
-      />
-
-      {/* Drawing Toolbar */}
-      <DrawingToolbar
-        isVisible={editState.isEditMode}
-        isDrawing={isDrawing}
-        drawingType={drawingType}
-        pointCount={pointCount}
-        onStartDrawing={startDrawing}
-        onCancelDrawing={stopDrawing}
-        onCompleteDrawing={completePolygon}
-      />
+      {/* Edit/Draw Tab Bar */}
+      {editState.isEditMode && (
+        <EditDrawTabBar
+          activeTab={activeTab}
+          drawingType={drawingTypeSelection}
+          onTabChange={handleTabChange}
+          onDrawingTypeChange={handleDrawingTypeChange}
+        />
+      )}
 
       {/* Error notification */}
       {detectionError && (
