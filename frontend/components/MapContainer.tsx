@@ -62,7 +62,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   }, [map, renderPolygons])
 
   // Drawing mode hook
-  const { isDrawing, drawingType, pointCount, startDrawing, stopDrawing, completePolygon } = useDrawingMode({
+  const { isDrawing, drawingType, startDrawing, stopDrawing, completePolygon } = useDrawingMode({
     map,
     isEditMode,
     onPolygonComplete: handlePolygonComplete

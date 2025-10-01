@@ -16,7 +16,6 @@ interface UseDrawingModeProps {
 export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawingModeProps) {
   const [isDrawing, setIsDrawing] = useState(false)
   const [drawingType, setDrawingType] = useState<DrawingMode | null>(null)
-  const [pointCount, setPointCount] = useState(0)
 
   // Use refs for immediate access without re-renders causing issues
   const pathRef = useRef<google.maps.LatLng[]>([])
@@ -26,6 +25,28 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const mouseMoveListenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const typeRef = useRef<DrawingMode | null>(null)
+  const firstMarkersRef = useRef<WeakSet<google.maps.Marker>>(new WeakSet())
+
+  const getCurrentColor = () => typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
+
+  const markerIcon = (isFirst: boolean, color: string) => ({
+    path: google.maps.SymbolPath.CIRCLE,
+    scale: isFirst ? 6 : 4,
+    fillColor: isFirst ? color : '#ffffff',
+    fillOpacity: 1,
+    strokeColor: isFirst ? '#ffffff' : color,
+    strokeWeight: isFirst ? 2 : 1.5,
+    strokeOpacity: 1
+  })
+
+  const lineOptions = (start: google.maps.LatLng, end: google.maps.LatLng, color: string, opacity = 0.9) => ({
+    path: [start, end],
+    strokeColor: color,
+    strokeWeight: 3,
+    strokeOpacity: opacity,
+    clickable: false,
+    zIndex: 1500
+  })
 
   const cleanup = useCallback(() => {
     markersRef.current.forEach(marker => marker.setMap(null))
@@ -37,24 +58,16 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       tempLineRef.current = null
     }
     pathRef.current = []
-    setPointCount(0)
+    firstMarkersRef.current = new WeakSet()
   }, [])
 
   const createMarker = useCallback((position: google.maps.LatLng, isFirst: boolean) => {
     if (!map) return null
-    const color = typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
+    const color = getCurrentColor()
     return new google.maps.Marker({
       position,
       map,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: isFirst ? 6 : 4,
-        fillColor: isFirst ? color : '#ffffff',
-        fillOpacity: 1,
-        strokeColor: isFirst ? '#ffffff' : color,
-        strokeWeight: isFirst ? 2 : 1.5,
-        strokeOpacity: 1
-      },
+      icon: markerIcon(isFirst, color),
       clickable: isFirst,
       zIndex: 2000,
       optimized: false
@@ -63,30 +76,21 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
 
   const createLine = useCallback((start: google.maps.LatLng, end: google.maps.LatLng) => {
     if (!map) return null
-    const color = typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
+    const color = getCurrentColor()
     return new google.maps.Polyline({
-      path: [start, end],
-      map,
-      strokeColor: color,
-      strokeWeight: 3,
-      strokeOpacity: 0.9,
-      clickable: false,
-      zIndex: 1500
+      ...lineOptions(start, end, color),
+      map
     })
   }, [map])
 
   const updateTempLine = useCallback((mousePos: google.maps.LatLng) => {
-    if (!map || pathRef.current.length === 0) return
+    if (!map || pathRef.current.length === 0) return undefined
     if (tempLineRef.current) tempLineRef.current.setMap(null)
     const lastPoint = pathRef.current[pathRef.current.length - 1]
-    const color = typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
+    const color = getCurrentColor()
     tempLineRef.current = new google.maps.Polyline({
-      path: [lastPoint, mousePos],
+      ...lineOptions(lastPoint, mousePos, color, 0.5),
       map,
-      strokeColor: color,
-      strokeWeight: 3,
-      strokeOpacity: 0.5,
-      clickable: false,
       zIndex: 2500,
       icons: [{
         icon: {
@@ -101,23 +105,23 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
   }, [map])
 
   const completePolygon = useCallback(() => {
-    if (pathRef.current.length < 3) return
+    if (pathRef.current.length < 3) return undefined
     const path = [...pathRef.current]
     const isRoof = typeRef.current === 'roof'
     onPolygonComplete(path, isRoof)
     // Clear markers and lines but keep drawing mode active
     cleanup()
     // Don't exit drawing mode - user stays in the same drawing type
-  }, [onPolygonComplete, cleanup])
+  }, [onPolygonComplete])
 
   const addPoint = useCallback((latLng: google.maps.LatLng) => {
-    if (!map) return
+    if (!map) return undefined
     const isFirst = pathRef.current.length === 0
     const marker = createMarker(latLng, isFirst)
-    if (!marker) return
+    if (!marker) return undefined
     if (isFirst) {
-      // Mark the first marker for click detection
-      ;(marker as any).__isFirstMarker = true
+      // Track first marker for click detection
+      firstMarkersRef.current.add(marker)
       marker.addListener('click', (e: google.maps.MapMouseEvent) => {
         e.stop?.()
         if (pathRef.current.length >= 3) completePolygon()
@@ -129,15 +133,13 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       if (line) linesRef.current.push(line)
     }
     pathRef.current.push(latLng)
-    setPointCount(pathRef.current.length)
   }, [map, createMarker, createLine, completePolygon])
 
   const startDrawing = useCallback((type: DrawingMode) => {
-    if (!map || !isEditMode) return
+    if (!map || !isEditMode) return undefined
     typeRef.current = type
     setDrawingType(type)
     setIsDrawing(true)
-    setPointCount(0)
     map.setOptions({
       draggable: false,
       scrollwheel: false,
@@ -146,7 +148,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       clickableIcons: false
     })
     cleanup()
-  }, [map, isEditMode, cleanup])
+  }, [map, isEditMode])
 
   const stopDrawing = useCallback(() => {
     cleanup()
@@ -161,20 +163,17 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
         disableDoubleClickZoom: isEditMode
       })
     }
-  }, [map, isEditMode, cleanup])
+  }, [map, isEditMode])
 
-  useEffect(() => {
-    if (!map || !isDrawing) {
-      if (clickListenerRef.current) {
-        google.maps.event.removeListener(clickListenerRef.current)
-        clickListenerRef.current = null
-      }
-      return
-    }
+  // Base overlay class for DOM-level event handling with coordinate conversion
+  const createEventOverlay = useCallback((
+    eventType: string,
+    callback: (latLng: google.maps.LatLng, point: google.maps.Point, e: MouseEvent) => void
+  ) => {
+    if (!map) return null
 
-    // Create overlay for DOM-level click handling
-    class ClickOverlay extends google.maps.OverlayView {
-      private handleClick: ((e: MouseEvent) => void) | null = null
+    class EventOverlay extends google.maps.OverlayView {
+      private handler: ((e: MouseEvent) => void) | null = null
 
       onAdd() {
         const panes = this.getPanes()
@@ -182,7 +181,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
 
         const mapDiv = map.getDiv()
 
-        this.handleClick = (e: MouseEvent) => {
+        this.handler = (e: MouseEvent) => {
           const projection = this.getProjection()
           if (!projection) return
 
@@ -193,42 +192,17 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
           )
 
           const latLng = projection.fromContainerPixelToLatLng(point)
-          if (!latLng) return
-
-          // Check if clicking near the first marker to complete polygon
-          if (pathRef.current.length >= 3 && markersRef.current[0]) {
-            const firstMarkerPos = markersRef.current[0].getPosition()
-            if (firstMarkerPos) {
-              const firstMarkerPixel = projection.fromLatLngToContainerPixel(firstMarkerPos)
-              if (firstMarkerPixel) {
-                const distance = Math.sqrt(
-                  Math.pow(point.x - firstMarkerPixel.x, 2) +
-                  Math.pow(point.y - firstMarkerPixel.y, 2)
-                )
-                // If within 15 pixels of first marker, complete polygon
-                if (distance <= 15) {
-                  e.stopPropagation()
-                  completePolygon()
-                  return
-                }
-              }
-            }
-          }
-
-          // Otherwise add a new point
-          e.stopPropagation()
-          addPoint(latLng)
+          if (latLng) callback(latLng, point, e)
         }
 
-        // Use capture phase to intercept clicks before polygons
-        mapDiv.addEventListener('click', this.handleClick, { capture: true })
+        mapDiv.addEventListener(eventType, this.handler, { capture: true })
       }
 
       onRemove() {
         const mapDiv = map.getDiv()
-        if (this.handleClick) {
-          mapDiv.removeEventListener('click', this.handleClick, { capture: true })
-          this.handleClick = null
+        if (this.handler) {
+          mapDiv.removeEventListener(eventType, this.handler, { capture: true })
+          this.handler = null
         }
       }
 
@@ -237,8 +211,49 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       }
     }
 
-    const overlay = new ClickOverlay()
-    overlay.setMap(map)
+    return new EventOverlay()
+  }, [map])
+
+  useEffect(() => {
+    if (!map || !isDrawing) {
+      if (clickListenerRef.current) {
+        google.maps.event.removeListener(clickListenerRef.current)
+        clickListenerRef.current = null
+      }
+      return
+    }
+
+    // Click handling with first marker detection
+    const clickOverlay = createEventOverlay('click', (latLng, point, e) => {
+      // Check if clicking near the first marker to complete polygon
+      if (pathRef.current.length >= 3 && markersRef.current[0]) {
+        const firstMarkerPos = markersRef.current[0].getPosition()
+        if (firstMarkerPos && clickOverlay) {
+          const projection = clickOverlay.getProjection()
+          if (projection) {
+            const firstMarkerPixel = projection.fromLatLngToContainerPixel(firstMarkerPos)
+            if (firstMarkerPixel) {
+              const distance = Math.sqrt(
+                Math.pow(point.x - firstMarkerPixel.x, 2) +
+                Math.pow(point.y - firstMarkerPixel.y, 2)
+              )
+              // If within 15 pixels of first marker, complete polygon
+              if (distance <= 15) {
+                e.stopPropagation()
+                completePolygon()
+                return
+              }
+            }
+          }
+        }
+      }
+
+      // Otherwise add a new point
+      e.stopPropagation()
+      addPoint(latLng)
+    })
+
+    if (clickOverlay) clickOverlay.setMap(map)
 
     // Also add standard listener as fallback
     clickListenerRef.current = google.maps.event.addListener(map, 'click', (e: google.maps.MapMouseEvent) => {
@@ -246,13 +261,13 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     })
 
     return () => {
-      overlay.setMap(null)
+      if (clickOverlay) clickOverlay.setMap(null)
       if (clickListenerRef.current) {
         google.maps.event.removeListener(clickListenerRef.current)
         clickListenerRef.current = null
       }
     }
-  }, [map, isDrawing, addPoint])
+  }, [map, isDrawing, addPoint, completePolygon])
 
   useEffect(() => {
     if (!map || !isDrawing) {
@@ -263,51 +278,13 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       return
     }
 
-    // Create overlay to access pixel-to-latlng conversion
-    class DrawingOverlay extends google.maps.OverlayView {
-      private handleMouseMove: ((e: MouseEvent) => void) | null = null
+    // Mouse move handling for temp line
+    const mouseMoveOverlay = createEventOverlay('mousemove', (latLng) => {
+      if (pathRef.current.length === 0) return
+      updateTempLine(latLng)
+    })
 
-      onAdd() {
-        const panes = this.getPanes()
-        if (!panes) return
-
-        const mapDiv = map.getDiv()
-
-        this.handleMouseMove = (e: MouseEvent) => {
-          if (pathRef.current.length === 0) return
-
-          const projection = this.getProjection()
-          if (!projection) return
-
-          const bounds = mapDiv.getBoundingClientRect()
-          const point = new google.maps.Point(
-            e.clientX - bounds.left,
-            e.clientY - bounds.top
-          )
-
-          const latLng = projection.fromContainerPixelToLatLng(point)
-          if (latLng) updateTempLine(latLng)
-        }
-
-        // Use capture phase to intercept events before polygons
-        mapDiv.addEventListener('mousemove', this.handleMouseMove, { capture: true })
-      }
-
-      onRemove() {
-        const mapDiv = map.getDiv()
-        if (this.handleMouseMove) {
-          mapDiv.removeEventListener('mousemove', this.handleMouseMove, { capture: true })
-          this.handleMouseMove = null
-        }
-      }
-
-      draw() {
-        // No drawing needed
-      }
-    }
-
-    const overlay = new DrawingOverlay()
-    overlay.setMap(map)
+    if (mouseMoveOverlay) mouseMoveOverlay.setMap(map)
 
     // Also add standard listener as fallback
     mouseMoveListenerRef.current = google.maps.event.addListener(map, 'mousemove', (e: google.maps.MapMouseEvent) => {
@@ -315,7 +292,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     })
 
     return () => {
-      overlay.setMap(null)
+      if (mouseMoveOverlay) mouseMoveOverlay.setMap(null)
       if (mouseMoveListenerRef.current) {
         google.maps.event.removeListener(mouseMoveListenerRef.current)
         mouseMoveListenerRef.current = null
@@ -337,5 +314,5 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     }
   }, [])
 
-  return { isDrawing, drawingType, pointCount, startDrawing, stopDrawing, completePolygon }
+  return { isDrawing, drawingType, startDrawing, stopDrawing, completePolygon }
 }
