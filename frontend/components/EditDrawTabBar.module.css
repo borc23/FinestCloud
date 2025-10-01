@@ -69,6 +69,11 @@
   transform: scale(0.96);
 }
 
+.tab:focus-visible {
+  outline: 2px solid rgba(0, 145, 255, 1);
+  outline-offset: 2px;
+}
+
 .tabActive {
   background: rgba(120, 120, 128, 0.32) !important;
   color: rgba(0, 145, 255, 1) !important;
@@ -108,6 +113,7 @@
 }
 
 .toggleSwitch {
+  --toggle-button-width: 116px;
   position: relative;
   display: flex;
   align-items: center;
@@ -129,7 +135,7 @@
 
 .typeButton {
   position: absolute;
-  width: 116px;
+  width: var(--toggle-button-width);
   height: 36px;
   top: 4px;
   left: 4px;
@@ -158,7 +164,7 @@
 }
 
 .typeButton.objectActive {
-  transform: translateX(116px);
+  transform: translateX(var(--toggle-button-width));
   background: rgba(255, 69, 58, 0.2);
 }
 
@@ -167,7 +173,12 @@
 }
 
 .toggleSwitch:active .typeButton.objectActive {
-  transform: translateX(116px) scale(0.98);
+  transform: translateX(var(--toggle-button-width)) scale(0.98);
+}
+
+.toggleSwitch:focus-visible {
+  outline: 2px solid rgba(0, 145, 255, 1);
+  outline-offset: 2px;
 }
 
 .toggleLabels {
