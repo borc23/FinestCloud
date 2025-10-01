@@ -1,67 +1,73 @@
 'use client'
 
+import { memo, useCallback } from 'react'
 import styles from './DrawingToolbar.module.css'
+
+export type DrawingMode = 'roof' | 'object'
+
+export const DRAWING_MODES = {
+  ROOF: 'roof' as const,
+  OBJECT: 'object' as const,
+}
 
 interface DrawingToolbarProps {
   isVisible: boolean
-  isDrawing: boolean
-  drawingType: 'roof' | 'object' | null
-  pointCount: number
-  onStartDrawing: (type: 'roof' | 'object') => void
-  onCancelDrawing: () => void
-  onCompleteDrawing: () => void
+  onStartDrawing: (type: DrawingMode) => void
+  activeMode?: DrawingMode | null
+  'aria-label'?: string
 }
 
-export default function DrawingToolbar({
+function DrawingToolbar({
   isVisible,
-  isDrawing,
-  drawingType,
-  pointCount,
   onStartDrawing,
-  onCancelDrawing,
-  onCompleteDrawing
+  activeMode = null,
+  'aria-label': ariaLabel = 'Drawing mode selection'
 }: DrawingToolbarProps) {
   if (!isVisible) return null
 
+  const handleDrawingStart = useCallback(
+    (mode: DrawingMode) => {
+      try {
+        onStartDrawing(mode)
+      } catch (error) {
+        console.error(`Failed to start drawing mode: ${mode}`, error)
+      }
+    },
+    [onStartDrawing]
+  )
+
   return (
-    <div className={styles.toolbar}>
-      {!isDrawing ? (
-        <div className={styles.segmentedControl}>
-          <button
-            className={`${styles.segment} ${styles.roofSegment}`}
-            onClick={() => onStartDrawing('roof')}
-          >
-            Roof
-          </button>
-          <button
-            className={`${styles.segment} ${styles.objectSegment}`}
-            onClick={() => onStartDrawing('object')}
-          >
-            Object
-          </button>
-        </div>
-      ) : (
-        <div className={styles.drawingControls}>
-          <div className={styles.counter}>
-            {pointCount}
-          </div>
-          <div className={styles.actions}>
-            <button
-              className={styles.cancelButton}
-              onClick={onCancelDrawing}
-            >
-              Cancel
-            </button>
-            <button
-              className={styles.doneButton}
-              onClick={onCompleteDrawing}
-              disabled={pointCount < 3}
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
+    <div className={styles.toolbar} data-testid="drawing-toolbar">
+      <div 
+        className={styles.segmentedControl}
+        role="group"
+        aria-label={ariaLabel}
+      >
+        <button
+          className={`${styles.segment} ${styles.roofSegment} ${
+            activeMode === DRAWING_MODES.ROOF ? styles.selected : ''
+          }`}
+          onClick={() => handleDrawingStart(DRAWING_MODES.ROOF)}
+          type="button"
+          aria-pressed={activeMode === DRAWING_MODES.ROOF}
+          data-testid="roof-button"
+        >
+          Roof
+        </button>
+        <button
+          className={`${styles.segment} ${styles.objectSegment} ${
+            activeMode === DRAWING_MODES.OBJECT ? styles.selected : ''
+          }`}
+          onClick={() => handleDrawingStart(DRAWING_MODES.OBJECT)}
+          type="button"
+          aria-pressed={activeMode === DRAWING_MODES.OBJECT}
+          data-testid="object-button"
+        >
+          Object
+        </button>
+      </div>
     </div>
   )
 }
+
+export default memo(DrawingToolbar)

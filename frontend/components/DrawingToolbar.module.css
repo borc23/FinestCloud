@@ -4,20 +4,20 @@
   right: 20px;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
+  will-change: opacity, transform;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.95) translateZ(0);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateZ(0);
   }
 }
 
-/* iOS Segmented Control */
 .segmentedControl {
   display: flex;
   background: rgba(255, 255, 255, 0.12);
@@ -29,9 +29,11 @@
   box-shadow:
     0 0 0 0.5px rgba(255, 255, 255, 0.15),
     0 4px 16px rgba(0, 0, 0, 0.3);
+  will-change: auto;
 }
 
 .segment {
+  flex: 1;
   padding: 8px 20px;
   border: none;
   border-radius: 8px;
@@ -42,110 +44,16 @@
   color: white;
   background: transparent;
   position: relative;
-  min-width: 90px;
+  min-height: 44px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
+  will-change: transform;
 }
 
-.segment:active {
-  transform: scale(0.96);
-}
-
-.roofSegment:hover {
-  background: rgba(52, 199, 89, 0.15);
-}
-
-.objectSegment:hover {
-  background: rgba(255, 69, 58, 0.15);
-}
-
-.roofSegment:active {
-  background: #34c759;
-  box-shadow:
-    0 0 0 0.5px rgba(52, 199, 89, 0.3),
-    0 2px 8px rgba(52, 199, 89, 0.4);
-}
-
-.objectSegment:active {
-  background: #ff453a;
-  box-shadow:
-    0 0 0 0.5px rgba(255, 69, 58, 0.3),
-    0 2px 8px rgba(255, 69, 58, 0.4);
-}
-
-/* Drawing Controls */
-.drawingControls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 20px;
-  padding: 8px 8px 8px 16px;
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.15),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.counter {
-  font-size: 17px;
-  font-weight: 600;
-  color: white;
-  min-width: 20px;
-  text-align: center;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.4px;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.cancelButton,
-.doneButton {
-  padding: 6px 16px;
-  border: none;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: -0.3px;
-}
-
-.cancelButton {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
-}
-
-.cancelButton:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.cancelButton:active {
-  transform: scale(0.96);
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.doneButton {
-  background: #0a84ff;
-  color: white;
-}
-
-.doneButton:hover:not(:disabled) {
-  background: #0077ed;
-}
-
-.doneButton:active:not(:disabled) {
-  transform: scale(0.96);
-  background: #006edb;
-}
-
-.doneButton:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+@media (prefers-reduced-motion: reduce) {
+  .toolbar,
+  .segment {
+    animation: none;
+    transition: none;
+  }
 }
