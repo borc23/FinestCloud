@@ -1,8 +1,8 @@
 .toolStrip {
   position: fixed;
   left: 50%;
-  top: 35px;
-  transform: translateX(-50%);
+  top: 5%;
+  transform: translate(-50%, -50%);
   width: auto;
   height: 44px;
   border-radius: 1000px;
@@ -112,21 +112,33 @@
   border-radius: 100px;
   background: rgba(120, 120, 128, 0.32);
   pointer-events: none;
-  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              height 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1;
   top: 4px;
-  left: calc(4px + 52px + 37.165px + (var(--tool-index, 0) * 74.33px));
-  transform: translateX(-50%);
+  left: 56px;
+  will-change: transform;
 }
 
 .toolStrip.expanded .frostedOverlay {
   height: 54px;
 }
 
-.frostedOverlay[data-tool-index="0"] { --tool-index: 0; }
-.frostedOverlay[data-tool-index="1"] { --tool-index: 1; }
-.frostedOverlay[data-tool-index="2"] { --tool-index: 2; }
-.frostedOverlay[data-tool-index="3"] { --tool-index: 3; }
+.frostedOverlay[data-tool-index="0"] {
+  transform: translateX(0);
+}
+
+.frostedOverlay[data-tool-index="1"] {
+  transform: translateX(74.33px);
+}
+
+.frostedOverlay[data-tool-index="2"] {
+  transform: translateX(148.66px);
+}
+
+.frostedOverlay[data-tool-index="3"] {
+  transform: translateX(222.99px);
+}
 
 .bottomSection {
   display: flex;
@@ -139,20 +151,21 @@
 @keyframes slide-in {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-20px) scale(0.95);
+    transform: translate(-50%, calc(-50% - 20px)) scale(0.95);
   }
   100% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
 
 @media (max-width: 768px) {
   .toolStrip {
-    left: var(--spacing-base);
-    bottom: var(--spacing-base);
+    left: 50%;
+    top: 5%;
     padding: var(--spacing-base);
+    transform: translate(-50%, -50%);
   }
 
   .toolWrapper {

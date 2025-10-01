@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import styles from './ToolStrip.module.css'
 
 interface ToolStripProps {
@@ -10,31 +10,34 @@ interface ToolStripProps {
   showPanelsTool?: boolean
 }
 
+const allToolsDefinition = [
+  { id: 'tab', icon: 'list', label: 'Tab', isFixed: true },
+  { id: 'upload', icon: 'upload', label: 'Upload Image' },
+  { id: 'select', icon: 'vector-square', label: 'Select Area' },
+  { id: 'panels', icon: 'solar-panel', label: 'Generate Panels' },
+  { id: 'edit', icon: 'pen-to-square', label: 'Edit Mode' }
+] as const
+
 export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const allToolsDefinition = [
-    { id: 'tab', icon: 'list', label: 'Tab', isFixed: true },
-    { id: 'upload', icon: 'upload', label: 'Upload Image' },
-    { id: 'select', icon: 'vector-square', label: 'Select Area' },
-    { id: 'panels', icon: 'solar-panel', label: 'Generate Panels' },
-    { id: 'edit', icon: 'pen-to-square', label: 'Edit Mode' }
-  ]
-
-  const tools = allToolsDefinition.filter(tool =>
-    tool.id !== 'panels' || showPanelsTool
+  const tools = useMemo(() =>
+    allToolsDefinition.filter(tool =>
+      tool.id !== 'panels' || showPanelsTool
+    ),
+    [showPanelsTool]
   )
 
-  const bottomTools = [
+  const bottomTools = useMemo(() => [
     { id: 'search', icon: 'search', label: 'Search', isFixed: true }
-  ]
+  ], [])
 
-  const allTools = [...tools, ...bottomTools]
+  const allTools = useMemo(() => [...tools, ...bottomTools], [tools, bottomTools])
 
-  const getActiveToolData = (targetTool: string | null = null) => {
+  const getActiveToolData = (targetTool: string | null = null): { index: number; section: string | null } => {
     const targetToolId = targetTool || activeTool
 
     // Skip fixed tools (first and last)
@@ -117,6 +120,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
               className={styles.tool}
               onClick={() => handleToolClick(tool.id)}
               aria-label={tool.label}
+              aria-pressed={tool.id === 'tab' ? isExpanded : activeTool === tool.id}
             >
               <i className={`fas fa-${tool.icon}`}></i>
               {isExpanded && !tool.isFixed && (
@@ -139,6 +143,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
               className={styles.tool}
               onClick={() => handleToolClick(tool.id)}
               aria-label={tool.label}
+              aria-pressed={activeTool === tool.id}
             >
               <i className={`fas fa-${tool.icon}`}></i>
               {isExpanded && !tool.isFixed && (
@@ -156,9 +161,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
         data-tool-section={getActiveToolData(hoveredTool).section}
         data-tool-index={getActiveToolData(hoveredTool).index}
         style={{
-          opacity: getActiveToolData(hoveredTool).index === -1 ? 0 : 1,
-          '--main-tools-count': tools.length
-        } as React.CSSProperties}
+          opacity: getActiveToolData(hoveredTool).index === -1 ? 0 : 1
+        }}
       />
     </div>
   )
