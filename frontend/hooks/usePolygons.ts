@@ -38,8 +38,8 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
     // Hover effects - simple and efficient
     const mouseoverListener = polygon.addListener('mouseover', () => {
-      // Don't apply hover effect if polygon is selected (draggable means selected)
-      if (!polygon.getDraggable?.()) {
+      // Don't apply hover effect if polygon is selected (draggable means selected) or not clickable
+      if (!polygon.getDraggable() && polygon.get('clickable')) {
         polygon.setOptions({
           strokeColor: baseColor.HOVER,
           fillColor: baseColor.HOVER
@@ -49,13 +49,18 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
     const mouseoutListener = polygon.addListener('mouseout', () => {
       // Don't revert hover effect if polygon is selected
-      if (!polygon.getDraggable?.()) {
+      if (!polygon.getDraggable()) {
         polygon.setOptions(defaultOptions)
       }
     })
 
     // Click to zoom - this gets removed in edit mode
     const clickListener = polygon.addListener('click', (event: google.maps.MapMouseEvent) => {
+      // Only handle click if polygon is clickable
+      if (!polygon.get('clickable')) {
+        return
+      }
+
       if (event.latLng && currentMap) {
         // Fit bounds to clicked polygon (only when NOT in edit mode)
         const bounds = new google.maps.LatLngBounds()

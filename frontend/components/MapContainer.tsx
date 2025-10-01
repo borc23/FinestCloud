@@ -74,6 +74,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     isEditMode,
     selectedPolygons,
     isCtrlPressed,
+    isDrawing,
     onSelectPolygon: selectPolygon,
     removeClickListener
   })
@@ -148,25 +149,24 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [activeTool])
 
-  // Update polygons when edit mode or selection changes
+  // Update polygons when edit mode, selection, or drawing state changes
   useEffect(() => {
-    if (roofPolygons.length > 0) {
-      updateAllPolygons(roofPolygons, true)
-    }
-    if (objectPolygons.length > 0) {
-      updateAllPolygons(objectPolygons, false)
-    }
-  }, [isEditMode, selectedPolygons, roofPolygons, objectPolygons, updateAllPolygons])
-
-  // Disable polygon clickability when drawing
-  useEffect(() => {
+    // First set clickability based on drawing state
     const allPolygons = [...roofPolygons, ...objectPolygons]
     allPolygons.forEach(polygon => {
       if (polygon) {
         polygon.setOptions({ clickable: !isDrawing })
       }
     })
-  }, [isDrawing, roofPolygons, objectPolygons])
+
+    // Then update polygon listeners and styles for edit/draw mode
+    if (roofPolygons.length > 0) {
+      updateAllPolygons(roofPolygons, true)
+    }
+    if (objectPolygons.length > 0) {
+      updateAllPolygons(objectPolygons, false)
+    }
+  }, [isEditMode, selectedPolygons, isDrawing, roofPolygons, objectPolygons, updateAllPolygons])
 
   // Handle roof detection
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {

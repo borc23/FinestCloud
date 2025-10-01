@@ -11,6 +11,7 @@ interface PolygonManagerProps {
   isEditMode: boolean
   selectedPolygons: Set<google.maps.Polygon>
   isCtrlPressed: boolean
+  isDrawing?: boolean
   onSelectPolygon: (polygon: google.maps.Polygon, ctrlKey: boolean) => void
   removeClickListener: (polygon: google.maps.Polygon) => void
 }
@@ -20,6 +21,7 @@ export function usePolygonManager({
   isEditMode,
   selectedPolygons,
   isCtrlPressed,
+  isDrawing = false,
   onSelectPolygon,
   removeClickListener: removePolygonClickListener
 }: PolygonManagerProps) {
@@ -43,19 +45,19 @@ export function usePolygonManager({
 
       polygon.setOptions({
         ...options,
-        clickable: isEditMode
+        clickable: isEditMode && !isDrawing
       })
     } else {
       const options = StyleConfig.getOptionsForType(isRoof, isSelected)
 
       polygon.setOptions({
         ...options,
-        editable: isSelected && isEditMode,
-        draggable: isSelected && isEditMode,
-        clickable: isEditMode
+        editable: isSelected && isEditMode && !isDrawing,
+        draggable: isSelected && isEditMode && !isDrawing,
+        clickable: isEditMode && !isDrawing
       })
     }
-  }, [isEditMode])
+  }, [isEditMode, isDrawing])
 
   const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
     // Remove listeners added by this manager
@@ -69,7 +71,7 @@ export function usePolygonManager({
   }, [])
 
   const addPolygonListeners = useCallback((polygon: google.maps.Polygon, isRoof: boolean) => {
-    if (!isEditMode) return
+    if (!isEditMode || isDrawing) return
 
     const listeners: google.maps.MapsEventListener[] = []
 
@@ -85,6 +87,10 @@ export function usePolygonManager({
     // Click listener - prevent event propagation to stop map from moving
     listeners.push(
       polygon.addListener('click', (e: google.maps.MapMouseEvent) => {
+        // Only handle click if polygon is clickable
+        if (!polygon.get('clickable')) {
+          return
+        }
         e.stop?.()
         onSelectPolygon(polygon, isCtrlPressed)
       })
@@ -140,20 +146,20 @@ export function usePolygonManager({
     }
 
     polygonListenersRef.current.set(polygon, listeners)
-  }, [isEditMode, isCtrlPressed, onSelectPolygon, removePolygonListeners])
+  }, [isEditMode, isDrawing, isCtrlPressed, onSelectPolygon, removePolygonListeners])
 
   const updateAllPolygons = useCallback((polygons: google.maps.Polygon[], isRoof: boolean) => {
     polygons.forEach(polygon => {
       removePolygonListeners(polygon)
       updatePolygonState(polygon, isRoof)
-      if (isEditMode) {
+      if (isEditMode && !isDrawing) {
         // Remove the click listener from usePolygons (keeps hover effects)
         removePolygonClickListener(polygon)
         // Add edit mode listeners
         addPolygonListeners(polygon, isRoof)
       }
     })
-  }, [isEditMode, addPolygonListeners, removePolygonListeners, updatePolygonState, removePolygonClickListener])
+  }, [isEditMode, isDrawing, addPolygonListeners, removePolygonListeners, updatePolygonState, removePolygonClickListener])
 
   // Cleanup on unmount
   useEffect(() => {

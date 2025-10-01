@@ -48,11 +48,11 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       map,
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: isFirst ? 10 : 7,
+        scale: isFirst ? 6 : 4,
         fillColor: isFirst ? color : '#ffffff',
         fillOpacity: 1,
         strokeColor: isFirst ? '#ffffff' : color,
-        strokeWeight: isFirst ? 3 : 2.5,
+        strokeWeight: isFirst ? 2 : 1.5,
         strokeOpacity: 1
       },
       clickable: isFirst,
@@ -87,7 +87,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       strokeWeight: 3,
       strokeOpacity: 0.5,
       clickable: false,
-      zIndex: 1500,
+      zIndex: 2500,
       icons: [{
         icon: {
           path: 'M 0,-1 0,1',
@@ -116,6 +116,8 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     const marker = createMarker(latLng, isFirst)
     if (!marker) return
     if (isFirst) {
+      // Mark the first marker for click detection
+      ;(marker as any).__isFirstMarker = true
       marker.addListener('click', (e: google.maps.MapMouseEvent) => {
         e.stop?.()
         if (pathRef.current.length >= 3) completePolygon()
@@ -169,10 +171,82 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       }
       return
     }
+
+    // Create overlay for DOM-level click handling
+    class ClickOverlay extends google.maps.OverlayView {
+      private handleClick: ((e: MouseEvent) => void) | null = null
+
+      onAdd() {
+        const panes = this.getPanes()
+        if (!panes) return
+
+        const mapDiv = map.getDiv()
+
+        this.handleClick = (e: MouseEvent) => {
+          const projection = this.getProjection()
+          if (!projection) return
+
+          const bounds = mapDiv.getBoundingClientRect()
+          const point = new google.maps.Point(
+            e.clientX - bounds.left,
+            e.clientY - bounds.top
+          )
+
+          const latLng = projection.fromContainerPixelToLatLng(point)
+          if (!latLng) return
+
+          // Check if clicking near the first marker to complete polygon
+          if (pathRef.current.length >= 3 && markersRef.current[0]) {
+            const firstMarkerPos = markersRef.current[0].getPosition()
+            if (firstMarkerPos) {
+              const firstMarkerPixel = projection.fromLatLngToContainerPixel(firstMarkerPos)
+              if (firstMarkerPixel) {
+                const distance = Math.sqrt(
+                  Math.pow(point.x - firstMarkerPixel.x, 2) +
+                  Math.pow(point.y - firstMarkerPixel.y, 2)
+                )
+                // If within 15 pixels of first marker, complete polygon
+                if (distance <= 15) {
+                  e.stopPropagation()
+                  completePolygon()
+                  return
+                }
+              }
+            }
+          }
+
+          // Otherwise add a new point
+          e.stopPropagation()
+          addPoint(latLng)
+        }
+
+        // Use capture phase to intercept clicks before polygons
+        mapDiv.addEventListener('click', this.handleClick, { capture: true })
+      }
+
+      onRemove() {
+        const mapDiv = map.getDiv()
+        if (this.handleClick) {
+          mapDiv.removeEventListener('click', this.handleClick, { capture: true })
+          this.handleClick = null
+        }
+      }
+
+      draw() {
+        // No drawing needed
+      }
+    }
+
+    const overlay = new ClickOverlay()
+    overlay.setMap(map)
+
+    // Also add standard listener as fallback
     clickListenerRef.current = google.maps.event.addListener(map, 'click', (e: google.maps.MapMouseEvent) => {
       if (e.latLng) addPoint(e.latLng)
     })
+
     return () => {
+      overlay.setMap(null)
       if (clickListenerRef.current) {
         google.maps.event.removeListener(clickListenerRef.current)
         clickListenerRef.current = null
@@ -188,10 +262,60 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       }
       return
     }
+
+    // Create overlay to access pixel-to-latlng conversion
+    class DrawingOverlay extends google.maps.OverlayView {
+      private handleMouseMove: ((e: MouseEvent) => void) | null = null
+
+      onAdd() {
+        const panes = this.getPanes()
+        if (!panes) return
+
+        const mapDiv = map.getDiv()
+
+        this.handleMouseMove = (e: MouseEvent) => {
+          if (pathRef.current.length === 0) return
+
+          const projection = this.getProjection()
+          if (!projection) return
+
+          const bounds = mapDiv.getBoundingClientRect()
+          const point = new google.maps.Point(
+            e.clientX - bounds.left,
+            e.clientY - bounds.top
+          )
+
+          const latLng = projection.fromContainerPixelToLatLng(point)
+          if (latLng) updateTempLine(latLng)
+        }
+
+        // Use capture phase to intercept events before polygons
+        mapDiv.addEventListener('mousemove', this.handleMouseMove, { capture: true })
+      }
+
+      onRemove() {
+        const mapDiv = map.getDiv()
+        if (this.handleMouseMove) {
+          mapDiv.removeEventListener('mousemove', this.handleMouseMove, { capture: true })
+          this.handleMouseMove = null
+        }
+      }
+
+      draw() {
+        // No drawing needed
+      }
+    }
+
+    const overlay = new DrawingOverlay()
+    overlay.setMap(map)
+
+    // Also add standard listener as fallback
     mouseMoveListenerRef.current = google.maps.event.addListener(map, 'mousemove', (e: google.maps.MapMouseEvent) => {
       if (e.latLng && pathRef.current.length > 0) updateTempLine(e.latLng)
     })
+
     return () => {
+      overlay.setMap(null)
       if (mouseMoveListenerRef.current) {
         google.maps.event.removeListener(mouseMoveListenerRef.current)
         mouseMoveListenerRef.current = null
