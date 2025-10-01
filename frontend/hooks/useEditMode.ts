@@ -9,7 +9,12 @@ interface EditState {
   polygonEditMode: 'roof' | 'object'
 }
 
-export function useEditMode(map: google.maps.Map | null) {
+interface UseEditModeProps {
+  map: google.maps.Map | null
+  onDeletePolygons?: (polygons: google.maps.Polygon[]) => void
+}
+
+export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
   const [editState, setEditState] = useState<EditState>({
     isEditMode: false,
     selectedPolygons: new Set(),
@@ -72,11 +77,13 @@ export function useEditMode(map: google.maps.Map | null) {
   }, [])
 
   const deleteSelected = useCallback(() => {
-    editState.selectedPolygons.forEach(polygon => {
+    const polygonsToDelete = Array.from(editState.selectedPolygons)
+    polygonsToDelete.forEach(polygon => {
       polygon.setMap(null)
     })
+    onDeletePolygons?.(polygonsToDelete)
     clearSelection()
-  }, [editState.selectedPolygons, clearSelection])
+  }, [editState.selectedPolygons, clearSelection, onDeletePolygons])
 
   // Handle keyboard events
   useEffect(() => {

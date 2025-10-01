@@ -39,23 +39,12 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
 
   const getActiveToolData = (targetTool: string | null = null): { index: number; section: string | null } => {
     const targetToolId = targetTool || activeTool
-
-    // Skip fixed tools (first and last)
-    if (targetToolId === 'tab' || targetToolId === 'search') {
-      return { index: -1, section: null }
-    }
-
-    // Check if tool is in main tools section (excluding first tab icon)
     const mainToolIndex = tools.findIndex(tool => tool.id === targetToolId && !tool.isFixed)
-    if (mainToolIndex !== -1) {
-      // Subtract 1 to account for the first fixed icon
-      return {
-        index: mainToolIndex - 1,
-        section: 'main'
-      }
-    }
 
-    return { index: -1, section: null }
+    // Return valid index and section only for non-fixed main tools
+    return mainToolIndex !== -1
+      ? { index: mainToolIndex - 1, section: 'main' }
+      : { index: -1, section: null }
   }
 
   const handleToolHover = useCallback((toolId: string | null) => {

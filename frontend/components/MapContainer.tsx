@@ -36,10 +36,13 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
   // Hooks for detection and polygon management
   const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
-  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, hasPolygons } = usePolygons(map)
+  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, removePolygons, hasRoofs } = usePolygons(map)
 
   // Edit mode hook
-  const { editState, toggleEditMode, selectPolygon, clearSelection, deleteSelected } = useEditMode(map)
+  const { editState, toggleEditMode, selectPolygon, clearSelection, deleteSelected } = useEditMode({
+    map,
+    onDeletePolygons: removePolygons
+  })
 
   // Handle polygon creation from drawing
   const handlePolygonComplete = useCallback((path: google.maps.LatLng[], isRoof: boolean) => {
@@ -67,10 +70,10 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     removeClickListener
   })
 
-  // Effect to handle panels tool visibility based on polygon presence
+  // Effect to handle panels tool visibility based on roof polygon presence
   useEffect(() => {
-    onPanelsAvailable?.(hasPolygons)
-  }, [hasPolygons, onPanelsAvailable])
+    onPanelsAvailable?.(hasRoofs)
+  }, [hasRoofs, onPanelsAvailable])
 
   // Effect to show/hide capture overlay based on active tool
   useEffect(() => {

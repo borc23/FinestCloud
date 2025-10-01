@@ -18,6 +18,7 @@ interface UsePolygonsReturn {
   togglePolygonVisibility: (visible: boolean) => void
   removePolygonListeners: (polygon: google.maps.Polygon) => void
   removeClickListener: (polygon: google.maps.Polygon) => void
+  removePolygons: (polygons: google.maps.Polygon[]) => void
   hasRoofs: boolean
   hasPolygons: boolean
 }
@@ -232,6 +233,26 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     }
   }, [])
 
+  const removePolygons = useCallback((polygonsToRemove: google.maps.Polygon[]) => {
+    const polygonSet = new Set(polygonsToRemove)
+
+    setRoofPolygons(prev => {
+      const toRemove = prev.filter(p => polygonSet.has(p))
+      toRemove.forEach(polygon => {
+        clearPolygonGroup([polygon])
+      })
+      return prev.filter(p => !polygonSet.has(p))
+    })
+
+    setObjectPolygons(prev => {
+      const toRemove = prev.filter(p => polygonSet.has(p))
+      toRemove.forEach(polygon => {
+        clearPolygonGroup([polygon])
+      })
+      return prev.filter(p => !polygonSet.has(p))
+    })
+  }, [clearPolygonGroup])
+
   const hasRoofs = roofPolygons.length > 0
   const hasPolygons = roofPolygons.length > 0 || objectPolygons.length > 0
 
@@ -243,6 +264,7 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     togglePolygonVisibility,
     removePolygonListeners,
     removeClickListener,
+    removePolygons,
     hasRoofs,
     hasPolygons
   }
