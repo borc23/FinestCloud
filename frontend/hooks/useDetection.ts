@@ -8,7 +8,7 @@ interface UseDetectionReturn {
   clearError: () => void
 }
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyArFZ4SYEzNAsmUgD0ss-kEScpZSC-1jh0'
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
 
 export function useDetection(): UseDetectionReturn {
   const [isDetecting, setIsDetecting] = useState(false)

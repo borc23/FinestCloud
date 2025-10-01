@@ -18,6 +18,8 @@ app/models/*.pt
 # Environment and IDE
 .env
 .venv
+.env.local
+.env*.local
 env/
 venv/
 ENV/

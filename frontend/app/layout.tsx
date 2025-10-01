@@ -35,8 +35,8 @@ export default function RootLayout({
         {children}
         {/* Google Maps API */}
         <Script
-          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY}&libraries=places`}
-          strategy="beforeInteractive"
+          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places&loading=async`}
+          strategy="afterInteractive"
         />
         {/* html2canvas for screenshots */}
         <Script

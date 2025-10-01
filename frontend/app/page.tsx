@@ -1,13 +1,17 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import ToolStrip from '@/components/ToolStrip'
-import MapContainer from '@/components/MapContainer'
 import FloatingSearch from '@/components/FloatingSearch'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { useState, useCallback } from 'react'
 
+const MapContainer = dynamic(() => import('@/components/MapContainer'), {
+  ssr: false,
+  loading: () => <LoadingSpinner />
+})
+
 export default function HomePage() {
-  const [isLoading, setIsLoading] = useState(false)
   const [activeTool, setActiveTool] = useState('')
   const [showToolStrip, setShowToolStrip] = useState(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -45,8 +49,6 @@ export default function HomePage() {
           {showSearch && <FloatingSearch map={map} />}
         </div>
       </div>
-
-      {isLoading && <LoadingSpinner />}
     </div>
   )
 }

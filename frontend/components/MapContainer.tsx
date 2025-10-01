@@ -188,7 +188,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
   useEffect(() => {
     const initializeMap = () => {
-      if (mapRef.current && window.google) {
+      if (mapRef.current && window.google && window.google.maps && window.google.maps.Map) {
         const mapOptions = {
           center: { lat: 37.7749, lng: -122.4194 },
           zoom: 20,
@@ -218,22 +218,21 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         const googleMap = new window.google.maps.Map(mapRef.current, mapOptions)
         setMap(googleMap)
         onMapReady?.(googleMap)
-        console.log('Map initialized with enhanced settings')
       }
     }
 
-    if (window.google && window.google.maps) {
+    if (window.google && window.google.maps && window.google.maps.Map) {
       initializeMap()
     } else {
       const checkGoogleMaps = setInterval(() => {
-        if (window.google && window.google.maps) {
+        if (window.google && window.google.maps && window.google.maps.Map) {
           clearInterval(checkGoogleMaps)
           initializeMap()
         }
       }, 100)
       setTimeout(() => clearInterval(checkGoogleMaps), 10000)
     }
-  }, [])
+  }, [onMapReady])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()

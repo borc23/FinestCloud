@@ -28,11 +28,6 @@
   --roof-area: #10b98120;
   --roof-border: #10b981;
 
-  /* Shadows - Ultra Subtle */
-  --shadow-minimal: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.12);
-  --shadow-floating: 0 12px 48px rgba(0, 0, 0, 0.15);
 
   /* Fluid Spacing System */
   --tool-strip-width: clamp(40px, 6vw, 64px);

@@ -15,48 +15,40 @@ interface FloatingSearchProps {
 
 export default function FloatingSearch({ map }: FloatingSearchProps) {
   const [query, setQuery] = useState('')
-  const [isFocused, setIsFocused] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
-  const [showLocationFallback, setShowLocationFallback] = useState(false)
-  const [fallbackLocation, setFallbackLocation] = useState('')
-  const [searchHistory, setSearchHistory] = useState<string[]>([])
-  const [historyIndex, setHistoryIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const fallbackInputRef = useRef<HTMLInputElement>(null)
   const autocompleteService = useRef<any>(null)
   const geocoder = useRef<any>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
-  // Auto-focus when component mounts
   useEffect(() => {
     inputRef.current?.focus()
-  }, [])
 
-  useEffect(() => {
-    if (window.google && window.google.maps) {
+    if (window.google?.maps) {
       autocompleteService.current = new window.google.maps.places.AutocompleteService()
       geocoder.current = new window.google.maps.Geocoder()
     }
   }, [])
 
   useEffect(() => {
-    if (query.length > 2 && autocompleteService.current) {
+    if (query.length < 3 || !autocompleteService.current) {
+      setSuggestions([])
+      return
+    }
+
+    const timer = setTimeout(() => {
       autocompleteService.current.getPlacePredictions(
-        {
-          input: query,
-          types: ['geocode']
-        },
+        { input: query, types: ['geocode'] },
         (predictions: any[], status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            const newSuggestions = predictions.slice(0, 5)
-            setSuggestions(newSuggestions)
+            setSuggestions(predictions.slice(0, 5))
           } else {
             setSuggestions([])
           }
         }
       )
-    } else {
-      setSuggestions([])
-    }
+    }, 100)
+    return () => clearTimeout(timer)
   }, [query])
 
   const searchLocation = (address: string) => {
@@ -71,122 +63,41 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     })
   }
 
-  const getCurrentLocation = () => {
-    if (!map) return
-
-    if (!navigator.geolocation) {
-      setShowLocationFallback(true)
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords
-        const currentLocation = new window.google.maps.LatLng(latitude, longitude)
-        map.setCenter(currentLocation)
-        map.setZoom(20)
-      },
-      (error) => {
-        console.log('Geolocation failed, showing manual location input')
-        setShowLocationFallback(true)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
-    )
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (query.trim()) {
-      const location = query.trim()
-      searchLocation(location)
-      addToHistory(location)
-      setSuggestions([])
-      setIsFocused(false)
-      inputRef.current?.blur()
-    }
+    if (!query.trim()) return
+
+    searchLocation(query.trim())
+    setSuggestions([])
+    inputRef.current?.blur()
   }
 
   const handleSuggestionClick = (prediction: any) => {
-    const address = prediction.description
-    setQuery(address)
+    setQuery(prediction.description)
     setSuggestions([])
-    setIsFocused(false)
-    searchLocation(address)
-    addToHistory(address)
+    searchLocation(prediction.description)
+  }
+
+  const handleClear = () => {
+    setQuery('')
+    setSuggestions([])
+    inputRef.current?.focus()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setSuggestions([])
-      setIsFocused(false)
       inputRef.current?.blur()
     }
   }
 
-  const handleFallbackSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (fallbackLocation.trim()) {
-      const location = fallbackLocation.trim()
-      searchLocation(location)
-      addToHistory(location)
-      setShowLocationFallback(false)
-      setFallbackLocation('')
-    }
-  }
-
-  const handleFallbackCancel = () => {
-    setShowLocationFallback(false)
-    setFallbackLocation('')
-  }
-
-  const addToHistory = (location: string) => {
-    setSearchHistory(prev => {
-      // Remove if already exists to avoid duplicates
-      const filtered = prev.filter(item => item !== location)
-      // Add new location to the front
-      const newHistory = [location, ...filtered]
-      // Keep only the first 5 items
-      return newHistory.slice(0, 5)
-    })
-    // Set history index to 1 (previous location) when new location is added
-    // This way first click goes to the previous location, not current
-    setHistoryIndex(1)
-  }
-
-  const handleHistoryNavigation = () => {
-    if (searchHistory.length === 0) return
-
-    // Get current location from history
-    const currentLocation = searchHistory[historyIndex]
-
-    // Search the current location
-    searchLocation(currentLocation)
-    setQuery(currentLocation)
-
-    // Move to next index (circular)
-    setHistoryIndex(prev => {
-      const nextIndex = prev + 1
-      // If we reach the end, go back to 0
-      return nextIndex >= searchHistory.length ? 0 : nextIndex
-    })
-
-    // Close suggestions and unfocus
-    setSuggestions([])
-    setIsFocused(false)
-    inputRef.current?.blur()
-  }
+  const showSuggestions = suggestions.length > 0
 
   return (
     <div className={styles.searchContainer}>
       <form onSubmit={handleSubmit} className={styles.searchForm}>
-        <div className={`${styles.searchWrapper} ${styles.expanded} ${isFocused ? styles.focused : ''}`}>
-          <div className={styles.searchIcon}>
-            <i className="fas fa-search"></i>
-          </div>
+        <div className={styles.searchWrapper}>
+          <i className={`fas fa-search ${styles.searchIcon}`} aria-hidden="true" />
 
           <input
             ref={inputRef}
@@ -195,101 +106,49 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
             placeholder="Search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
             onKeyDown={handleKeyDown}
             autoComplete="off"
+            aria-label="Search location"
+            aria-autocomplete="list"
+            aria-controls={showSuggestions ? 'search-suggestions' : undefined}
+            aria-expanded={showSuggestions}
           />
 
           {query && (
             <button
               type="button"
               className={styles.clearButton}
-              onClick={() => setQuery('')}
-              title="Clear text"
+              onClick={handleClear}
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Clear"
             >
-              <i className="fas fa-times"></i>
+              <span className={styles.clearIcon} aria-hidden="true" />
             </button>
           )}
         </div>
 
-        {suggestions.length > 0 && isFocused && (
-          <div className={styles.suggestions}>
-            {suggestions.map((prediction, index) => (
+        {showSuggestions && (
+          <div 
+            id="search-suggestions" 
+            ref={suggestionsRef}
+            className={styles.suggestions}
+            role="listbox"
+          >
+            {suggestions.map((prediction) => (
               <button
-                key={prediction.place_id || index}
+                key={prediction.place_id}
                 type="button"
                 className={styles.suggestion}
                 onClick={() => handleSuggestionClick(prediction)}
+                role="option"
               >
-                <div className={styles.suggestionIcon}>
-                  <i className="fas fa-map-marker-alt"></i>
-                </div>
+                <i className={`fas fa-map-marker-alt ${styles.suggestionIcon}`} aria-hidden="true" />
                 <span className={styles.suggestionText}>{prediction.description}</span>
               </button>
             ))}
           </div>
         )}
       </form>
-
-      {/* Quick Actions - Hidden for now */}
-      {/* <div className={styles.quickActions}>
-        <button
-          className={styles.quickAction}
-          title="Use Current Location"
-          onClick={getCurrentLocation}
-        >
-          <i className="fas fa-location-arrow"></i>
-        </button>
-
-        <button
-          className={styles.quickAction}
-          title={searchHistory.length > 1 && historyIndex < searchHistory.length ? `Go to: ${searchHistory[historyIndex]}` : searchHistory.length === 1 ? "Only one location in history" : "No search history"}
-          onClick={handleHistoryNavigation}
-          disabled={searchHistory.length <= 1}
-        >
-          <i className="fas fa-history"></i>
-        </button>
-      </div> */}
-
-      {/* Location Fallback Modal */}
-      {showLocationFallback && (
-        <div className={styles.fallbackOverlay}>
-          <div className={styles.fallbackModal}>
-            <h3 className={styles.fallbackTitle}>Enter Your Location</h3>
-            <p className={styles.fallbackMessage}>
-              We couldn't detect your current location automatically. Please enter your address, city, or location:
-            </p>
-            <form onSubmit={handleFallbackSubmit} className={styles.fallbackForm}>
-              <input
-                ref={fallbackInputRef}
-                type="text"
-                className={styles.fallbackInput}
-                placeholder="Enter your address or city..."
-                value={fallbackLocation}
-                onChange={(e) => setFallbackLocation(e.target.value)}
-                autoFocus
-              />
-              <div className={styles.fallbackButtons}>
-                <button
-                  type="button"
-                  className={styles.fallbackCancel}
-                  onClick={handleFallbackCancel}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={styles.fallbackSubmit}
-                  disabled={!fallbackLocation.trim()}
-                >
-                  Go to Location
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
