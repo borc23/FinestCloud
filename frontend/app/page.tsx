@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import ToolStrip from '@/components/ToolStrip'
 import FloatingSearch from '@/components/FloatingSearch'
 import LoadingSpinner from '@/components/LoadingSpinner'
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 
 const MapContainer = dynamic(() => import('@/components/MapContainer'), {
   ssr: false,
@@ -14,16 +14,11 @@ const MapContainer = dynamic(() => import('@/components/MapContainer'), {
 export default function HomePage() {
   const [activeTool, setActiveTool] = useState('')
   const [showToolStrip, setShowToolStrip] = useState(true)
-  const [showSearch, setShowSearch] = useState(false)
-  const [map, setMap] = useState<any>(null)
+  const [map, setMap] = useState<google.maps.Map | null>(null)
   const [showPanelsTool, setShowPanelsTool] = useState(false)
 
   const handleToolSelect = (tool: string) => {
-    if (tool === 'search') {
-      setShowSearch(!showSearch)
-    } else {
-      setActiveTool(tool)
-    }
+    setActiveTool(activeTool === tool ? '' : tool)
   }
 
   return (
@@ -46,7 +41,7 @@ export default function HomePage() {
             />
           )}
 
-          {showSearch && <FloatingSearch map={map} />}
+          {activeTool === 'search' && <FloatingSearch map={map} />}
         </div>
       </div>
     </div>
