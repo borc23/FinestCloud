@@ -39,7 +39,15 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, removePolygons, hasRoofs } = usePolygons(map)
 
   // Edit mode hook
-  const { editState, toggleEditMode, selectPolygon, clearSelection, deleteSelected } = useEditMode({
+  const {
+    isEditMode,
+    selectedPolygons,
+    isCtrlPressed,
+    toggleEditMode,
+    selectPolygon,
+    clearSelection,
+    deleteSelected
+  } = useEditMode({
     map,
     onDeletePolygons: removePolygons
   })
@@ -56,16 +64,16 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   // Drawing mode hook
   const { isDrawing, drawingType, pointCount, startDrawing, stopDrawing, completePolygon } = useDrawingMode({
     map,
-    isEditMode: editState.isEditMode,
+    isEditMode,
     onPolygonComplete: handlePolygonComplete
   })
 
   // Polygon manager hook
   const { updateAllPolygons } = usePolygonManager({
     map,
-    isEditMode: editState.isEditMode,
-    selectedPolygons: editState.selectedPolygons,
-    isCtrlPressed: editState.isCtrlPressed,
+    isEditMode,
+    selectedPolygons,
+    isCtrlPressed,
     onSelectPolygon: selectPolygon,
     removeClickListener
   })
@@ -89,7 +97,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     setActiveTab(tab)
     if (tab === 'edit') {
       // Switch to edit mode
-      if (!editState.isEditMode) {
+      if (!isEditMode) {
         toggleEditMode()
       }
       // Stop any active drawing
@@ -99,7 +107,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       // Don't change the toolbar active tool - keep it as 'edit'
     } else if (tab === 'draw') {
       // Switch to draw mode
-      if (!editState.isEditMode) {
+      if (!isEditMode) {
         toggleEditMode() // Draw mode requires edit mode to be active
       }
       // Start drawing with the selected type
@@ -108,7 +116,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       }
       // Don't change the toolbar active tool - keep it as 'edit'
     }
-  }, [editState.isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
+  }, [isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
 
   const handleDrawingTypeChange = useCallback((type: 'roof' | 'object') => {
     setDrawingTypeSelection(type)
@@ -123,7 +131,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   useEffect(() => {
     if (activeTool === 'edit') {
       setActiveTab('edit')
-      if (!editState.isEditMode) {
+      if (!isEditMode) {
         toggleEditMode()
       }
       if (isDrawing) {
@@ -131,7 +139,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       }
     } else if (activeTool !== 'edit') {
       // Exit edit mode when switching to any other tool (capture, etc.)
-      if (editState.isEditMode) {
+      if (isEditMode) {
         toggleEditMode()
       }
       if (isDrawing) {
@@ -148,7 +156,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     if (objectPolygons.length > 0) {
       updateAllPolygons(objectPolygons, false)
     }
-  }, [editState.isEditMode, editState.selectedPolygons, roofPolygons, objectPolygons, updateAllPolygons])
+  }, [isEditMode, selectedPolygons, roofPolygons, objectPolygons, updateAllPolygons])
 
   // Disable polygon clickability when drawing
   useEffect(() => {
@@ -311,7 +319,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       />
 
       {/* Edit/Draw Tab Bar */}
-      {editState.isEditMode && (
+      {isEditMode && (
         <EditDrawTabBar
           activeTab={activeTab}
           drawingType={drawingTypeSelection}

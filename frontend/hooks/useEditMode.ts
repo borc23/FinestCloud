@@ -1,13 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-
-interface EditState {
-  isEditMode: boolean
-  selectedPolygons: Set<google.maps.Polygon>
-  isCtrlPressed: boolean
-  isDrawingPolygon: boolean
-  isClickable: boolean
-  polygonEditMode: 'roof' | 'object'
-}
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 
 interface UseEditModeProps {
   map: google.maps.Map | null
@@ -15,20 +6,20 @@ interface UseEditModeProps {
 }
 
 export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
-  const [editState, setEditState] = useState<EditState>({
-    isEditMode: false,
-    selectedPolygons: new Set(),
-    isCtrlPressed: false,
-    isDrawingPolygon: false,
-    isClickable: true,
-    polygonEditMode: 'roof'
-  })
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [selectedPolygons, setSelectedPolygons] = useState<Set<google.maps.Polygon>>(new Set())
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
+  const [isDrawingPolygon, setIsDrawingPolygon] = useState(false)
+  const [isClickable, setIsClickable] = useState(true)
+  const [polygonEditMode, setPolygonEditMode] = useState<'roof' | 'object'>('roof')
 
   const mapClickListenerRef = useRef<google.maps.MapsEventListener | null>(null)
+  const deleteSelectedRef = useRef<() => void>(() => {})
+  const clearSelectionRef = useRef<() => void>(() => {})
 
   const toggleEditMode = useCallback(() => {
-    setEditState(prev => {
-      const newIsEditMode = !prev.isEditMode
+    setIsEditMode(prev => {
+      const newIsEditMode = !prev
 
       // Update map options based on edit mode
       if (map) {
@@ -40,17 +31,14 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
         })
       }
 
-      return {
-        ...prev,
-        isEditMode: newIsEditMode,
-        selectedPolygons: new Set() // Clear selection when toggling
-      }
+      return newIsEditMode
     })
+    setSelectedPolygons(new Set()) // Clear selection when toggling
   }, [map])
 
   const selectPolygon = useCallback((polygon: google.maps.Polygon, ctrlKey: boolean = false) => {
-    setEditState(prev => {
-      const newSelection = new Set(prev.selectedPolygons)
+    setSelectedPolygons(prev => {
+      const newSelection = new Set(prev)
 
       if (!ctrlKey) {
         newSelection.clear()
@@ -62,46 +50,46 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
         newSelection.add(polygon)
       }
 
-      return {
-        ...prev,
-        selectedPolygons: newSelection
-      }
+      return newSelection
     })
   }, [])
 
   const clearSelection = useCallback(() => {
-    setEditState(prev => ({
-      ...prev,
-      selectedPolygons: new Set()
-    }))
+    setSelectedPolygons(new Set())
   }, [])
 
   const deleteSelected = useCallback(() => {
-    const polygonsToDelete = Array.from(editState.selectedPolygons)
-    polygonsToDelete.forEach(polygon => {
-      polygon.setMap(null)
+    setSelectedPolygons(prev => {
+      const polygonsToDelete = Array.from(prev)
+      polygonsToDelete.forEach(polygon => polygon.setMap(null))
+      onDeletePolygons?.(polygonsToDelete)
+      return new Set()
     })
-    onDeletePolygons?.(polygonsToDelete)
-    clearSelection()
-  }, [editState.selectedPolygons, clearSelection, onDeletePolygons])
+  }, [onDeletePolygons])
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    deleteSelectedRef.current = deleteSelected
+    clearSelectionRef.current = clearSelection
+  }, [deleteSelected, clearSelection])
 
   // Handle keyboard events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!editState.isEditMode) return
+      if (!isEditMode) return
 
       if (e.key === 'Control') {
-        setEditState(prev => ({ ...prev, isCtrlPressed: true }))
+        setIsCtrlPressed(true)
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        deleteSelected()
+        deleteSelectedRef.current()
       } else if (e.key === 'Escape') {
-        clearSelection()
+        clearSelectionRef.current()
       }
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control') {
-        setEditState(prev => ({ ...prev, isCtrlPressed: false }))
+        setIsCtrlPressed(false)
       }
     }
 
@@ -112,15 +100,15 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('keyup', handleKeyUp)
     }
-  }, [editState.isEditMode, deleteSelected, clearSelection])
+  }, [isEditMode])
 
   // Handle map clicks to deselect
   useEffect(() => {
     if (!map) return
 
-    if (editState.isEditMode && !editState.isDrawingPolygon) {
+    if (isEditMode && !isDrawingPolygon) {
       mapClickListenerRef.current = map.addListener('click', () => {
-        clearSelection()
+        clearSelectionRef.current()
       })
     }
 
@@ -130,13 +118,31 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
         mapClickListenerRef.current = null
       }
     }
-  }, [map, editState.isEditMode, editState.isDrawingPolygon, clearSelection])
+  }, [map, isEditMode, isDrawingPolygon])
 
-  return {
-    editState,
+  return useMemo(() => ({
+    isEditMode,
+    selectedPolygons,
+    isCtrlPressed,
+    isDrawingPolygon,
+    isClickable,
+    polygonEditMode,
+    setIsDrawingPolygon,
+    setPolygonEditMode,
     toggleEditMode,
     selectPolygon,
     clearSelection,
     deleteSelected
-  }
+  }), [
+    isEditMode,
+    selectedPolygons,
+    isCtrlPressed,
+    isDrawingPolygon,
+    isClickable,
+    polygonEditMode,
+    toggleEditMode,
+    selectPolygon,
+    clearSelection,
+    deleteSelected
+  ])
 }

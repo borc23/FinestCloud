@@ -23,8 +23,17 @@ export interface DetectionResponse {
   error?: string
 }
 
+export interface StaticMapParams {
+  center: string
+  zoom: number
+  size: string
+  maptype: string
+  format: string
+  style: string
+}
+
 export interface DetectionRequest {
-  image: string
+  image: StaticMapParams
   bounds: DetectionBounds
   conf?: number
   epsilon?: number

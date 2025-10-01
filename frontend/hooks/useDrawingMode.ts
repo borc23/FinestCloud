@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 
+const COLORS = {
+  ROOF: '#34c759',
+  OBJECT: '#ff453a'
+} as const
+
+export type DrawingMode = 'roof' | 'object'
+
 interface UseDrawingModeProps {
   map: google.maps.Map | null
   isEditMode: boolean
@@ -8,7 +15,7 @@ interface UseDrawingModeProps {
 
 export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawingModeProps) {
   const [isDrawing, setIsDrawing] = useState(false)
-  const [drawingType, setDrawingType] = useState<'roof' | 'object' | null>(null)
+  const [drawingType, setDrawingType] = useState<DrawingMode | null>(null)
   const [pointCount, setPointCount] = useState(0)
 
   // Use refs for immediate access without re-renders causing issues
@@ -18,11 +25,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
   const tempLineRef = useRef<google.maps.Polyline | null>(null)
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const mouseMoveListenerRef = useRef<google.maps.MapsEventListener | null>(null)
-  const typeRef = useRef<'roof' | 'object' | null>(null)
-
-  const getColor = useCallback(() => {
-    return typeRef.current === 'roof' ? '#22c55e' : '#f59e0b'
-  }, [])
+  const typeRef = useRef<DrawingMode | null>(null)
 
   const cleanup = useCallback(() => {
     markersRef.current.forEach(marker => marker.setMap(null))
@@ -39,7 +42,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
 
   const createMarker = useCallback((position: google.maps.LatLng, isFirst: boolean) => {
     if (!map) return null
-    const color = typeRef.current === 'roof' ? '#34c759' : '#ff453a'
+    const color = typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
     return new google.maps.Marker({
       position,
       map,
@@ -60,7 +63,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
 
   const createLine = useCallback((start: google.maps.LatLng, end: google.maps.LatLng) => {
     if (!map) return null
-    const color = typeRef.current === 'roof' ? '#34c759' : '#ff453a'
+    const color = typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
     return new google.maps.Polyline({
       path: [start, end],
       map,
@@ -76,7 +79,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     if (!map || pathRef.current.length === 0) return
     if (tempLineRef.current) tempLineRef.current.setMap(null)
     const lastPoint = pathRef.current[pathRef.current.length - 1]
-    const color = typeRef.current === 'roof' ? '#34c759' : '#ff453a'
+    const color = typeRef.current === 'roof' ? COLORS.ROOF : COLORS.OBJECT
     tempLineRef.current = new google.maps.Polyline({
       path: [lastPoint, mousePos],
       map,
@@ -113,7 +116,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     const marker = createMarker(latLng, isFirst)
     if (!marker) return
     if (isFirst) {
-      marker.addListener('click', (e: any) => {
+      marker.addListener('click', (e: google.maps.MapMouseEvent) => {
         e.stop?.()
         if (pathRef.current.length >= 3) completePolygon()
       })
@@ -127,7 +130,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     setPointCount(pathRef.current.length)
   }, [map, createMarker, createLine, completePolygon])
 
-  const startDrawing = useCallback((type: 'roof' | 'object') => {
+  const startDrawing = useCallback((type: DrawingMode) => {
     if (!map || !isEditMode) return
     typeRef.current = type
     setDrawingType(type)
@@ -207,10 +210,8 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
   useEffect(() => {
     return () => {
       cleanup()
-      if (clickListenerRef.current) google.maps.event.removeListener(clickListenerRef.current)
-      if (mouseMoveListenerRef.current) google.maps.event.removeListener(mouseMoveListenerRef.current)
     }
-  }, [cleanup])
+  }, [])
 
   return { isDrawing, drawingType, pointCount, startDrawing, stopDrawing, completePolygon }
 }

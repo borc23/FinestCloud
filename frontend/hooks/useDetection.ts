@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { DetectionBounds, DetectionResponse, DetectionRequest } from '../types/detection'
 
 interface UseDetectionReturn {
@@ -8,32 +8,10 @@ interface UseDetectionReturn {
   clearError: () => void
 }
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
-
 export function useDetection(): UseDetectionReturn {
   const [isDetecting, setIsDetecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const generateStaticMapUrl = useCallback((map: google.maps.Map): string => {
-    const center = map.getCenter()
-    const zoom = map.getZoom()
-
-    if (!center) {
-      throw new Error('Unable to get map center')
-    }
-
-    const params = new URLSearchParams({
-      center: `${center.lat()},${center.lng()}`,
-      size: '640x640',
-      maptype: 'satellite',
-      zoom: zoom.toString(),
-      format: 'jpg',
-      style: 'feature:all|color:0xffffff',
-      key: GOOGLE_MAPS_API_KEY
-    })
-
-    return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`
-  }, [])
+  const isDetectingRef = useRef(false)
 
   const convertBoundsToDetectionBounds = useCallback((bounds: google.maps.LatLngBounds): DetectionBounds => {
     const ne = bounds.getNorthEast()
@@ -51,17 +29,31 @@ export function useDetection(): UseDetectionReturn {
     map: google.maps.Map,
     bounds: google.maps.LatLngBounds
   ): Promise<DetectionResponse | null> => {
-    if (isDetecting) return null
+    if (isDetectingRef.current) return null
 
+    isDetectingRef.current = true
     setIsDetecting(true)
     setError(null)
 
     try {
-      const staticMapUrl = generateStaticMapUrl(map)
+      const center = map.getCenter()
+      const zoom = map.getZoom()
+
+      if (!center) {
+        throw new Error('Unable to get map center')
+      }
+
       const detectionBounds = convertBoundsToDetectionBounds(bounds)
 
       const requestData: DetectionRequest = {
-        image: staticMapUrl,
+        image: {
+          center: `${center.lat()},${center.lng()}`,
+          zoom: zoom,
+          size: '640x640',
+          maptype: 'satellite',
+          format: 'jpg',
+          style: 'feature:all|color:0xffffff'
+        },
         bounds: detectionBounds,
         conf: 0.5,
         epsilon: 0.0075
@@ -92,9 +84,10 @@ export function useDetection(): UseDetectionReturn {
       console.error('Detection error:', err)
       return null
     } finally {
+      isDetectingRef.current = false
       setIsDetecting(false)
     }
-  }, [isDetecting, generateStaticMapUrl, convertBoundsToDetectionBounds])
+  }, [convertBoundsToDetectionBounds])
 
   const clearError = useCallback(() => {
     setError(null)
