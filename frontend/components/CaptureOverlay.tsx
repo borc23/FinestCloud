@@ -13,7 +13,6 @@ interface CaptureOverlayProps {
 export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: CaptureOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const isMountedRef = useRef(true)
 
   const updatePosition = useCallback(() => {
     if (!overlayRef.current || !map) return
@@ -23,13 +22,14 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
 
     // Center the 640x640 capture square
     const squareSize = 640
-    const left = (containerRect.width - squareSize) / 2
-    const top = (containerRect.height - squareSize) / 2
+    const maxSize = Math.min(containerRect.width, containerRect.height, squareSize)
+    const left = (containerRect.width - maxSize) / 2
+    const top = (containerRect.height - maxSize) / 2
 
     overlayRef.current.style.left = `${left}px`
     overlayRef.current.style.top = `${top}px`
-    overlayRef.current.style.width = `${squareSize}px`
-    overlayRef.current.style.height = `${squareSize}px`
+    overlayRef.current.style.width = `${maxSize}px`
+    overlayRef.current.style.height = `${maxSize}px`
   }, [map])
 
   useEffect(() => {
@@ -45,6 +45,7 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
 
       return () => {
         listeners.forEach(listener => google.maps.event.removeListener(listener))
+        listeners.length = 0
       }
     }
   }, [isVisible, map, updatePosition])
@@ -80,18 +81,13 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
     }
   }, [isVisible])
 
-  // Track component mount/unmount
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+  const isCalculatingRef = useRef(false)
 
   const getBounds = useCallback(async (): Promise<google.maps.LatLngBounds | null> => {
-    if (!overlayRef.current || !map || !isMountedRef.current) {
-      return null
-    }
+    if (!overlayRef.current || !map) return null
+    if (isCalculatingRef.current) return null
+
+    isCalculatingRef.current = true
 
     let overlay: google.maps.OverlayView | null = null
 
@@ -103,10 +99,16 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
       // Wait for overlay to be ready with timeout
       return new Promise((resolve, reject) => {
         let attempts = 0
-        const maxAttempts = 40 // 2 seconds max wait
+        const maxAttempts = 10 // Reduced from 40 to 10 attempts
+        let animationFrameId: number | null = null
         let timeoutId: NodeJS.Timeout | null = null
+        const startTime = Date.now()
+        const maxWaitTime = 500 // Reduced from 2000ms to 500ms
 
         const cleanup = () => {
+          if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId)
+          }
           if (timeoutId) {
             clearTimeout(timeoutId)
           }
@@ -120,12 +122,6 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         }
 
         const checkProjection = () => {
-          if (!isMountedRef.current) {
-            cleanup()
-            reject(new Error('Component unmounted'))
-            return
-          }
-
           const projection = overlay!.getProjection()
           if (projection) {
             try {
@@ -157,11 +153,14 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
             }
           } else {
             attempts++
-            if (attempts >= maxAttempts) {
+            const elapsedTime = Date.now() - startTime
+
+            if (attempts >= maxAttempts || elapsedTime >= maxWaitTime) {
               cleanup()
               reject(new Error('Timeout waiting for Google Maps projection'))
             } else {
-              timeoutId = setTimeout(checkProjection, 50)
+              // Use requestAnimationFrame for more efficient polling
+              animationFrameId = requestAnimationFrame(checkProjection)
             }
           }
         }
@@ -170,29 +169,28 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
     } catch (error) {
       if (overlay) {
         try {
-          overlay.setMap(null)
-        } catch (cleanupError) {
-          // Ignore cleanup errors
+          overlay.setMap(null);
+        } catch {
         }
       }
-      return null
+
+      isCalculatingRef.current = false;
+      return null;
     }
+    isCalculatingRef.current = false;
+    return null;
   }, [map])
 
   const handleDetect = async () => {
-    if (isProcessing || !isMountedRef.current) return
+    if (isProcessing) return
 
     setIsProcessing(true)
 
     try {
       const bounds = await getBounds()
-      if (isMountedRef.current) {
-        await onCapture(bounds)
-      }
+      await onCapture(bounds)
     } finally {
-      if (isMountedRef.current) {
-        setIsProcessing(false)
-      }
+      setIsProcessing(false)
     }
   }
 
@@ -200,6 +198,11 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
 
   return (
     <>
+      {/* ARIA Live Region for Screen Readers */}
+      <div role="status" aria-live="polite" className={styles.srOnly}>
+        {isProcessing ? "Processing capture" : ""}
+      </div>
+
       {/* Capture Square */}
       <div
         ref={overlayRef}
