@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { StyleConfig } from '../utils/styleConfig'
 
+interface ExtendedPolygon extends google.maps.Polygon {
+  isPanelElement?: boolean
+  moduleType?: 'STANDARD' | 'PREMIUM' | string
+}
+
 interface PolygonManagerProps {
   map: google.maps.Map | null
   isEditMode: boolean
@@ -19,13 +24,20 @@ export function usePolygonManager({
   removeClickListener: removePolygonClickListener
 }: PolygonManagerProps) {
   const polygonListenersRef = useRef<Map<google.maps.Polygon, google.maps.MapsEventListener[]>>(new Map())
+  const selectedPolygonsRef = useRef(selectedPolygons)
+
+  // Keep ref in sync without triggering re-renders
+  useEffect(() => {
+    selectedPolygonsRef.current = selectedPolygons
+  }, [selectedPolygons])
 
   const updatePolygonState = useCallback((polygon: google.maps.Polygon, isRoof: boolean) => {
-    const isSelected = selectedPolygons.has(polygon)
-    const isPanelElement = (polygon as any).isPanelElement
+    const isSelected = selectedPolygonsRef.current.has(polygon)
+    const extendedPolygon = polygon as ExtendedPolygon
+    const isPanelElement = extendedPolygon.isPanelElement
 
     if (isPanelElement) {
-      const moduleType = (polygon as any).moduleType || 'STANDARD'
+      const moduleType = extendedPolygon.moduleType || 'STANDARD'
       const state = isSelected ? 'selected' : 'default'
       const options = StyleConfig.getPanelOptions(state, moduleType)
 
@@ -43,21 +55,37 @@ export function usePolygonManager({
         clickable: isEditMode
       })
     }
-  }, [selectedPolygons, isEditMode])
+  }, [isEditMode])
+
+  const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
+    // Remove listeners added by this manager
+    const listeners = polygonListenersRef.current.get(polygon)
+    if (!listeners) return
+
+    listeners.forEach(listener => {
+      google.maps.event.removeListener(listener)
+    })
+    polygonListenersRef.current.delete(polygon)
+  }, [])
 
   const addPolygonListeners = useCallback((polygon: google.maps.Polygon, isRoof: boolean) => {
     if (!isEditMode) return
 
     const listeners: google.maps.MapsEventListener[] = []
 
+    // Map change listener - cleanup when polygon is removed from map
+    listeners.push(
+      polygon.addListener('map_changed', () => {
+        if (polygon.getMap() === null) {
+          removePolygonListeners(polygon)
+        }
+      })
+    )
+
     // Click listener - prevent event propagation to stop map from moving
     listeners.push(
       polygon.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (e.stop) e.stop()
-        if (e.domEvent) {
-          e.domEvent.stopPropagation?.()
-          e.domEvent.preventDefault?.()
-        }
+        e.stop?.()
         onSelectPolygon(polygon, isCtrlPressed)
       })
     )
@@ -65,7 +93,7 @@ export function usePolygonManager({
     // Right-click for vertex removal
     listeners.push(
       polygon.addListener('rightclick', (e: any) => {
-        if (selectedPolygons.has(polygon) && e.vertex !== undefined) {
+        if (selectedPolygonsRef.current.has(polygon) && e.vertex !== undefined) {
           const path = polygon.getPath()
           if (path.getLength() > 3) {
             path.removeAt(e.vertex)
@@ -79,12 +107,8 @@ export function usePolygonManager({
     // Double-click for vertex addition
     listeners.push(
       polygon.addListener('dblclick', (e: any) => {
-        if (e.stop) e.stop()
-        if (e.domEvent) {
-          e.domEvent.stopPropagation?.()
-          e.domEvent.preventDefault?.()
-        }
-        if (selectedPolygons.has(polygon) && e.vertex !== undefined) {
+        e.stop?.()
+        if (selectedPolygonsRef.current.has(polygon) && e.vertex !== undefined) {
           const path = polygon.getPath()
           path.insertAt(e.vertex + 1, e.latLng)
         }
@@ -92,11 +116,12 @@ export function usePolygonManager({
     )
 
     // Panel hover effects
-    if ((polygon as any).isPanelElement) {
+    const extendedPolygon = polygon as ExtendedPolygon
+    if (extendedPolygon.isPanelElement) {
       listeners.push(
         polygon.addListener('mouseover', () => {
-          if (!selectedPolygons.has(polygon)) {
-            const moduleType = (polygon as any).moduleType || 'STANDARD'
+          if (!selectedPolygonsRef.current.has(polygon)) {
+            const moduleType = extendedPolygon.moduleType || 'STANDARD'
             const options = StyleConfig.getPanelOptions('hover', moduleType)
             polygon.setOptions(options)
           }
@@ -105,8 +130,8 @@ export function usePolygonManager({
 
       listeners.push(
         polygon.addListener('mouseout', () => {
-          if (!selectedPolygons.has(polygon)) {
-            const moduleType = (polygon as any).moduleType || 'STANDARD'
+          if (!selectedPolygonsRef.current.has(polygon)) {
+            const moduleType = extendedPolygon.moduleType || 'STANDARD'
             const options = StyleConfig.getPanelOptions('default', moduleType)
             polygon.setOptions(options)
           }
@@ -115,18 +140,7 @@ export function usePolygonManager({
     }
 
     polygonListenersRef.current.set(polygon, listeners)
-  }, [isEditMode, isCtrlPressed, onSelectPolygon, selectedPolygons])
-
-  const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
-    // Remove listeners added by this manager
-    const listeners = polygonListenersRef.current.get(polygon)
-    if (listeners) {
-      listeners.forEach(listener => {
-        google.maps.event.removeListener(listener)
-      })
-      polygonListenersRef.current.delete(polygon)
-    }
-  }, [])
+  }, [isEditMode, isCtrlPressed, onSelectPolygon, removePolygonListeners])
 
   const updateAllPolygons = useCallback((polygons: google.maps.Polygon[], isRoof: boolean) => {
     polygons.forEach(polygon => {

@@ -1,14 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { RoofModel, CoordinateModel } from '../types/detection'
-
-interface PolygonOptions {
-  strokeColor: string
-  strokeOpacity: number
-  strokeWeight: number
-  fillColor: string
-  fillOpacity: number
-  clickable?: boolean
-}
+import { StyleConfig } from '../utils/styleConfig'
 
 interface UsePolygonsReturn {
   roofPolygons: google.maps.Polygon[]
@@ -23,43 +15,6 @@ interface UsePolygonsReturn {
   hasPolygons: boolean
 }
 
-const POLYGON_STYLES = {
-  roof: {
-    default: {
-      strokeColor: '#22c55e',
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: '#22c55e',
-      fillOpacity: 0.2,
-      clickable: true
-    },
-    hover: {
-      strokeColor: '#16a34a',
-      strokeOpacity: 1,
-      strokeWeight: 3,
-      fillColor: '#16a34a',
-      fillOpacity: 0.3
-    }
-  },
-  object: {
-    default: {
-      strokeColor: '#f59e0b',
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: '#f59e0b',
-      fillOpacity: 0.2,
-      clickable: true
-    },
-    hover: {
-      strokeColor: '#d97706',
-      strokeOpacity: 1,
-      strokeWeight: 3,
-      fillColor: '#d97706',
-      fillOpacity: 0.3
-    }
-  }
-}
-
 export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   const [roofPolygons, setRoofPolygons] = useState<google.maps.Polygon[]>([])
   const [objectPolygons, setObjectPolygons] = useState<google.maps.Polygon[]>([])
@@ -71,13 +26,13 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
       .map(coord => new google.maps.LatLng(coord.lat!, coord.lng!))
   }, [])
 
-  const createPolygonOptions = useCallback((isRoof: boolean): PolygonOptions => {
-    return isRoof ? POLYGON_STYLES.roof.default : POLYGON_STYLES.object.default
+  const createPolygonOptions = useCallback((isRoof: boolean): google.maps.PolygonOptions => {
+    return StyleConfig.getOptionsForType(isRoof, false)
   }, [])
 
   const addHoverEffects = useCallback((polygon: google.maps.Polygon, isRoof: boolean, currentMap: google.maps.Map) => {
-    const hoverStyle = isRoof ? POLYGON_STYLES.roof.hover : POLYGON_STYLES.object.hover
-    const defaultStyle = isRoof ? POLYGON_STYLES.roof.default : POLYGON_STYLES.object.default
+    const baseColor = isRoof ? StyleConfig.COLORS.ROOF : StyleConfig.COLORS.OBJECT
+    const defaultOptions = StyleConfig.getOptionsForType(isRoof, false)
 
     const listeners: google.maps.MapsEventListener[] = []
 
@@ -85,14 +40,17 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     const mouseoverListener = polygon.addListener('mouseover', () => {
       // Don't apply hover effect if polygon is selected (draggable means selected)
       if (!polygon.getDraggable?.()) {
-        polygon.setOptions(hoverStyle)
+        polygon.setOptions({
+          strokeColor: baseColor.HOVER,
+          fillColor: baseColor.HOVER
+        })
       }
     })
 
     const mouseoutListener = polygon.addListener('mouseout', () => {
       // Don't revert hover effect if polygon is selected
       if (!polygon.getDraggable?.()) {
-        polygon.setOptions(defaultStyle)
+        polygon.setOptions(defaultOptions)
       }
     })
 
