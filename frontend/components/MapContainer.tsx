@@ -10,6 +10,7 @@ import { useEditMode } from '../hooks/useEditMode'
 import { usePolygonManager } from '../hooks/usePolygonManager'
 import { useDrawingMode } from '../hooks/useDrawingMode'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
+import RoofAnglePanel from './RoofAnglePanel'
 // import { StyleConfig } from '../utils/styleConfig'
 
 declare global {
@@ -33,6 +34,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
+  const [showAnglePanel, setShowAnglePanel] = useState(false)
+  const [solarDataResults, setSolarDataResults] = useState<any>(null)
   const solarPanelApiRef = useRef(new SolarPanelApiService())
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
@@ -119,15 +122,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       const result = await solarPanelApiRef.current.fetchSolarDataForPolygons(roofPolygons, mapBounds)
 
       if (result.success && result.data) {
-        // Log data for each polygon
-        console.log('=== Solar Panel Data for Each Polygon ===')
-        if (Array.isArray(result.data)) {
-          result.data.forEach((polygonData: any, index: number) => {
-            console.log(`\nPolygon ${index + 1}:`, polygonData)
-          })
-        } else {
-          console.log('Response data:', result.data)
-        }
+        setSolarDataResults(result.data)
+        setShowAnglePanel(true)
       } else {
         console.error('Failed to fetch solar panel data:', result.error)
       }
@@ -135,6 +131,15 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       console.error('Panel generation failed:', err)
     }
   }, [map, roofPolygons])
+
+  const handleAngleConfirm = useCallback((data: { angles: number[]; edgePadding: number }) => {
+    console.log('Confirmed angles and padding:', data)
+    setShowAnglePanel(false)
+  }, [])
+
+  const handleAngleCancel = useCallback(() => {
+    setShowAnglePanel(false)
+  }, [])
 
   // Effect to manage edit/draw mode based on active tool
   useEffect(() => {
@@ -368,6 +373,16 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
           drawingType={drawingTypeSelection}
           onTabChange={handleTabChange}
           onDrawingTypeChange={handleDrawingTypeChange}
+        />
+      )}
+
+      {/* Roof Angle Panel */}
+      {showAnglePanel && (
+        <RoofAnglePanel
+          roofPolygons={roofPolygons}
+          solarData={solarDataResults}
+          onConfirm={handleAngleConfirm}
+          onCancel={handleAngleCancel}
         />
       )}
 
