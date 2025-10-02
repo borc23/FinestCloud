@@ -9,11 +9,11 @@ import { usePolygons } from '../hooks/usePolygons'
 import { useEditMode } from '../hooks/useEditMode'
 import { usePolygonManager } from '../hooks/usePolygonManager'
 import { useDrawingMode } from '../hooks/useDrawingMode'
-import { StyleConfig } from '../utils/styleConfig'
+// import { StyleConfig } from '../utils/styleConfig'
 
 declare global {
   interface Window {
-    google: any
+    google: typeof google
     initMap: () => void
   }
 }
@@ -31,11 +31,11 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [isImageView, setIsImageView] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
-  const [activeTab, setActiveTab] = useState<'edit' | 'draw'>('edit')
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
 
-  // Hooks for detection and polygon management
-  const { isDetecting, error: detectionError, detectRoofs, clearError } = useDetection()
+  const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
+
+  const { error: detectionError, detectRoofs, clearError } = useDetection()
   const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, removePolygons, hasRoofs } = usePolygons(map)
 
   // Edit mode hook
@@ -45,8 +45,6 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     isCtrlPressed,
     toggleEditMode,
     selectPolygon,
-    clearSelection,
-    deleteSelected
   } = useEditMode({
     map,
     onDeletePolygons: removePolygons
@@ -62,7 +60,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   }, [map, renderPolygons])
 
   // Drawing mode hook
-  const { isDrawing, drawingType, startDrawing, stopDrawing, completePolygon } = useDrawingMode({
+  const { isDrawing, startDrawing, stopDrawing } = useDrawingMode({
     map,
     isEditMode,
     onPolygonComplete: handlePolygonComplete
@@ -93,31 +91,10 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [activeTool])
 
-  // Handle tab changes
+  // Handle tab changes by updating the parent tool state
   const handleTabChange = useCallback((tab: 'edit' | 'draw') => {
-    setActiveTab(tab)
-    if (tab === 'edit') {
-      // Switch to edit mode
-      if (!isEditMode) {
-        toggleEditMode()
-      }
-      // Stop any active drawing
-      if (isDrawing) {
-        stopDrawing()
-      }
-      // Don't change the toolbar active tool - keep it as 'edit'
-    } else if (tab === 'draw') {
-      // Switch to draw mode
-      if (!isEditMode) {
-        toggleEditMode() // Draw mode requires edit mode to be active
-      }
-      // Start drawing with the selected type
-      if (!isDrawing) {
-        startDrawing(drawingTypeSelection)
-      }
-      // Don't change the toolbar active tool - keep it as 'edit'
-    }
-  }, [isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
+    onToolChange?.(tab)
+  }, [onToolChange])
 
   const handleDrawingTypeChange = useCallback((type: 'roof' | 'object') => {
     setDrawingTypeSelection(type)
@@ -128,18 +105,28 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [isDrawing, stopDrawing, startDrawing])
 
-  // Effect to toggle edit mode based on active tool (from toolbar)
+  // Effect to manage edit/draw mode based on active tool
   useEffect(() => {
     if (activeTool === 'edit') {
-      setActiveTab('edit')
+      // Enter edit mode
       if (!isEditMode) {
         toggleEditMode()
       }
+      // Stop any active drawing
       if (isDrawing) {
         stopDrawing()
       }
-    } else if (activeTool !== 'edit') {
-      // Exit edit mode when switching to any other tool (capture, etc.)
+    } else if (activeTool === 'draw') {
+      // Enter draw mode
+      if (!isEditMode) {
+        toggleEditMode()
+      }
+      // Start drawing with the selected type
+      if (!isDrawing) {
+        startDrawing(drawingTypeSelection)
+      }
+    } else {
+      // Exit edit/draw mode when switching to any other tool
       if (isEditMode) {
         toggleEditMode()
       }
@@ -147,26 +134,32 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         stopDrawing()
       }
     }
-  }, [activeTool])
+  }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
 
-  // Update polygons when edit mode, selection, or drawing state changes
+  const roofPolygonsRef = useRef<google.maps.Polygon[]>([])
+  const objectPolygonsRef = useRef<google.maps.Polygon[]>([])
+
   useEffect(() => {
-    // First set clickability based on drawing state
-    const allPolygons = [...roofPolygons, ...objectPolygons]
+    roofPolygonsRef.current = roofPolygons
+    objectPolygonsRef.current = objectPolygons
+  }, [roofPolygons, objectPolygons])
+
+  useEffect(() => {
+    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current]
+
     allPolygons.forEach(polygon => {
       if (polygon) {
         polygon.setOptions({ clickable: !isDrawing })
       }
     })
 
-    // Then update polygon listeners and styles for edit/draw mode
-    if (roofPolygons.length > 0) {
-      updateAllPolygons(roofPolygons, true)
+    if (roofPolygonsRef.current.length > 0) {
+      updateAllPolygons(roofPolygonsRef.current, true)
     }
-    if (objectPolygons.length > 0) {
-      updateAllPolygons(objectPolygons, false)
+    if (objectPolygonsRef.current.length > 0) {
+      updateAllPolygons(objectPolygonsRef.current, false)
     }
-  }, [isEditMode, selectedPolygons, isDrawing, roofPolygons, objectPolygons, updateAllPolygons])
+  }, [isEditMode, selectedPolygons, isDrawing, updateAllPolygons])
 
   // Handle roof detection
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
@@ -198,6 +191,9 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   }, [map, detectRoofs, clearAllPolygons, renderPolygons])
 
   useEffect(() => {
+    let checkInterval: NodeJS.Timeout | null = null
+    let timeoutId: NodeJS.Timeout | null = null
+
     const initializeMap = () => {
       if (mapRef.current && window.google && window.google.maps && window.google.maps.Map) {
         const mapOptions = {
@@ -235,13 +231,21 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     if (window.google && window.google.maps && window.google.maps.Map) {
       initializeMap()
     } else {
-      const checkGoogleMaps = setInterval(() => {
+      checkInterval = setInterval(() => {
         if (window.google && window.google.maps && window.google.maps.Map) {
-          clearInterval(checkGoogleMaps)
+          if (checkInterval) clearInterval(checkInterval)
+          if (timeoutId) clearTimeout(timeoutId)
           initializeMap()
         }
       }, 100)
-      setTimeout(() => clearInterval(checkGoogleMaps), 10000)
+      timeoutId = setTimeout(() => {
+        if (checkInterval) clearInterval(checkInterval)
+      }, 10000)
+    }
+
+    return () => {
+      if (checkInterval) clearInterval(checkInterval)
+      if (timeoutId) clearTimeout(timeoutId)
     }
   }, [onMapReady])
 
@@ -263,7 +267,6 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
     const files = e.dataTransfer.files
     if (files.length > 0 && files[0].type.startsWith('image/')) {
-      console.log('Image file dropped:', files[0].name)
       setIsImageView(true)
       // Handle image upload logic
     }
@@ -272,7 +275,6 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
-      console.log('File selected:', files[0].name)
       setIsImageView(true)
     }
   }
