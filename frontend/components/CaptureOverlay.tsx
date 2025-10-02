@@ -222,6 +222,15 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         {/* Action Button */}
         <div className={styles.actionContainer}>
         <button
+          className={styles.secondaryButton}
+          onClick={onToggle}
+          disabled={isProcessing}
+          aria-label="Cancel"
+        >
+          Cancel
+        </button>
+
+        <button
           className={styles.primaryButton}
           onClick={handleDetect}
           disabled={isProcessing}
@@ -235,15 +244,6 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
           ) : (
             'Capture'
           )}
-        </button>
-
-        <button
-          className={styles.secondaryButton}
-          onClick={onToggle}
-          disabled={isProcessing}
-          aria-label="Cancel"
-        >
-          Cancel
         </button>
         </div>
       </div>
