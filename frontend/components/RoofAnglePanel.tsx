@@ -123,8 +123,10 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
             </div>
           )
         })}
+      </div>
 
-        <div className={styles.roofItem}>
+      <div className={styles.footer}>
+        <div className={styles.globalSetting}>
           <label>Edge Padding</label>
           <div className={styles.inputGroup}>
             <input
@@ -138,15 +140,15 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
             <span className={styles.unit}>cm</span>
           </div>
         </div>
-      </div>
 
-      <div className={styles.actions}>
-        <button className={styles.cancelBtn} onClick={onCancel}>
-          Cancel
-        </button>
-        <button className={styles.confirmBtn} onClick={handleConfirm}>
-          Confirm
-        </button>
+        <div className={styles.actions}>
+          <button className={styles.cancelBtn} onClick={onCancel}>
+            Cancel
+          </button>
+          <button className={styles.confirmBtn} onClick={handleConfirm}>
+            Confirm
+          </button>
+        </div>
       </div>
     </div>
   )

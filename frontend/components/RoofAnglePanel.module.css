@@ -73,9 +73,6 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-.roofItem:last-child {
-  border-bottom: none;
-}
 
 .roofItem label {
   display: block;
@@ -174,16 +171,33 @@
   margin-left: 6px;
 }
 
-.actions {
-  display: flex;
-  gap: 10px;
-  padding: 16px 20px 20px;
+.footer {
   border-top: 0.5px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.02) 0%,
     rgba(255, 255, 255, 0.06) 100%
   );
+}
+
+.globalSetting {
+  padding: 14px 20px 16px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+}
+
+.globalSetting label {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 10px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 20px;
 }
 
 .cancelBtn,
