@@ -144,7 +144,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
   const handleAngleCancel = useCallback(() => {
     setShowAnglePanel(false)
-  }, [])
+    onToolChange?.('')
+  }, [onToolChange])
 
   // Effect to manage edit/draw mode based on active tool
   useEffect(() => {
