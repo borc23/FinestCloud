@@ -12,10 +12,10 @@ interface ToolStripProps {
 
 const allToolsDefinition = [
   { id: 'tab', icon: 'list', label: 'Tab', isFixed: true },
-  { id: 'upload', icon: 'upload', label: 'Upload Image' },
-  { id: 'select', icon: 'vector-square', label: 'Select Area' },
-  { id: 'panels', icon: 'solar-panel', label: 'Generate Panels' },
-  { id: 'edit', icon: 'pen-to-square', label: 'Edit Mode' }
+  { id: 'upload', icon: 'upload', label: 'Upload' },
+  { id: 'select', icon: 'vector-square', label: 'Select' },
+  { id: 'panels', icon: 'solar-panel', label: 'Generate' },
+  { id: 'edit', icon: 'pen-to-square', label: 'Edit' }
 ] as const
 
 export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false }: ToolStripProps) {
