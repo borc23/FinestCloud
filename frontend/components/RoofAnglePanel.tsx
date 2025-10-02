@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import polylabel from 'polylabel'
 import styles from './RoofAnglePanel.module.css'
 
 interface RoofSegment {
@@ -23,6 +24,11 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
   const labelsRef = useRef<google.maps.Marker[]>([])
 
   useEffect(() => {
+    console.log('RoofAnglePanel useEffect running', { polygonCount: roofPolygons.length, hasSolarData: !!solarData })
+
+    labelsRef.current.forEach(label => label.setMap(null))
+    labelsRef.current = []
+
     // Initialize angles from solar data
     const initialAngles = roofPolygons.map((_, index) => {
       const segment = solarData?.find(s => s.polygonIndex === index)
@@ -31,14 +37,24 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
     })
     setAngles(initialAngles)
 
-    // Add numbered labels to polygons
     roofPolygons.forEach((polygon, index) => {
-      const bounds = new google.maps.LatLngBounds()
-      polygon.getPath().forEach(point => bounds.extend(point))
-      const center = bounds.getCenter()
+      const path = polygon.getPath().getArray()
+      const coordinates = path.map(point => [point.lng(), point.lat()] as [number, number])
+
+      console.log(`Polygon ${index + 1} points:`, coordinates)
+      coordinates.push(coordinates[0])
+      const [lng, lat] = polylabel([coordinates], 0.000001)
+
+      console.log(`Polygon ${index + 1} label position:`, { lat, lng })
+      console.log(`Polygon ${index + 1} bounds:`, {
+        minLat: Math.min(...coordinates.map(c => c[1])),
+        maxLat: Math.max(...coordinates.map(c => c[1])),
+        minLng: Math.min(...coordinates.map(c => c[0])),
+        maxLng: Math.max(...coordinates.map(c => c[0]))
+      })
 
       const label = new google.maps.Marker({
-        position: center,
+        position: { lat, lng },
         map: polygon.getMap(),
         label: {
           text: (index + 1).toString(),

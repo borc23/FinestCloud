@@ -192,7 +192,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       // Hide angle panel when switching away from panels tool
       setShowAnglePanel(false)
     }
-  }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing, handlePanelGeneration])
+  }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
 
   const roofPolygonsRef = useRef<google.maps.Polygon[]>([])
   const objectPolygonsRef = useRef<google.maps.Polygon[]>([])
