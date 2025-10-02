@@ -92,17 +92,20 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
           const segment = solarData?.find(s => s.polygonIndex === index)
           const apiAngle = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.pitchDegrees
           const azimuth = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees
+          const isLoading = solarData === null
 
           return (
             <div key={index} className={styles.roofItem}>
               <label>
                 <span className={styles.badge}>{index + 1}</span>
                 Angle
-                {apiAngle && (
+                {isLoading ? (
+                  <small className={styles.hint}>Loading...</small>
+                ) : apiAngle ? (
                   <small className={styles.hint}>
                     Pitch: {apiAngle.toFixed(1)}°, Azimuth: {azimuth?.toFixed(0)}°
                   </small>
-                )}
+                ) : null}
               </label>
               <div className={styles.inputGroup}>
                 <input

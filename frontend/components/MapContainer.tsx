@@ -117,18 +117,23 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       return
     }
 
+    // Show panel immediately with null data (loading state)
+    setSolarDataResults(null)
+    setShowAnglePanel(true)
+
     try {
       const mapBounds = solarPanelApiRef.current.getMapBounds(map)
       const result = await solarPanelApiRef.current.fetchSolarDataForPolygons(roofPolygons, mapBounds)
 
       if (result.success && result.data) {
         setSolarDataResults(result.data)
-        setShowAnglePanel(true)
       } else {
         console.error('Failed to fetch solar panel data:', result.error)
+        // Keep panel open but with null data
       }
     } catch (err) {
       console.error('Panel generation failed:', err)
+      // Keep panel open but with null data
     }
   }, [map, roofPolygons])
 
