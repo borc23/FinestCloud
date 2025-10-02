@@ -158,6 +158,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (isDrawing) {
         stopDrawing()
       }
+      // Hide angle panel when switching away from panels tool
+      setShowAnglePanel(false)
     } else if (activeTool === 'draw') {
       // Enter draw mode
       if (!isEditMode) {
@@ -167,6 +169,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (!isDrawing) {
         startDrawing(drawingTypeSelection)
       }
+      // Hide angle panel when switching away from panels tool
+      setShowAnglePanel(false)
     } else if (activeTool === 'panels') {
       // Handle panels generation
       handlePanelGeneration()
@@ -185,6 +189,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (isDrawing) {
         stopDrawing()
       }
+      // Hide angle panel when switching away from panels tool
+      setShowAnglePanel(false)
     }
   }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing, handlePanelGeneration])
 
