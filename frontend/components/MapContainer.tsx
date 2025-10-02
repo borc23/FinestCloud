@@ -9,6 +9,7 @@ import { usePolygons } from '../hooks/usePolygons'
 import { useEditMode } from '../hooks/useEditMode'
 import { usePolygonManager } from '../hooks/usePolygonManager'
 import { useDrawingMode } from '../hooks/useDrawingMode'
+import { SolarPanelApiService } from '../lib/solarPanelApi'
 // import { StyleConfig } from '../utils/styleConfig'
 
 declare global {
@@ -32,6 +33,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
+  const solarPanelApiRef = useRef(new SolarPanelApiService())
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
@@ -105,6 +107,35 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [isDrawing, stopDrawing, startDrawing])
 
+  // Handle solar panel generation
+  const handlePanelGeneration = useCallback(async () => {
+    if (!map || roofPolygons.length === 0) {
+      console.warn('No roof polygons available for panel generation')
+      return
+    }
+
+    try {
+      const mapBounds = solarPanelApiRef.current.getMapBounds(map)
+      const result = await solarPanelApiRef.current.fetchSolarDataForPolygons(roofPolygons, mapBounds)
+
+      if (result.success && result.data) {
+        // Log data for each polygon
+        console.log('=== Solar Panel Data for Each Polygon ===')
+        if (Array.isArray(result.data)) {
+          result.data.forEach((polygonData: any, index: number) => {
+            console.log(`\nPolygon ${index + 1}:`, polygonData)
+          })
+        } else {
+          console.log('Response data:', result.data)
+        }
+      } else {
+        console.error('Failed to fetch solar panel data:', result.error)
+      }
+    } catch (err) {
+      console.error('Panel generation failed:', err)
+    }
+  }, [map, roofPolygons])
+
   // Effect to manage edit/draw mode based on active tool
   useEffect(() => {
     if (activeTool === 'edit') {
@@ -125,6 +156,16 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       if (!isDrawing) {
         startDrawing(drawingTypeSelection)
       }
+    } else if (activeTool === 'panels') {
+      // Handle panels generation
+      handlePanelGeneration()
+      // Exit edit/draw mode
+      if (isEditMode) {
+        toggleEditMode()
+      }
+      if (isDrawing) {
+        stopDrawing()
+      }
     } else {
       // Exit edit/draw mode when switching to any other tool
       if (isEditMode) {
@@ -134,7 +175,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         stopDrawing()
       }
     }
-  }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing])
+  }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing, handlePanelGeneration])
 
   const roofPolygonsRef = useRef<google.maps.Polygon[]>([])
   const objectPolygonsRef = useRef<google.maps.Polygon[]>([])

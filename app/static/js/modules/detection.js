@@ -21,7 +21,7 @@ export class DetectionService {
         this.captureService = captureService;
         this.editService = null;
         this.config = {
-            apiKey: config.apiKey || 'AIzaSyArFZ4SYEzNAsmUgD0ss-kEScpZSC-1jh0',
+            apiKey: config.apiKey || 'AIzaSyDIQk97vo58fJ8xGE0ozHJKkv-nqoB1YU4',
             generatePanelsBtnId: config.generatePanelsBtnId || 'generatePanelsBtn'
         };
         

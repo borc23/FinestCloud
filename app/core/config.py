@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # External API Keys
     google_maps_api_key: str = Field(
-        default="AIzaSyArFZ4SYEzNAsmUgD0ss-kEScpZSC-1jh0",
+        default="AIzaSyDIQk97vo58fJ8xGE0ozHJKkv-nqoB1YU4",
         description="Google Maps API key",
     )
 

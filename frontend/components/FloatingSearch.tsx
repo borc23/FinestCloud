@@ -5,7 +5,7 @@ import styles from './FloatingSearch.module.css'
 
 declare global {
   interface Window {
-    google: any
+    google: typeof google
   }
 }
 
@@ -17,7 +17,6 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<any[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
-  const autocompleteService = useRef<any>(null)
   const geocoder = useRef<any>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -25,28 +24,42 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     inputRef.current?.focus()
 
     if (window.google?.maps) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService()
       geocoder.current = new window.google.maps.Geocoder()
     }
   }, [])
 
   useEffect(() => {
-    if (query.length < 3 || !autocompleteService.current) {
+    if (query.length < 3) {
       setSuggestions([])
       return
     }
 
-    const timer = setTimeout(() => {
-      autocompleteService.current.getPlacePredictions(
-        { input: query, types: ['geocode'] },
-        (predictions: any[], status: string) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setSuggestions(predictions.slice(0, 5))
-          } else {
-            setSuggestions([])
-          }
-        }
-      )
+    const timer = setTimeout(async () => {
+      try {
+        const { AutocompleteSuggestion } = (await window.google.maps.importLibrary(
+          'places'
+        )) as google.maps.PlacesLibrary
+
+        const { suggestions: fetchedSuggestions } = 
+        await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: query,
+          includedPrimaryTypes: ['geocode'],
+          locationBias: {
+            west: -10.0,
+            south: 36.0,
+            east: 40.0,
+            north: 71.0,
+          },
+        })
+
+        const predictions = fetchedSuggestions
+        .map((suggestion: any) => suggestion.placePrediction)
+        .slice(0, 5)
+
+        setSuggestions(predictions)
+      } catch (error) {
+        console.log('Failed to fetch suggestions:', error)
+      }
     }, 100)
     return () => clearTimeout(timer)
   }, [query])
@@ -73,9 +86,16 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
   }
 
   const handleSuggestionClick = (prediction: any) => {
-    setQuery(prediction.description)
+    const description = [
+      prediction.mainText?.text,
+      prediction.secondaryText?.text
+    ]
+      .filter(Boolean)
+      .join(' ')
+    
+    setQuery(description)
     setSuggestions([])
-    searchLocation(prediction.description)
+    searchLocation(description)
   }
 
   const handleClear = () => {
@@ -136,14 +156,14 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
           >
             {suggestions.map((prediction) => (
               <button
-                key={prediction.place_id}
+                key={prediction.placeId}
                 type="button"
                 className={styles.suggestion}
                 onClick={() => handleSuggestionClick(prediction)}
                 role="option"
               >
                 <i className={`fas fa-map-marker-alt ${styles.suggestionIcon}`} aria-hidden="true" />
-                <span className={styles.suggestionText}>{prediction.description}</span>
+                <span className={styles.suggestionText}>{prediction.text.toString()}</span>
               </button>
             ))}
           </div>

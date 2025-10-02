@@ -96,7 +96,7 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         "MODELS_DIR": os.getenv("MODELS_DIR", "/tmp/models"),
         "MAX_CONTENT_LENGTH": 16 * 1024 * 1024,  # 16MB max upload
         "GOOGLE_MAPS_API_KEY": os.getenv(
-            "GOOGLE_MAPS_API_KEY", "AIzaSyArFZ4SYEzNAsmUgD0ss-kEScpZSC-1jh0"
+            "GOOGLE_MAPS_API_KEY", "AIzaSyDIQk97vo58fJ8xGE0ozHJKkv-nqoB1YU4"
         ),
     }
 
