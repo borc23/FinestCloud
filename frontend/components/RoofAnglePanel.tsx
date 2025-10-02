@@ -40,18 +40,8 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
     roofPolygons.forEach((polygon, index) => {
       const path = polygon.getPath().getArray()
       const coordinates = path.map(point => [point.lng(), point.lat()] as [number, number])
-
-      console.log(`Polygon ${index + 1} points:`, coordinates)
       coordinates.push(coordinates[0])
       const [lng, lat] = polylabel([coordinates], 0.000001)
-
-      console.log(`Polygon ${index + 1} label position:`, { lat, lng })
-      console.log(`Polygon ${index + 1} bounds:`, {
-        minLat: Math.min(...coordinates.map(c => c[1])),
-        maxLat: Math.max(...coordinates.map(c => c[1])),
-        minLng: Math.min(...coordinates.map(c => c[0])),
-        maxLng: Math.max(...coordinates.map(c => c[0]))
-      })
 
       const label = new google.maps.Marker({
         position: { lat, lng },

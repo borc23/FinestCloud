@@ -37,7 +37,7 @@ export class SolarPanelApiService {
         const center = this.calculatePolygonCenter(coords)
 
         // Call the solar API proxy for this polygon via Next.js API route
-        const apiUrl = `/api/solar_api_proxy?latitude=${center.lat}&longitude=${center.lng}`
+        const apiUrl = `/api/generate_panels?latitude=${center.lat}&longitude=${center.lng}`
         const response = await fetch(apiUrl)
 
         if (!response.ok) {
