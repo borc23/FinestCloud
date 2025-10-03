@@ -235,7 +235,7 @@ class PanelService:
             [[0, 0], [panel_width, 0], [panel_width, panel_height], [0, panel_height]]
         )
 
-        angle, _ = self._find_longest_edge(roof_polygon)
+        angle = self._find_longest_edge(roof_polygon)
 
         if tune_params:
             panels = self._generate_optimized_grid_cm(
