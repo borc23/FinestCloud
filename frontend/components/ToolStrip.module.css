@@ -37,6 +37,11 @@
   width: 122px;
   height: 36px;
   transition: width var(--transition-slow);
+  cursor: pointer;
+}
+
+.toolWrapper:active .tool {
+  transform: scale(0.95);
 }
 
 .toolsSection .toolWrapper:not(:first-child) {
@@ -83,12 +88,8 @@
   padding: 0;
 }
 
-.tool:hover {
+.toolWrapper:hover .tool {
   color: rgba(255, 255, 255, 1);
-}
-
-.tool:active {
-  transform: scale(0.95);
 }
 
 .toolLabel {

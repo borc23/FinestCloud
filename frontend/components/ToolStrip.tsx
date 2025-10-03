@@ -105,10 +105,10 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             key={tool.id}
             className={styles.toolWrapper}
             onMouseEnter={() => handleToolHover(tool.id)}
+            onClick={() => handleToolClick(tool.id)}
           >
             <button
               className={styles.tool}
-              onClick={() => handleToolClick(tool.id)}
               aria-label={tool.label}
               aria-pressed={tool.id === 'tab' ? isExpanded : activeTool === tool.id}
             >
@@ -128,10 +128,10 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             key={tool.id}
             className={styles.toolWrapper}
             onMouseEnter={() => handleToolHover(tool.id)}
+            onClick={() => handleToolClick(tool.id)}
           >
             <button
               className={styles.tool}
-              onClick={() => handleToolClick(tool.id)}
               aria-label={tool.label}
               aria-pressed={activeTool === tool.id}
             >
