@@ -23,6 +23,9 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
   const [edgePadding, setEdgePadding] = useState('20')
   const labelsRef = useRef<google.maps.Marker[]>([])
 
+  // Check if all angles are populated
+  const isGenerateEnabled = angles.length > 0 && angles.every(angle => angle !== '' && !isNaN(parseFloat(angle)))
+
   useEffect(() => {
     labelsRef.current.forEach(label => label.setMap(null))
     labelsRef.current = []
@@ -220,7 +223,11 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
           <button className={styles.cancelBtn} onClick={onCancel}>
             Cancel
           </button>
-          <button className={styles.confirmBtn} onClick={handleConfirm}>
+          <button
+            className={`${styles.confirmBtn} ${!isGenerateEnabled ? styles.disabled : ''}`}
+            onClick={handleConfirm}
+            disabled={!isGenerateEnabled}
+          >
             Generate
           </button>
         </div>

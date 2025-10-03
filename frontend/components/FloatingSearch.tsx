@@ -11,9 +11,10 @@ declare global {
 
 interface FloatingSearchProps {
   map?: any
+  onClose?: () => void
 }
 
-export default function FloatingSearch({ map }: FloatingSearchProps) {
+export default function FloatingSearch({ map, onClose }: FloatingSearchProps) {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<any[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
@@ -83,6 +84,7 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     searchLocation(query.trim())
     setSuggestions([])
     inputRef.current?.blur()
+    onClose?.()
   }
 
   const handleSuggestionClick = (prediction: any) => {
@@ -92,10 +94,11 @@ export default function FloatingSearch({ map }: FloatingSearchProps) {
     ]
       .filter(Boolean)
       .join(' ')
-    
+
     setQuery(description)
     setSuggestions([])
     searchLocation(description)
+    onClose?.()
   }
 
   const handleClear = () => {

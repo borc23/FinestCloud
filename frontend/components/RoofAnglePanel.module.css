@@ -255,3 +255,17 @@
   transform: scale(0.96);
   background: #004999;
 }
+
+.confirmBtn.disabled {
+  background: rgba(120, 120, 128, 0.24);
+  color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.confirmBtn.disabled:hover {
+  background: rgba(120, 120, 128, 0.24);
+  transform: none;
+  box-shadow: none;
+}

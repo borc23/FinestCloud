@@ -41,7 +41,12 @@ export default function HomePage() {
             />
           )}
 
-          {activeTool === 'search' && <FloatingSearch map={map} />}
+          {activeTool === 'search' && (
+            <FloatingSearch
+              map={map}
+              onClose={() => setActiveTool('')}
+            />
+          )}
         </div>
       </div>
     </div>

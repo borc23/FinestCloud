@@ -55,7 +55,6 @@ async def generate_panels(
         generator = create_panel_generator(data, cache_manager)
         results = execute_panel_generation(generator, data, cache_manager)
 
-        # Cache results for non-selective generation
         cache_generation_results(cache_manager, results, data)
         session_service.mark_panels_generated()
 
