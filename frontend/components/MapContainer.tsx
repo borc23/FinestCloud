@@ -42,7 +42,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
   const { error: detectionError, detectRoofs, clearError } = useDetection()
-  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, removeClickListener, removePolygons, hasRoofs } = usePolygons(map)
+  const { roofPolygons, objectPolygons, renderPolygons, clearAllPolygons, togglePolygonVisibility, removeClickListener, removePolygons, hasRoofs } = usePolygons(map)
 
   // Edit mode hook
   const {
@@ -61,9 +61,11 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     if (!map) return
 
     // Convert path to coordinate format and render using the standard rendering function
+    // Disable hover effects during drawing mode
     const coords = path.map(p => ({ lat: p.lat(), lng: p.lng() }))
-    renderPolygons([{ coords }], isRoof)
-  }, [map, renderPolygons])
+    const enableHover = activeTool !== 'draw'
+    renderPolygons([{ coords }], isRoof, enableHover)
+  }, [map, renderPolygons, activeTool])
 
   // Drawing mode hook
   const { isDrawing, startDrawing, stopDrawing } = useDrawingMode({
@@ -178,13 +180,16 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
         setSolarPanelMarkers(newMarkers)
         console.log(`Rendered ${newMarkers.length} solar panels on the map`)
+
+        // Hide roof and object polygons after panels are generated
+        togglePolygonVisibility(false)
       } else {
         console.warn('Unexpected panel data format:', data.panelData)
       }
     }
 
     setShowAnglePanel(false)
-  }, [map, solarPanelMarkers])
+  }, [map, solarPanelMarkers, togglePolygonVisibility])
 
   const handleAngleCancel = useCallback(() => {
     setShowAnglePanel(false)
@@ -276,12 +281,13 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         // Clear existing polygons
         clearAllPolygons()
 
-        // Render new polygons
+        // Render new polygons (disable hover effects in draw mode)
+        const enableHover = activeTool !== 'draw'
         if (result.roofs) {
-          renderPolygons(result.roofs, true) // isRoof = true
+          renderPolygons(result.roofs, true, enableHover) // isRoof = true
         }
         if (result.objects) {
-          renderPolygons(result.objects, false) // isRoof = false
+          renderPolygons(result.objects, false, enableHover) // isRoof = false
         }
 
         // Hide capture overlay after successful detection
@@ -290,7 +296,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     } catch (err) {
       console.error('Detection failed:', err)
     }
-  }, [map, detectRoofs, clearAllPolygons, renderPolygons])
+  }, [map, detectRoofs, clearAllPolygons, renderPolygons, activeTool])
 
   useEffect(() => {
     let checkInterval: NodeJS.Timeout | null = null

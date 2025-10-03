@@ -5,7 +5,7 @@ import { StyleConfig } from '../utils/styleConfig'
 interface UsePolygonsReturn {
   roofPolygons: google.maps.Polygon[]
   objectPolygons: google.maps.Polygon[]
-  renderPolygons: (polygonData: RoofModel[], isRoof: boolean) => void
+  renderPolygons: (polygonData: RoofModel[], isRoof: boolean, enableHover?: boolean) => void
   clearAllPolygons: () => void
   togglePolygonVisibility: (visible: boolean) => void
   removePolygonListeners: (polygon: google.maps.Polygon) => void
@@ -83,7 +83,7 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     ;(polygon as any).__clickListener = clickListener
   }, [])
 
-  const renderPolygons = useCallback((polygonData: RoofModel[], isRoof: boolean) => {
+  const renderPolygons = useCallback((polygonData: RoofModel[], isRoof: boolean, enableHover: boolean = true) => {
     if (!map || !polygonData) return
 
     const newPolygons: google.maps.Polygon[] = []
@@ -102,7 +102,9 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
         map: map
       })
 
-      addHoverEffects(polygon, isRoof, map)
+      if (enableHover) {
+        addHoverEffects(polygon, isRoof, map)
+      }
       newPolygons.push(polygon)
     })
 
