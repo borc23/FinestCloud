@@ -4,12 +4,11 @@
   left: 50%;
   top: 5%;
   transform: translate(-50%, -50%);
-  width: auto;
+  width: 470px;
   height: var(--toolbar-height);
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0 4px;
   gap: 0;
   z-index: 900;
   animation: slideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -27,7 +26,6 @@
   flex-direction: row;
   align-items: center;
   gap: 0;
-  flex: 1;
   position: relative;
 }
 
@@ -36,13 +34,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 74.33px;
+  width: 122px;
   height: 36px;
+  transition: width var(--transition-slow);
+}
+
+.toolsSection .toolWrapper:not(:first-child) {
+  width: 122px;
+}
+
+.toolStrip[data-has-generate="true"] .toolsSection .toolWrapper:not(:first-child) {
+  width: 91.5px;
 }
 
 .toolWrapper:first-child {
   margin-left: 0;
-  width: 52px;
+  width: 52px !important;
 }
 
 .toolWrapper:last-child {
@@ -50,7 +57,7 @@
 }
 
 .bottomSection .toolWrapper {
-  width: 52px;
+  width: 52px !important;
 }
 
 .tool {
@@ -95,17 +102,22 @@
 
 .frostedOverlay {
   position: absolute;
-  width: 72.33px;
+  width: 122px;
   height: 36px;
   border-radius: var(--radius-full);
   background: rgba(120, 120, 128, 0.32);
   pointer-events: none;
   transition: transform var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              height var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+              height var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              width var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1;
   top: 4px;
-  left: 56px;
+  left: 52px;
   will-change: transform;
+}
+
+.toolStrip[data-has-generate="true"] .frostedOverlay {
+  width: 91.5px;
 }
 
 .toolStrip.expanded .frostedOverlay {
@@ -117,15 +129,27 @@
 }
 
 .frostedOverlay[data-tool-index="1"] {
-  transform: translateX(74.33px);
+  transform: translateX(122px);
+}
+
+.toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="1"] {
+  transform: translateX(91.5px);
 }
 
 .frostedOverlay[data-tool-index="2"] {
-  transform: translateX(148.66px);
+  transform: translateX(244px);
+}
+
+.toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="2"] {
+  transform: translateX(183px);
 }
 
 .frostedOverlay[data-tool-index="3"] {
-  transform: translateX(222.99px);
+  transform: translateX(366px);
+}
+
+.toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="3"] {
+  transform: translateX(274.5px);
 }
 
 .bottomSection {
@@ -133,7 +157,6 @@
   flex-direction: row;
   align-items: center;
   gap: 0;
-  margin-left: auto;
 }
 
 @media (max-width: 768px) {

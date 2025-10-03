@@ -95,6 +95,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     <div
       ref={containerRef}
       className={`${styles.toolStrip} ${isExpanded ? styles.expanded : ''}`}
+      data-has-generate={showPanelsTool}
       onMouseLeave={handleContainerMouseLeave}
     >
       {/* Tools */}
