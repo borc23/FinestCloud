@@ -44,13 +44,11 @@ async def generate_panels(
 
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
-            "mapBounds": request.mapBounds.dict(),  # N,S,E,W coord values of map
-            "mapDimensions": request.mapDimensions.dict(),  # in pixel values full map when generation panels start
-            "resolution": request.resolution,  # cm per pixel
-            "module": request.module,  # Standard, premium, etc
-            "spacing": request.spacing,  # Spacing between panels in grid(cm value if I'm correct)
-            "max_panels": request.max_panels,  # None for now
-            "padding": request.padding,  # Edge padding in cm
+            "mapBounds": request.mapBounds.dict(),
+            "module": request.module or "standard",
+            "spacing": request.spacing,
+            "max_panels": request.max_panels,
+            "padding": request.padding,
         }
 
         logger.info(f"Received roofs data: {data['roofs']}")
@@ -91,11 +89,7 @@ async def generate_panels_selective(
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
             "mapBounds": request.mapBounds.dict(),
-            "mapDimensions": request.mapDimensions.dict()
-            if request.mapDimensions
-            else None,
-            "resolution": request.resolution,
-            "module": request.module,
+            "module": request.module or "standard",
             "spacing": request.spacing,
             "max_panels": request.max_panels,
             "padding": request.padding,
@@ -135,19 +129,9 @@ async def update_panel_count(
 
         all_panels, max_panels, module_data = validate_cached_panels(cache_manager)
 
-        # Get resolution from request or cache
-        resolution = request.resolution
-        if not resolution:
-            resolution = cache_manager.get(CacheKeys.RESOLUTION)
-            if not resolution:
-                raise SessionDataError(
-                    "No resolution found in session. Please generate panels first"
-                )
-
         custom_module = cache_manager.get(CacheKeys.CUSTOM_MODULE)
         generator = PanelService(
             bounds=request.mapBounds.dict(),
-            resolution=resolution,
             custom_module=custom_module,
         )
         generator.set_module(module_data)

@@ -25,8 +25,6 @@ export async function POST(request: NextRequest) {
         }
       }),
       mapBounds: body.mapBounds,
-      mapDimensions: body.mapDimensions,
-      resolution: body.resolution,
       module: body.module || 'standard',
       spacing: body.spacing || 0.5,
       max_panels: body.max_panels || null,

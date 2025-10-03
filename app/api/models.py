@@ -82,12 +82,8 @@ class GeneratePanelsRequest(BaseModel):
 
     roofs: List[RoofModel] = Field(..., description="Roof polygons")
     mapBounds: BoundsModel = Field(..., description="Map bounds")
-    mapDimensions: Optional[MapDimensionsModel] = Field(
-        None, description="Map dimensions in pixels"
-    )
-    resolution: float = Field(..., gt=0, description="Image resolution")
     module: Optional[str] = Field(None, description="Panel module type")
-    spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing")
+    spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing in cm")
     max_panels: Optional[int] = Field(None, ge=0, description="Maximum panels per roof")
     padding: Optional[float] = Field(
         default=20, ge=0.0, description="Edge padding in cm"
@@ -130,7 +126,6 @@ class UpdatePanelCountRequest(BaseModel):
 
     panel_count: int = Field(..., ge=0, description="Target panel count")
     mapBounds: BoundsModel = Field(..., description="Map bounds")
-    resolution: Optional[float] = Field(None, gt=0, description="Image resolution")
 
 
 class UpdateMaxPanelCountRequest(BaseModel):

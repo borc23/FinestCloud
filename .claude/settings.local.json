@@ -6,7 +6,8 @@
       "Bash(git stash:*)",
       "Bash(npm run dev:*)",
       "Bash(cat:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(python test_gps_standalone.py:*)"
     ],
     "deny": [],
     "ask": []

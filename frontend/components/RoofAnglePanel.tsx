@@ -104,27 +104,6 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
       west: bounds.getSouthWest().lng()
     }
 
-    // Calculate resolution (cm per pixel) and map dimensions
-    const mapDiv = map.getDiv()
-    const mapWidth = mapDiv.offsetWidth
-    const mapHeight = mapDiv.offsetHeight
-    const latLngBounds = new google.maps.LatLngBounds(
-      new google.maps.LatLng(mapBounds.south, mapBounds.west),
-      new google.maps.LatLng(mapBounds.north, mapBounds.east)
-    )
-    const ne = latLngBounds.getNorthEast()
-    const sw = latLngBounds.getSouthWest()
-    const earthCircumference = 40075017 // meters
-    const degreesPerPixel = (ne.lng() - sw.lng()) / mapWidth
-    const metersPerDegree = earthCircumference / 360
-    const metersPerPixel = degreesPerPixel * metersPerDegree
-    const resolution = metersPerPixel * 100 // convert to cm
-
-    const mapDimensions = {
-      width: mapWidth,
-      height: mapHeight
-    }
-
     // Call the API endpoint
     try {
       const requestBody = {
@@ -141,8 +120,6 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
         }),
         solarData,
         mapBounds,
-        mapDimensions,
-        resolution,
         module: 'standard',
         spacing: 0.5
       }

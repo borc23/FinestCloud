@@ -74,6 +74,5 @@ class PanelModule(Enum):
 class RoofData:
     coords: List[Dict[str, float]]
     bounds: Dict[str, float]
-    resolution: float
     pitch: float
     azimuth: float
