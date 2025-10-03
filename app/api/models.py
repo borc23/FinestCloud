@@ -81,6 +81,9 @@ class GeneratePanelsRequest(BaseModel):
     """Request model for panel generation."""
 
     roofs: List[RoofModel] = Field(..., description="Roof polygons")
+    objects: List[RoofModel] = Field(
+        default_factory=list, description="Obstacle polygons"
+    )
     mapBounds: BoundsModel = Field(..., description="Map bounds")
     module: Optional[str] = Field(None, description="Panel module type")
     spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing in cm")

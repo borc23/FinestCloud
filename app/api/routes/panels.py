@@ -44,6 +44,7 @@ async def generate_panels(
 
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
+            "objects": [obj.dict() for obj in request.objects],
             "mapBounds": request.mapBounds.dict(),
             "module": request.module or "standard",
             "spacing": request.spacing,
@@ -87,6 +88,7 @@ async def generate_panels_selective(
         # Convert Pydantic models to dict format
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
+            "objects": [obj.dict() for obj in request.objects],
             "mapBounds": request.mapBounds.dict(),
             "module": request.module or "standard",
             "spacing": request.spacing,

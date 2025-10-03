@@ -14,12 +14,13 @@ interface RoofSegment {
 
 interface RoofAnglePanelProps {
   roofPolygons: google.maps.Polygon[]
+  objectPolygons: google.maps.Polygon[]
   solarData: RoofSegment[] | null
   onConfirm: (data: { angles: number[]; edgePadding: number; panelData?: any }) => void
   onCancel: () => void
 }
 
-export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onCancel }: RoofAnglePanelProps) {
+export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData, onConfirm, onCancel }: RoofAnglePanelProps) {
   const [angles, setAngles] = useState<string[]>([])
   const [edgePadding, setEdgePadding] = useState('20')
   const labelsRef = useRef<google.maps.Marker[]>([])
@@ -114,6 +115,15 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
         angles: parsedAngles,
         edgePadding: padding,
         roofPolygons: roofPolygons.map(polygon => {
+          const path = polygon.getPath()
+          const coords = []
+          for (let i = 0; i < path.getLength(); i++) {
+            const point = path.getAt(i)
+            coords.push({ lat: point.lat(), lng: point.lng() })
+          }
+          return { coords }
+        }),
+        objectPolygons: objectPolygons.map(polygon => {
           const path = polygon.getPath()
           const coords = []
           for (let i = 0; i < path.getLength(); i++) {

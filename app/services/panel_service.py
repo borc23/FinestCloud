@@ -224,7 +224,9 @@ class PanelService:
 
         object_polys = []
         for obj in objects:
-            obj_coords_cm = self.gps_system.gps_array_to_cm(obj)
+            # Extract coords from object dict if needed
+            obj_coords = obj.get("coords", obj) if isinstance(obj, dict) else obj
+            obj_coords_cm = self.gps_system.gps_array_to_cm(obj_coords)
             if len(obj_coords_cm) > 2:
                 object_polys.append(Polygon(obj_coords_cm))
 

@@ -436,6 +436,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
       {showAnglePanel && (
         <RoofAnglePanel
           roofPolygons={roofPolygons}
+          objectPolygons={objectPolygons}
           solarData={solarDataResults}
           onConfirm={handleAngleConfirm}
           onCancel={handleAngleCancel}

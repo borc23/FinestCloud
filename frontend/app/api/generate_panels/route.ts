@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
           azimuth
         }
       }),
+      objects: (body.objectPolygons || []).map((objPoly: any) => ({
+        coords: objPoly.coords.map((coord: any) => ({
+          lat: coord.lat,
+          lng: coord.lng
+        }))
+      })),
       mapBounds: body.mapBounds,
       module: body.module || 'standard',
       spacing: body.spacing || 0.5,
