@@ -150,11 +150,12 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
       // Check if panelData has the backend response structure
       if (data.panelData.roofs) {
-        // Backend response format: { roofs: [ { panels: [ [coords], [coords] ] } ] }
+        // Backend response format: { roofs: [ { panels: [ {coords: [...], roof_id: 0, panel_id: 0}, ... ] } ] }
         data.panelData.roofs.forEach((roof: any) => {
           if (roof.panels && Array.isArray(roof.panels)) {
-            roof.panels.forEach((panelCoords: any[]) => {
-              // Each panel is an array of 4 corner coordinates
+            roof.panels.forEach((panel: any) => {
+              // Each panel is an object with coords array
+              const panelCoords = panel.coords || panel
               const path = panelCoords.map((coord: { lat: number; lng: number }) => ({
                 lat: coord.lat,
                 lng: coord.lng
