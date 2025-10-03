@@ -1,35 +1,19 @@
 .toolStrip {
+  composes: glass-dark rounded-pill from global;
   position: fixed;
   left: 50%;
   top: 5%;
   transform: translate(-50%, -50%);
   width: auto;
-  height: 44px;
-  border-radius: 1000px;
-  background: linear-gradient(
-    180deg,
-    rgba(26, 26, 26, 0.85) 0%,
-    rgba(0, 0, 0, 0.75) 100%
-  );
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 0 2px 0 rgba(0, 0, 0, 0.4),
-    0 2px 25px 0 rgba(0, 0, 0, 0.5),
-    1px 1px 0.25px 0 inset rgba(77, 77, 77, 0.8),
-    1.5px 1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.6),
-    -1.5px -1.5px 0.25px 0 inset rgba(26, 26, 26, 1),
-    -1.5px -1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.4),
-    0 0 8px 0 inset rgba(0, 0, 0, 0.3);
+  height: var(--toolbar-height);
   display: flex;
   flex-direction: row;
   align-items: center;
   padding: 0 4px;
   gap: 0;
   z-index: 900;
-  animation: slide-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: height var(--transition-slow);
 }
 
 .toolStrip.expanded {
@@ -82,14 +66,13 @@
   gap: 2px;
   cursor: pointer;
   color: rgba(191, 191, 191, 1);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
   font-size: 17px;
-  font-weight: 500;
+  font-weight: var(--font-medium);
   text-align: center;
   line-height: 20px;
   outline: none;
   z-index: 2;
-  transition: all 200ms ease;
+  transition: all var(--transition-base);
   padding: 0;
 }
 
@@ -103,7 +86,7 @@
 
 .toolLabel {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   letter-spacing: -0.1px;
   text-align: center;
   line-height: 12px;
@@ -114,11 +97,11 @@
   position: absolute;
   width: 72.33px;
   height: 36px;
-  border-radius: 100px;
+  border-radius: var(--radius-full);
   background: rgba(120, 120, 128, 0.32);
   pointer-events: none;
-  transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              height 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              height var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1;
   top: 4px;
   left: 56px;
@@ -152,18 +135,6 @@
   gap: 0;
   margin-left: auto;
 }
-
-@keyframes slide-in {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, calc(-50% - 20px)) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
 
 @media (max-width: 768px) {
   .toolStrip {

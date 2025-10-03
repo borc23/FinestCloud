@@ -85,6 +85,53 @@
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
+
+  /* Glassmorphism Design System */
+  --glass-bg-dark: linear-gradient(
+    180deg,
+    rgba(26, 26, 26, 0.85) 0%,
+    rgba(0, 0, 0, 0.75) 100%
+  );
+  --glass-bg-light: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.75) 100%
+  );
+  --glass-bg-subtle: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  --glass-border: 0.5px solid rgba(255, 255, 255, 0.12);
+  --glass-border-light: 1px solid rgba(255, 255, 255, 0.3);
+  --glass-blur: blur(16px) saturate(180%);
+  --glass-blur-heavy: blur(40px) saturate(200%);
+  --glass-blur-light: blur(20px) saturate(180%);
+
+  /* Glass Shadow System - Complex Inset Shadows */
+  --shadow-glass-dark:
+    0 0 2px 0 rgba(0, 0, 0, 0.4),
+    0 2px 25px 0 rgba(0, 0, 0, 0.5),
+    1px 1px 0.25px 0 inset rgba(77, 77, 77, 0.8),
+    1.5px 1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.6),
+    -1.5px -1.5px 0.25px 0 inset rgba(26, 26, 26, 1),
+    -1.5px -1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.4),
+    0 0 8px 0 inset rgba(0, 0, 0, 0.3);
+
+  --shadow-glass-elevated:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+
+  /* Component-specific sizes */
+  --input-height: 44px;
+  --input-height-sm: 40px;
+  --button-height: 48px;
+  --button-height-sm: 44px;
+  --toolbar-height: 44px;
+  --panel-width: 280px;
+  --search-radius: 1000px;
 }
 
 /* Global Reset and Base Styles */
@@ -216,111 +263,89 @@ a {
 
 /* Enhanced Modern Button System */
 .btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
-  padding: clamp(10px, 2vw, 16px) clamp(16px, 3vw, 24px);
+  gap: 8px;
+  padding: 14px 24px;
   border: none;
-  border-radius: var(--radius-base);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  border-radius: 22px;
+  font-size: 17px;
+  font-weight: 500;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   cursor: pointer;
-  transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  background: var(--pure-white);
-  color: var(--text-black);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   text-decoration: none;
   user-select: none;
   position: relative;
-  overflow: hidden;
   white-space: nowrap;
-  min-height: 44px;
-}
-
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
-.btn:hover::before {
-  opacity: 1;
-}
-
-.btn:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow:
-    0 8px 25px rgba(0, 0, 0, 0.1),
-    0 4px 10px rgba(0, 0, 0, 0.07),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-
-.btn:active {
-  transform: translateY(-1px) scale(1.01);
-  transition: all 150ms ease-out;
-  box-shadow:
-    0 4px 15px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.05);
+  height: 48px;
 }
 
 .btn:focus-visible {
-  box-shadow:
-    0 0 0 3px var(--accent-focus),
-    0 8px 25px rgba(0, 0, 0, 0.1),
-    0 4px 10px rgba(0, 0, 0, 0.07);
-  outline: 2px solid transparent;
+  outline: 2px solid rgba(0, 145, 255, 1);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  box-shadow: var(--shadow-minimal);
-}
-
-.btn:disabled:hover {
-  transform: none;
-  box-shadow: var(--shadow-minimal);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-hover) 100%);
-  color: var(--pure-white);
-  box-shadow:
-    0 4px 15px rgba(14, 165, 233, 0.3),
-    0 2px 6px rgba(14, 165, 233, 0.2);
+  background: #007AFF;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+  border: none;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--accent-hover) 0%, #0369a1 100%);
-  box-shadow:
-    0 8px 30px rgba(14, 165, 233, 0.4),
-    0 4px 15px rgba(14, 165, 233, 0.3);
+  background: #0056CC;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
 }
 
 .btn-primary:active {
-  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  transform: scale(0.96);
+  background: #004999;
+}
+
+.btn-primary:disabled {
+  background: rgba(120, 120, 128, 0.24);
+  color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary:disabled:hover {
+  background: rgba(120, 120, 128, 0.24);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background: var(--light-gray);
-  color: var(--text-dark);
-  border: 1px solid var(--medium-gray);
+  background: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary:hover {
-  background: var(--medium-gray);
-  border-color: var(--text-gray);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: scale(0.96);
+  background: rgba(248, 248, 248, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-ghost {
@@ -1005,6 +1030,195 @@ select:focus-visible,
   100% {
     transform: translateX(100%);
   }
+}
+
+/* ========================================
+   GLASSMORPHISM UTILITY CLASSES
+   ======================================== */
+
+/* Dark Glass - Primary glassmorphism effect */
+.glass-dark {
+  background: var(--glass-bg-dark);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-glass-dark);
+}
+
+/* Light Glass - For lighter backgrounds */
+.glass-light {
+  background: var(--glass-bg-light);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-light);
+  box-shadow: var(--shadow-glass-elevated);
+}
+
+/* Subtle Glass - Ultra-thin glass effect */
+.glass-subtle {
+  background: var(--glass-bg-subtle);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: var(--glass-border-light);
+  box-shadow: var(--shadow-glass-elevated);
+}
+
+/* Glass with heavy blur */
+.glass-heavy {
+  background: var(--glass-bg-dark);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-glass-dark);
+}
+
+/* Pill shape - for toolbar/search bars */
+.rounded-pill {
+  border-radius: var(--search-radius);
+}
+
+/* ========================================
+   ADDITIONAL COMMON ANIMATIONS
+   ======================================== */
+
+/* Fade In - Entry animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide Up - Bottom to top entry */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide In - General slide animation */
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 20px)) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Shimmer - Loading effect */
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Liquid Spin - Smooth spinner animation */
+@keyframes liquidSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(90deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1);
+  }
+  75% {
+    transform: rotate(270deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Processing Float - Floating animation for overlays */
+@keyframes processingFloat {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(0.95) translateY(0px);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1) translateY(-2px);
+  }
+}
+
+/* Glass Fade In - Fade in with backdrop blur */
+@keyframes glassFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    backdrop-filter: blur(30px);
+  }
+}
+
+/* Pulse Glow - Pulsing border effect */
+@keyframes pulseGlow {
+  0%, 100% {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(14, 165, 233, 0.05);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(14, 165, 233, 0.1);
+  }
+}
+
+/* Haptic Tap - iOS-style tap feedback */
+@keyframes hapticTap {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* Suggestion Slide In - For dropdown animations */
+@keyframes suggestionSlideIn {
+  0% {
+    transform: translateY(-12px) scale(0.95);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(2px) scale(1.01);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   UTILITY ANIMATION CLASSES
+   ======================================== */
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-base) ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-glass-fade-in {
+  animation: glassFadeIn 0.6s ease-out;
 }
 
 /* Responsive Design */

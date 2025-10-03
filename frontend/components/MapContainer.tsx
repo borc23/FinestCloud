@@ -11,7 +11,7 @@ import { usePolygonManager } from '../hooks/usePolygonManager'
 import { useDrawingMode } from '../hooks/useDrawingMode'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import RoofAnglePanel from './RoofAnglePanel'
-// import { StyleConfig } from '../utils/styleConfig'
+import { StyleConfig } from '../utils/styleConfig'
 
 declare global {
   interface Window {
@@ -161,15 +161,15 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
                 lng: coord.lng
               }))
 
+              const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
               const polygon = new google.maps.Polygon({
                 paths: path,
                 map: map,
-                fillColor: '#4285F4',
-                fillOpacity: 0.6,
-                strokeColor: '#1967D2',
-                strokeWeight: 1,
-                clickable: false,
-              })
+                ...panelOptions,
+                clickable: true,
+                isPanelElement: true,
+                moduleType: 'STANDARD'
+              } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
 
               newMarkers.push(polygon)
             })

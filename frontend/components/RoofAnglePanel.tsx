@@ -220,11 +220,11 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
         </div>
 
         <div className={styles.actions}>
-          <button className={styles.cancelBtn} onClick={onCancel}>
+          <button className="btn btn-secondary" onClick={onCancel}>
             Cancel
           </button>
           <button
-            className={`${styles.confirmBtn} ${!isGenerateEnabled ? styles.disabled : ''}`}
+            className="btn btn-primary"
             onClick={handleConfirm}
             disabled={!isGenerateEnabled}
           >

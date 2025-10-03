@@ -7,44 +7,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  gap: var(--spacing-base);
+  animation: slideUp var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Main Tab Bar */
 .tabBar {
+  composes: glass-dark rounded-pill from global;
   display: flex;
   height: 62px;
   padding: 4px;
   gap: 0;
-  border-radius: 1000px;
-  background: linear-gradient(
-    180deg,
-    rgba(26, 26, 26, 0.85) 0%,
-    rgba(0, 0, 0, 0.75) 100%
-  );
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 0 2px 0 rgba(0, 0, 0, 0.4),
-    0 2px 25px 0 rgba(0, 0, 0, 0.5),
-    1px 1px 0.25px 0 inset rgba(77, 77, 77, 0.8),
-    1.5px 1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.6),
-    -1.5px -1.5px 0.25px 0 inset rgba(26, 26, 26, 1),
-    -1.5px -1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.4),
-    0 0 8px 0 inset rgba(0, 0, 0, 0.3);
 }
 
 .tab {
@@ -59,8 +32,7 @@
   background: transparent;
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
+  transition: all var(--transition-base);
   width: 74.98px;
   height: 54px;
   flex-shrink: 0;
@@ -92,7 +64,7 @@
 
 .label {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   letter-spacing: -0.1px;
   text-align: center;
   line-height: 12px;
@@ -103,45 +75,19 @@
   position: relative;
   display: flex;
   align-items: center;
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  animation: fadeIn var(--transition-base) ease-out;
 }
 
 .toggleSwitch {
+  composes: glass-dark from global;
   --toggle-button-width: 116px;
   position: relative;
   display: flex;
   align-items: center;
   width: 240px;
-  height: 44px;
+  height: var(--input-height);
   padding: 4px;
   border-radius: 22px;
-  background: linear-gradient(
-    180deg,
-    rgba(26, 26, 26, 0.85) 0%,
-    rgba(0, 0, 0, 0.75) 100%
-  );
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 0 2px 0 rgba(0, 0, 0, 0.4),
-    0 2px 25px 0 rgba(0, 0, 0, 0.5),
-    1px 1px 0.25px 0 inset rgba(77, 77, 77, 0.8),
-    1.5px 1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.6),
-    -1.5px -1.5px 0.25px 0 inset rgba(26, 26, 26, 1),
-    -1.5px -1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.4),
-    0 0 8px 0 inset rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 
@@ -155,15 +101,14 @@
   border-radius: 20px;
   background: rgba(31, 31, 31, 1);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-slow);
   padding: 9px 4px;
   pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   line-height: 18px;
   text-align: center;
   color: rgba(191, 191, 191, 1);
@@ -206,12 +151,11 @@
 
 .toggleText {
   flex: 1;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   line-height: 18px;
   text-align: center;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-base);
   padding: 9px 4px;
 }
 

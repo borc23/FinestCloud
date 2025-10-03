@@ -222,7 +222,7 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         {/* Action Button */}
         <div className={styles.actionContainer}>
         <button
-          className={styles.secondaryButton}
+          className="btn btn-secondary"
           onClick={onToggle}
           disabled={isProcessing}
           aria-label="Cancel"
@@ -231,19 +231,12 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         </button>
 
         <button
-          className={styles.primaryButton}
+          className={`btn btn-primary ${isProcessing ? 'btn-loading' : ''}`}
           onClick={handleDetect}
           disabled={isProcessing}
           aria-label={isProcessing ? "Processing" : "Start Capture"}
         >
-          {isProcessing ? (
-            <>
-              <div className={styles.buttonSpinner} />
-              Processing
-            </>
-          ) : (
-            'Capture'
-          )}
+          {!isProcessing && 'Capture'}
         </button>
         </div>
       </div>
