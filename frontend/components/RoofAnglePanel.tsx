@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import polylabel from 'polylabel'
+import Button from './Button'
 import styles from './RoofAnglePanel.module.css'
 
 interface RoofSegment {
@@ -173,7 +174,7 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
             <div key={index} className={styles.roofItem}>
               <label>
                 <span className={styles.badge}>{index + 1}</span>
-                Angle
+                Pitch
                 {isLoading ? (
                   <small className={styles.hint}>Loading...</small>
                 ) : apiAngle ? (
@@ -220,16 +221,16 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
         </div>
 
         <div className={styles.actions}>
-          <button className="btn btn-secondary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            className="btn btn-primary"
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleConfirm}
             disabled={!isGenerateEnabled}
           >
             Generate
-          </button>
+          </Button>
         </div>
       </div>
     </div>

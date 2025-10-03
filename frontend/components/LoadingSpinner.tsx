@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Spinner from './Spinner'
 
 interface LoadingSpinnerProps {
   message?: string
@@ -44,11 +45,7 @@ export default function LoadingSpinner({
   return (
     <div className="loading-overlay">
       <div className="loading-content">
-        <div className={`spinner-enhanced ${sizeClasses[size]}`}>
-          <div className="spinner-ring"></div>
-          <div className="spinner-ring"></div>
-          <div className="spinner-ring"></div>
-        </div>
+        <Spinner size={size} variant="primary" />
         <p className="loading-text">
           {message}{dots}
         </p>

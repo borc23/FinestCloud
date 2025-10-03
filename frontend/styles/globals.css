@@ -21,12 +21,22 @@
   --warning: #f59e0b;
   --error: #ef4444;
 
+  /* Map Drawing Colors - Roof */
+  --roof-default: #27ae60;
+  --roof-selected: #219a52;
+  --roof-hover: #2ecc71;
+
+  /* Map Drawing Colors - Object */
+  --object-default: #e74c3c;
+  --object-selected: #c0392b;
+  --object-hover: #f56565;
+
   /* Solar Panel Colors */
-  --panel-default: #1f2937;
-  --panel-active: #0ea5e9;
-  --panel-hover: #374151;
-  --roof-area: #10b98120;
-  --roof-border: #10b981;
+  --panel-stroke: #2c3e50;
+  --panel-stroke-highlight: #546e7a;
+  --panel-standard: #1a2332;
+  --panel-premium: #0f1419;
+  --panel-compact: #1f2937;
 
 
   /* Fluid Spacing System */
@@ -292,6 +302,28 @@ a {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.btn-loading .spinner {
+  margin-right: 8px;
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .btn-primary {

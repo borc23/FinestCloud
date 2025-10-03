@@ -1,21 +1,32 @@
+// Helper to get CSS variable value
+const getCSSVar = (name: string): string => {
+  if (typeof window !== 'undefined') {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  }
+  return ''
+}
+
 export class StyleConfig {
-  static COLORS = {
-    ROOF: {
-      DEFAULT: '#27ae60',
-      SELECTED: '#219a52',
-      HOVER: '#2ecc71'
-    },
-    OBJECT: {
-      DEFAULT: '#e74c3c',
-      SELECTED: '#c0392b',
-      HOVER: '#f56565'
-    },
-    PANEL: {
-      STROKE: '#2c3e50',
-      STROKE_HIGHLIGHT: '#546e7a',
-      STANDARD: '#1a2332',
-      PREMIUM: '#0f1419',
-      COMPACT: '#1f2937'
+  // Colors now read from CSS variables for consistency
+  static get COLORS() {
+    return {
+      ROOF: {
+        DEFAULT: getCSSVar('--roof-default'),
+        SELECTED: getCSSVar('--roof-selected'),
+        HOVER: getCSSVar('--roof-hover')
+      },
+      OBJECT: {
+        DEFAULT: getCSSVar('--object-default'),
+        SELECTED: getCSSVar('--object-selected'),
+        HOVER: getCSSVar('--object-hover')
+      },
+      PANEL: {
+        STROKE: getCSSVar('--panel-stroke'),
+        STROKE_HIGHLIGHT: getCSSVar('--panel-stroke-highlight'),
+        STANDARD: getCSSVar('--panel-standard'),
+        PREMIUM: getCSSVar('--panel-premium'),
+        COMPACT: getCSSVar('--panel-compact')
+      }
     }
   }
 
@@ -72,7 +83,7 @@ export class StyleConfig {
     }
   }
 
-  static getPanelOptions(state: 'default' | 'selected' | 'hover' = 'default', moduleType: string = 'STANDARD'): google.maps.PolygonOptions {
+  static getPanelOptions(state: 'default' | 'selected' | 'hover' = 'default', moduleType: 'STANDARD' | 'PREMIUM' | 'COMPACT' = 'STANDARD'): google.maps.PolygonOptions {
     let strokeOpacity = this.PANEL_STYLES.DEFAULT_STROKE_OPACITY
     let strokeWeight = this.PANEL_STYLES.DEFAULT_STROKE_WEIGHT
     let fillOpacity = this.PANEL_STYLES.DEFAULT_FILL_OPACITY
@@ -91,7 +102,7 @@ export class StyleConfig {
       fillOpacity = this.PANEL_STYLES.HOVER_FILL_OPACITY
     }
 
-    const fillColor = (this.COLORS.PANEL as any)[moduleType] || this.COLORS.PANEL.STANDARD
+    const fillColor = this.COLORS.PANEL[moduleType] ?? this.COLORS.PANEL.STANDARD
 
     return {
       strokeColor: this.COLORS.PANEL.STROKE,

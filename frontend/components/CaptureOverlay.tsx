@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import Button from './Button'
+import Spinner from './Spinner'
 import styles from './CaptureOverlay.module.css'
 
 interface CaptureOverlayProps {
@@ -214,30 +216,30 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
 
         {isProcessing && (
           <div className={styles.processingOverlay}>
-            <div className={styles.spinner} />
+            <Spinner size="md" variant="primary" />
             <span>Processing</span>
           </div>
         )}
 
         {/* Action Button */}
         <div className={styles.actionContainer}>
-        <button
-          className="btn btn-secondary"
+        <Button
+          variant="secondary"
           onClick={onToggle}
           disabled={isProcessing}
           aria-label="Cancel"
         >
           Cancel
-        </button>
+        </Button>
 
-        <button
-          className={`btn btn-primary ${isProcessing ? 'btn-loading' : ''}`}
+        <Button
+          variant="primary"
           onClick={handleDetect}
-          disabled={isProcessing}
+          loading={isProcessing}
           aria-label={isProcessing ? "Processing" : "Start Capture"}
         >
-          {!isProcessing && 'Capture'}
-        </button>
+          Capture
+        </Button>
         </div>
       </div>
     </>
