@@ -36,6 +36,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
   const [showAnglePanel, setShowAnglePanel] = useState(false)
   const [solarDataResults, setSolarDataResults] = useState<any>(null)
+  const [solarPanelMarkers, setSolarPanelMarkers] = useState<google.maps.Polygon[]>([])
   const solarPanelApiRef = useRef(new SolarPanelApiService())
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
@@ -137,10 +138,52 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [map, roofPolygons])
 
-  const handleAngleConfirm = useCallback((data: { angles: number[]; edgePadding: number }) => {
+  const handleAngleConfirm = useCallback((data: { angles: number[]; edgePadding: number; panelData?: any }) => {
     console.log('Confirmed angles and padding:', data)
+
+    // Clear existing panel markers
+    solarPanelMarkers.forEach(marker => marker.setMap(null))
+
+    // Render new solar panels if data is available
+    if (data.panelData && map) {
+      const newMarkers: google.maps.Polygon[] = []
+
+      // Check if panelData has the backend response structure
+      if (data.panelData.roofs) {
+        // Backend response format: { roofs: [ { panels: [ [coords], [coords] ] } ] }
+        data.panelData.roofs.forEach((roof: any) => {
+          if (roof.panels && Array.isArray(roof.panels)) {
+            roof.panels.forEach((panelCoords: any[]) => {
+              // Each panel is an array of 4 corner coordinates
+              const path = panelCoords.map((coord: { lat: number; lng: number }) => ({
+                lat: coord.lat,
+                lng: coord.lng
+              }))
+
+              const polygon = new google.maps.Polygon({
+                paths: path,
+                map: map,
+                fillColor: '#4285F4',
+                fillOpacity: 0.6,
+                strokeColor: '#1967D2',
+                strokeWeight: 1,
+                clickable: false,
+              })
+
+              newMarkers.push(polygon)
+            })
+          }
+        })
+
+        setSolarPanelMarkers(newMarkers)
+        console.log(`Rendered ${newMarkers.length} solar panels on the map`)
+      } else {
+        console.warn('Unexpected panel data format:', data.panelData)
+      }
+    }
+
     setShowAnglePanel(false)
-  }, [])
+  }, [map, solarPanelMarkers])
 
   const handleAngleCancel = useCallback(() => {
     setShowAnglePanel(false)

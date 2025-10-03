@@ -90,8 +90,8 @@ class PanelService:
             coords=roof["coords"],
             bounds=self.bounds,
             resolution=self.resolution,
-            pitch=roof["pitch"],
-            azimuth=roof["azimuth"],
+            pitch=roof.get("pitch", 0),
+            azimuth=roof.get("azimuth", 180),
         )
         roof_panels = self._generate_panels_on_roof(
             roof_data, objects, map_dimensions, tune_params
@@ -103,8 +103,8 @@ class PanelService:
             "module_type": self.module_dict["id"],
             "module_specs": self.module_dict,
             "coords": roof["coords"],
-            "pitch": roof["pitch"],
-            "azimuth": roof["azimuth"],
+            "pitch": roof.get("pitch", 0),
+            "azimuth": roof.get("azimuth", 180),
         }
 
     def get_visible_panels(self, panel_count: int) -> Dict:

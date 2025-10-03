@@ -70,11 +70,21 @@ class DetectionResponse(BaseResponse):
 
 
 # Panel generation models
+class MapDimensionsModel(BaseModel):
+    """Map dimensions model."""
+
+    width: int = Field(..., gt=0, description="Map width in pixels")
+    height: int = Field(..., gt=0, description="Map height in pixels")
+
+
 class GeneratePanelsRequest(BaseModel):
     """Request model for panel generation."""
 
     roofs: List[RoofModel] = Field(..., description="Roof polygons")
     mapBounds: BoundsModel = Field(..., description="Map bounds")
+    mapDimensions: Optional[MapDimensionsModel] = Field(
+        None, description="Map dimensions in pixels"
+    )
     resolution: float = Field(..., gt=0, description="Image resolution")
     module: Optional[str] = Field(None, description="Panel module type")
     spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing")
@@ -89,10 +99,26 @@ class PanelModel(BaseModel):
     panel_id: Optional[int] = None
 
 
+class RoofPanelsModel(BaseModel):
+    """Model for panels on a single roof."""
+
+    roof_id: int
+    panels: List[PanelModel]
+    panel_count: int
+    module_type: str
+    module_specs: Dict[str, Any]
+    coords: List[CoordinateModel]
+    pitch: float
+    azimuth: float
+
+
 class PanelGenerationResponse(BaseResponse):
     """Panel generation response model."""
 
-    results: List[List[PanelModel]]
+    roofs: List[RoofPanelsModel]
+    max_panels: int
+    module: str
+    electrical_system: Optional[Dict[str, Any]] = None
 
 
 # Panel count update models

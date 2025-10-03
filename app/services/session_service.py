@@ -5,10 +5,7 @@ This module provides centralized session management functionality including
 session initialization, validation, and cleanup operations.
 """
 
-import uuid
 from typing import Optional
-
-from flask import session
 
 from app.utils.exceptions import SessionDataError
 
@@ -16,35 +13,42 @@ from app.utils.exceptions import SessionDataError
 class SessionService:
     """Service for managing session state and validation."""
 
-    @staticmethod
-    def ensure_initialized() -> str:
+    def __init__(self, session_id: str):
+        """Initialize SessionService with a session ID."""
+        self.session_id = session_id
+        # In-memory storage for session flags (in production, use Redis or database)
+        # This is a simple implementation; consider using cache_manager instead
+        if not hasattr(SessionService, "_session_storage"):
+            SessionService._session_storage = {}
+
+    def ensure_initialized(self) -> str:
         """Ensure session is initialized and return session ID."""
-        if "session_id" not in session:
-            session["session_id"] = str(uuid.uuid4())
-        return session["session_id"]
+        return self.session_id
 
-    @staticmethod
-    def get_session_id() -> Optional[str]:
+    def get_session_id(self) -> Optional[str]:
         """Get current session ID if it exists."""
-        return session.get("session_id")
+        return self.session_id
 
-    @staticmethod
-    def validate_panels_exist() -> None:
+    def validate_panels_exist(self) -> None:
         """Validate that panels exist in the current session."""
-        session_id = SessionService.get_session_id()
-        if not session_id:
+        if not self.session_id:
             raise SessionDataError("No active session. Please generate panels first")
 
-        if not session.get("has_panels", False):
+        if not self._get_session_flag("has_panels"):
             raise SessionDataError("No panels generated. Please generate panels first")
 
-    @staticmethod
-    def reset() -> None:
+    def reset(self) -> None:
         """Reset session state."""
-        session["session_id"] = str(uuid.uuid4())
-        session["has_panels"] = False
+        self._set_session_flag("has_panels", False)
 
-    @staticmethod
-    def mark_panels_generated() -> None:
+    def mark_panels_generated(self) -> None:
         """Mark that panels have been generated for this session."""
-        session["has_panels"] = True
+        self._set_session_flag("has_panels", True)
+
+    def _get_session_flag(self, key: str) -> bool:
+        """Get a boolean flag from session storage."""
+        return SessionService._session_storage.get(f"{self.session_id}:{key}", False)
+
+    def _set_session_flag(self, key: str, value: bool) -> None:
+        """Set a boolean flag in session storage."""
+        SessionService._session_storage[f"{self.session_id}:{key}"] = value

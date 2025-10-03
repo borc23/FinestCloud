@@ -14,7 +14,7 @@ interface RoofSegment {
 interface RoofAnglePanelProps {
   roofPolygons: google.maps.Polygon[]
   solarData: RoofSegment[] | null
-  onConfirm: (data: { angles: number[]; edgePadding: number }) => void
+  onConfirm: (data: { angles: number[]; edgePadding: number; panelData?: any }) => void
   onCancel: () => void
 }
 
@@ -24,8 +24,6 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
   const labelsRef = useRef<google.maps.Marker[]>([])
 
   useEffect(() => {
-    console.log('RoofAnglePanel useEffect running', { polygonCount: roofPolygons.length, hasSolarData: !!solarData })
-
     labelsRef.current.forEach(label => label.setMap(null))
     labelsRef.current = []
 
@@ -70,7 +68,7 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
     }
   }, [roofPolygons, solarData])
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const parsedAngles = angles.map((a, i) => {
       const val = parseFloat(a)
       if (isNaN(val) || val < 0 || val > 90) {
@@ -84,7 +82,98 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
       throw new Error('Invalid edge padding')
     }
 
-    onConfirm({ angles: parsedAngles, edgePadding: padding })
+    // Get map bounds and resolution
+    const map = roofPolygons[0]?.getMap()
+    if (!map) {
+      console.error('Map not available')
+      onConfirm({ angles: parsedAngles, edgePadding: padding })
+      return
+    }
+
+    const bounds = map.getBounds()
+    if (!bounds) {
+      console.error('Map bounds not available')
+      onConfirm({ angles: parsedAngles, edgePadding: padding })
+      return
+    }
+
+    const mapBounds = {
+      north: bounds.getNorthEast().lat(),
+      south: bounds.getSouthWest().lat(),
+      east: bounds.getNorthEast().lng(),
+      west: bounds.getSouthWest().lng()
+    }
+
+    // Calculate resolution (cm per pixel) and map dimensions
+    const mapDiv = map.getDiv()
+    const mapWidth = mapDiv.offsetWidth
+    const mapHeight = mapDiv.offsetHeight
+    const latLngBounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(mapBounds.south, mapBounds.west),
+      new google.maps.LatLng(mapBounds.north, mapBounds.east)
+    )
+    const ne = latLngBounds.getNorthEast()
+    const sw = latLngBounds.getSouthWest()
+    const earthCircumference = 40075017 // meters
+    const degreesPerPixel = (ne.lng() - sw.lng()) / mapWidth
+    const metersPerDegree = earthCircumference / 360
+    const metersPerPixel = degreesPerPixel * metersPerDegree
+    const resolution = metersPerPixel * 100 // convert to cm
+
+    const mapDimensions = {
+      width: mapWidth,
+      height: mapHeight
+    }
+
+    // Call the API endpoint
+    try {
+      const requestBody = {
+        angles: parsedAngles,
+        edgePadding: padding,
+        roofPolygons: roofPolygons.map(polygon => {
+          const path = polygon.getPath()
+          const coords = []
+          for (let i = 0; i < path.getLength(); i++) {
+            const point = path.getAt(i)
+            coords.push({ lat: point.lat(), lng: point.lng() })
+          }
+          return { coords }
+        }),
+        solarData,
+        mapBounds,
+        mapDimensions,
+        resolution,
+        module: 'standard',
+        spacing: 0.5
+      }
+
+      console.log('RoofAnglePanel sending request:', {
+        angles: parsedAngles,
+        solarDataCount: solarData?.length,
+        roofCount: roofPolygons.length
+      })
+
+      const response = await fetch('/api/generate_panels', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      console.log('API call response status:', response.status)
+      const responseData = await response.json()
+      console.log('API call response data:', responseData)
+
+      onConfirm({
+        angles: parsedAngles,
+        edgePadding: padding,
+        panelData: responseData.results || responseData
+      })
+    } catch (error) {
+      console.error('API call error:', error)
+      onConfirm({ angles: parsedAngles, edgePadding: padding })
+    }
   }
 
   return (
@@ -155,7 +244,7 @@ export default function RoofAnglePanel({ roofPolygons, solarData, onConfirm, onC
             Cancel
           </button>
           <button className={styles.confirmBtn} onClick={handleConfirm}>
-            Confirm
+            Generate
           </button>
         </div>
       </div>

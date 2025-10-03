@@ -40,19 +40,31 @@ def create_panel_generator(
 
 def get_map_dimensions(
     data: Dict[str, Any], cache_manager: CacheManager
-) -> Tuple[int, int]:
+) -> Dict[str, int]:
     """
     Get map dimensions from cache or request data.
 
     Args:
-        data: Request data
+        data: Request data containing mapDimensions
         cache_manager: Cache manager instance
 
     Returns:
-        Tuple of (width, height) dimensions
+        Dict with 'width' and 'height' dimensions
     """
+    # First check cache for image shape
     image_shape = cache_manager.get(CacheKeys.IMAGE_SHAPE)
-    return image_shape if image_shape else data["mapDimensions"]
+    if image_shape:
+        # Convert tuple to dict format if needed
+        if isinstance(image_shape, tuple):
+            return {"width": image_shape[0], "height": image_shape[1]}
+        return image_shape
+
+    # Use mapDimensions from request if provided
+    if "mapDimensions" in data and data["mapDimensions"]:
+        return data["mapDimensions"]
+
+    # Fallback
+    return {"width": 1000, "height": 1000}
 
 
 def execute_panel_generation(
@@ -72,7 +84,7 @@ def execute_panel_generation(
     dims = get_map_dimensions(data, cache_manager)
     return generator.generate_panels(
         roofs=data["roofs"],
-        objects=data["objects"],
+        objects=data.get("objects", []),
         map_dimensions=dims,
         tune_params=True,
     )

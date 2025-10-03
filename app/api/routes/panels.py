@@ -46,12 +46,16 @@ async def generate_panels(
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
             "mapBounds": request.mapBounds.dict(),
+            "mapDimensions": request.mapDimensions.dict()
+            if request.mapDimensions
+            else None,
             "resolution": request.resolution,
             "module": request.module,
             "spacing": request.spacing,
             "max_panels": request.max_panels,
         }
 
+        logger.info(f"Received roofs data: {data['roofs']}")
         generator = create_panel_generator(data, cache_manager)
         results = execute_panel_generation(generator, data, cache_manager)
 
@@ -61,7 +65,7 @@ async def generate_panels(
 
         logger.info(f"Panels generated and stored in cache for session {session_id}")
 
-        return PanelGenerationResponse(results=results)
+        return PanelGenerationResponse(**results)
 
     except Exception as e:
         logger.error(f"Panel generation failed: {str(e)}", exc_info=True)
@@ -89,6 +93,9 @@ async def generate_panels_selective(
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
             "mapBounds": request.mapBounds.dict(),
+            "mapDimensions": request.mapDimensions.dict()
+            if request.mapDimensions
+            else None,
             "resolution": request.resolution,
             "module": request.module,
             "spacing": request.spacing,
@@ -102,7 +109,7 @@ async def generate_panels_selective(
             f"Selective panels generated for {len(request.roofs)} roofs in session {session_id}"
         )
 
-        return PanelGenerationResponse(results=results)
+        return PanelGenerationResponse(**results)
 
     except Exception as e:
         logger.error(f"Selective panel generation failed: {str(e)}", exc_info=True)
@@ -150,7 +157,7 @@ async def update_panel_count(
 
         visible_panels = generator.get_visible_panels(request.panel_count)
 
-        return PanelGenerationResponse(results=visible_panels)
+        return PanelGenerationResponse(**visible_panels)
 
     except SessionDataError as e:
         raise HTTPException(status_code=400, detail=str(e))
