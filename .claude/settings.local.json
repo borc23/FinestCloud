@@ -7,7 +7,8 @@
       "Bash(npm run dev:*)",
       "Bash(cat:*)",
       "Bash(mkdir:*)",
-      "Bash(python test_gps_standalone.py:*)"
+      "Bash(python test_gps_standalone.py:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

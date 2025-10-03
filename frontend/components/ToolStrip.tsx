@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { motion, LayoutGroup } from 'framer-motion'
 import styles from './ToolStrip.module.css'
 
 interface ToolStripProps {
@@ -10,13 +11,123 @@ interface ToolStripProps {
   showPanelsTool?: boolean
 }
 
-const allToolsDefinition = [
-  { id: 'tab', icon: 'list', label: 'Tab', isFixed: true },
+const mainToolsDefinition = [
   { id: 'upload', icon: 'upload', label: 'Upload' },
   { id: 'select', icon: 'vector-square', label: 'Select' },
   { id: 'panels', icon: 'solar-panel', label: 'Generate' },
   { id: 'edit', icon: 'pen-to-square', label: 'Edit' }
 ] as const
+
+// Tab button component - static, no motion
+const TabButton = ({ isExpanded, onHover, onClick }: {
+  isExpanded: boolean
+  onHover: () => void
+  onClick: () => void
+}) => (
+  <div
+    className={styles.tabButton}
+    onMouseEnter={onHover}
+    onClick={onClick}
+  >
+    <button
+      className={styles.tool}
+      aria-label="Tab"
+      aria-pressed={isExpanded}
+    >
+      <i className="fas fa-list"></i>
+    </button>
+  </div>
+)
+
+// Search button component - static, no motion
+const SearchButton = ({ isActive, onHover, onClick }: {
+  isActive: boolean
+  onHover: () => void
+  onClick: () => void
+}) => (
+  <div
+    className={styles.searchButton}
+    onMouseEnter={onHover}
+    onClick={onClick}
+  >
+    <button
+      className={styles.tool}
+      aria-label="Search"
+      aria-pressed={isActive}
+    >
+      <i className="fas fa-search"></i>
+    </button>
+  </div>
+)
+
+// Middle icon strip component - with motion
+const MiddleIconStrip = ({
+  tools,
+  activeTool,
+  isExpanded,
+  hoveredTool,
+  showPanelsTool,
+  onHover,
+  onClick
+}: {
+  tools: readonly typeof mainToolsDefinition[number][]
+  activeTool: string
+  isExpanded: boolean
+  hoveredTool: string | null
+  showPanelsTool: boolean
+  onHover: (toolId: string | null) => void
+  onClick: (toolId: string) => void
+}) => {
+  const getActiveToolIndex = (targetTool: string | null = null): number => {
+    const targetToolId = targetTool || activeTool
+    return tools.findIndex(tool => tool.id === targetToolId)
+  }
+
+  const activeIndex = getActiveToolIndex(hoveredTool)
+
+  return (
+    <div className={styles.middleStrip}>
+      <LayoutGroup>
+        <div className={styles.iconsContainer}>
+          {tools.map((tool) => (
+            <motion.div
+              key={tool.id}
+              layout
+              transition={{
+                type: 'spring',
+                stiffness: 350,
+                damping: 25
+              }}
+              className={styles.iconWrapper}
+              onMouseEnter={() => onHover(tool.id)}
+              onClick={() => onClick(tool.id)}
+            >
+              <button
+                className={styles.tool}
+                aria-label={tool.label}
+                aria-pressed={activeTool === tool.id}
+              >
+                <i className={`fas fa-${tool.icon}`}></i>
+                {isExpanded && (
+                  <span className={styles.toolLabel}>{tool.label}</span>
+                )}
+              </button>
+            </motion.div>
+          ))}
+        </div>
+      </LayoutGroup>
+
+      {/* Frosted Overlay - only for middle strip */}
+      <div
+        className={styles.frostedOverlay}
+        data-tool-index={activeIndex}
+        style={{
+          opacity: activeIndex === -1 ? 0 : 1
+        }}
+      />
+    </div>
+  )
+}
 
 export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
@@ -25,27 +136,11 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const containerRef = useRef<HTMLDivElement>(null)
 
   const tools = useMemo(() =>
-    allToolsDefinition.filter(tool =>
+    mainToolsDefinition.filter(tool =>
       tool.id !== 'panels' || showPanelsTool
     ),
     [showPanelsTool]
   )
-
-  const bottomTools = useMemo(() => [
-    { id: 'search', icon: 'search', label: 'Search', isFixed: true }
-  ], [])
-
-  const allTools = useMemo(() => [...tools, ...bottomTools], [tools, bottomTools])
-
-  const getActiveToolData = (targetTool: string | null = null): { index: number; section: string | null } => {
-    const targetToolId = targetTool || activeTool
-    const mainToolIndex = tools.findIndex(tool => tool.id === targetToolId && !tool.isFixed)
-
-    // Return valid index and section only for non-fixed main tools
-    return mainToolIndex !== -1
-      ? { index: mainToolIndex - 1, section: 'main' }
-      : { index: -1, section: null }
-  }
 
   const handleToolHover = useCallback((toolId: string | null) => {
     if (hoverTimeoutRef.current) {
@@ -56,7 +151,6 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     if (toolId) {
       setHoveredTool(toolId)
     } else {
-      // Delay clearing hover state to prevent flicker when moving between tools
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredTool(null)
       }, 100)
@@ -75,14 +169,13 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const handleToolClick = (toolId: string) => {
     if (toolId === 'tab') {
       setIsExpanded(!isExpanded)
-    } else if (toolId === 'stats') {
-      onStatsToggle()
+    } else if (toolId === 'search') {
+      onToolSelect(toolId)
     } else {
       onToolSelect(toolId)
     }
   }
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
@@ -98,61 +191,29 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
       data-has-generate={showPanelsTool}
       onMouseLeave={handleContainerMouseLeave}
     >
-      {/* Tools */}
-      <div className={styles.toolsSection}>
-        {tools.map((tool, index) => (
-          <div
-            key={tool.id}
-            className={styles.toolWrapper}
-            onMouseEnter={() => handleToolHover(tool.id)}
-            onClick={() => handleToolClick(tool.id)}
-          >
-            <button
-              className={styles.tool}
-              aria-label={tool.label}
-              aria-pressed={tool.id === 'tab' ? isExpanded : activeTool === tool.id}
-            >
-              <i className={`fas fa-${tool.icon}`}></i>
-              {isExpanded && !tool.isFixed && (
-                <span className={styles.toolLabel}>{tool.label}</span>
-              )}
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* Tab Button - Static */}
+      <TabButton
+        isExpanded={isExpanded}
+        onHover={() => handleToolHover('tab')}
+        onClick={() => handleToolClick('tab')}
+      />
 
-      {/* Bottom Actions */}
-      <div className={styles.bottomSection}>
-        {bottomTools.map((tool) => (
-          <div
-            key={tool.id}
-            className={styles.toolWrapper}
-            onMouseEnter={() => handleToolHover(tool.id)}
-            onClick={() => handleToolClick(tool.id)}
-          >
-            <button
-              className={styles.tool}
-              aria-label={tool.label}
-              aria-pressed={activeTool === tool.id}
-            >
-              <i className={`fas fa-${tool.icon}`}></i>
-              {isExpanded && !tool.isFixed && (
-                <span className={styles.toolLabel}>{tool.label}</span>
-              )}
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* Middle Icon Strip - With Motion */}
+      <MiddleIconStrip
+        tools={tools}
+        activeTool={activeTool}
+        isExpanded={isExpanded}
+        hoveredTool={hoveredTool}
+        showPanelsTool={showPanelsTool}
+        onHover={handleToolHover}
+        onClick={handleToolClick}
+      />
 
-      {/* Frosted Overlay */}
-      <div
-        className={styles.frostedOverlay}
-        data-active-tool={hoveredTool || activeTool}
-        data-tool-section={getActiveToolData(hoveredTool).section}
-        data-tool-index={getActiveToolData(hoveredTool).index}
-        style={{
-          opacity: getActiveToolData(hoveredTool).index === -1 ? 0 : 1
-        }}
+      {/* Search Button - Static */}
+      <SearchButton
+        isActive={activeTool === 'search'}
+        onHover={() => handleToolHover('search')}
+        onClick={() => handleToolClick('search')}
       />
     </div>
   )

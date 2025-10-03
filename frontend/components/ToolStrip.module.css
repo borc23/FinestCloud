@@ -20,49 +20,73 @@
   padding: 4px;
 }
 
+/* Tab Button - Static */
+.tabButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 36px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
-.toolsSection {
+.tabButton:active .tool {
+  transform: scale(0.95);
+}
+
+/* Search Button - Static */
+.searchButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 36px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.searchButton:active .tool {
+  transform: scale(0.95);
+}
+
+/* Middle Strip - Contains the animated icons */
+.middleStrip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 366px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.iconsContainer {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 0;
-  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
-.toolWrapper {
+.iconWrapper {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 122px;
   height: 36px;
-  transition: width var(--transition-slow);
   cursor: pointer;
 }
 
-.toolWrapper:active .tool {
-  transform: scale(0.95);
-}
-
-.toolsSection .toolWrapper:not(:first-child) {
-  width: 122px;
-}
-
-.toolStrip[data-has-generate="true"] .toolsSection .toolWrapper:not(:first-child) {
+.toolStrip[data-has-generate="true"] .iconWrapper {
   width: 91.5px;
 }
 
-.toolWrapper:first-child {
-  margin-left: 0;
-  width: 52px !important;
-}
-
-.toolWrapper:last-child {
-  margin-right: 0;
-}
-
-.bottomSection .toolWrapper {
-  width: 52px !important;
+.iconWrapper:active .tool {
+  transform: scale(0.95);
 }
 
 .tool {
@@ -101,6 +125,7 @@
   color: inherit;
 }
 
+/* Frosted Overlay - Only inside middle strip */
 .frostedOverlay {
   position: absolute;
   width: 122px;
@@ -112,8 +137,8 @@
               height var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
               width var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1;
-  top: 4px;
-  left: 52px;
+  top: 0;
+  left: 0;
   will-change: transform;
 }
 
@@ -123,6 +148,7 @@
 
 .toolStrip.expanded .frostedOverlay {
   height: 54px;
+  top: -9px;
 }
 
 .frostedOverlay[data-tool-index="0"] {
@@ -153,13 +179,6 @@
   transform: translateX(274.5px);
 }
 
-.bottomSection {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0;
-}
-
 @media (max-width: 768px) {
   .toolStrip {
     left: 50%;
@@ -168,14 +187,14 @@
     transform: translate(-50%, -50%);
   }
 
-  .toolWrapper {
+  .iconWrapper {
     padding: calc(var(--tool-gap) / 1.5);
     margin: calc(-1 * var(--tool-gap) / 1.5);
   }
 }
 
 @media (max-width: 480px) {
-  .toolWrapper {
+  .iconWrapper {
     padding: var(--tool-gap);
     margin: calc(-1 * var(--tool-gap));
   }
