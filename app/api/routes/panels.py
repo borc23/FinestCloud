@@ -42,17 +42,15 @@ async def generate_panels(
         session_id = session_service.ensure_initialized()
         logger.debug(f"Generating panels for session {session_id}")
 
-        # Convert Pydantic models to dict format expected by existing logic
         data = {
             "roofs": [roof.dict() for roof in request.roofs],
-            "mapBounds": request.mapBounds.dict(),
-            "mapDimensions": request.mapDimensions.dict()
-            if request.mapDimensions
-            else None,
-            "resolution": request.resolution,
-            "module": request.module,
-            "spacing": request.spacing,
-            "max_panels": request.max_panels,
+            "mapBounds": request.mapBounds.dict(),  # N,S,E,W coord values of map
+            "mapDimensions": request.mapDimensions.dict(),  # in pixel values full map when generation panels start
+            "resolution": request.resolution,  # cm per pixel
+            "module": request.module,  # Standard, premium, etc
+            "spacing": request.spacing,  # Spacing between panels in grid(cm value if I'm correct)
+            "max_panels": request.max_panels,  # None for now
+            "padding": request.padding,  # Edge padding in cm
         }
 
         logger.info(f"Received roofs data: {data['roofs']}")
@@ -100,6 +98,7 @@ async def generate_panels_selective(
             "module": request.module,
             "spacing": request.spacing,
             "max_panels": request.max_panels,
+            "padding": request.padding,
         }
 
         generator = create_panel_generator(data, cache_manager)

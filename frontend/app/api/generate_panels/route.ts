@@ -10,14 +10,16 @@ export async function POST(request: NextRequest) {
     console.log('Request body:', JSON.stringify(body, null, 2))
     console.log('Angles array:', body.angles)
 
-    // Transform frontend data to backend format
     const backendRequest = {
       roofs: body.roofPolygons.map((roofPoly: any, index: number) => {
         const pitch = body.angles?.[index] !== undefined ? body.angles[index] : 0
         const azimuth = body.solarData?.[index]?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees || 180
         console.log(`Roof ${index}: pitch=${pitch}, azimuth=${azimuth}`)
         return {
-          coords: roofPoly.coords,
+          coords: roofPoly.coords.map((coord: any) => ({
+            lat: coord.lat,
+            lng: coord.lng
+          })),
           pitch,
           azimuth
         }
@@ -27,7 +29,8 @@ export async function POST(request: NextRequest) {
       resolution: body.resolution,
       module: body.module || 'standard',
       spacing: body.spacing || 0.5,
-      max_panels: body.max_panels || null
+      max_panels: body.max_panels || null,
+      padding: body.edgePadding !== undefined ? body.edgePadding : 20
     }
 
     console.log('Transformed backend request:', JSON.stringify(backendRequest, null, 2))

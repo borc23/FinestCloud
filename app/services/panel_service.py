@@ -96,9 +96,13 @@ class PanelService:
         roof_panels = self._generate_panels_on_roof(
             roof_data, objects, map_dimensions, tune_params
         )
+        formatted_panels = [
+            {"coords": panel, "roof_id": roof_id, "panel_id": i}
+            for i, panel in enumerate(roof_panels)
+        ]
         return {
             "roof_id": roof_id,
-            "panels": roof_panels,
+            "panels": formatted_panels,
             "panel_count": len(roof_panels),
             "module_type": self.module_dict["id"],
             "module_specs": self.module_dict,
@@ -314,7 +318,6 @@ class PanelService:
         else:
             valid_area_mask = roof_mask
 
-        # Cache result for small roofs only
         if cache_key and len(self._mask_cache) < 20:
             self._mask_cache[cache_key] = valid_area_mask.copy()
 

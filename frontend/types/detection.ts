@@ -8,8 +8,9 @@ export interface DetectionBounds {
 export interface CoordinateModel {
   lat?: number
   lng?: number
-  x?: number
-  y?: number
+  pitch?: number
+  azimuth?: number
+  padding?: number
 }
 
 export interface RoofModel {

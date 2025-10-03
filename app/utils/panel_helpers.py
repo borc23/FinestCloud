@@ -32,7 +32,7 @@ def create_panel_generator(
         bounds=data["mapBounds"],
         resolution=data["resolution"],
         custom_module=custom_module,
-        edge_padding_cm=data.get("edge_padding_cm", 20),
+        edge_padding_cm=data.get("padding", 20),
     )
     generator.set_module(data["module"])
     return generator
@@ -59,11 +59,9 @@ def get_map_dimensions(
             return {"width": image_shape[0], "height": image_shape[1]}
         return image_shape
 
-    # Use mapDimensions from request if provided
     if "mapDimensions" in data and data["mapDimensions"]:
         return data["mapDimensions"]
 
-    # Fallback
     return {"width": 1000, "height": 1000}
 
 

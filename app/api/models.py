@@ -52,14 +52,14 @@ class CoordinateModel(BaseModel):
 
     lat: Optional[float] = None
     lng: Optional[float] = None
-    x: Optional[float] = None
-    y: Optional[float] = None
 
 
 class RoofModel(BaseModel):
     """Roof polygon model."""
 
     coords: List[CoordinateModel]
+    pitch: Optional[float] = None
+    azimuth: Optional[float] = None
 
 
 class DetectionResponse(BaseResponse):
@@ -89,6 +89,9 @@ class GeneratePanelsRequest(BaseModel):
     module: Optional[str] = Field(None, description="Panel module type")
     spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing")
     max_panels: Optional[int] = Field(None, ge=0, description="Maximum panels per roof")
+    padding: Optional[float] = Field(
+        default=20, ge=0.0, description="Edge padding in cm"
+    )
 
 
 class PanelModel(BaseModel):
