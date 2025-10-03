@@ -81,6 +81,8 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
       if (e.key === 'Control') {
         setIsCtrlPressed(true)
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
+        e.stopPropagation()
         deleteSelectedRef.current()
       } else if (e.key === 'Escape') {
         clearSelectionRef.current()
