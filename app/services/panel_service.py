@@ -18,11 +18,13 @@ class PanelService:
         custom_module=None,
         edge_padding_cm: int = 20,
         spacing_cm: float = 0.5,
+        panel_orientation: str = "best",
     ):
         self.bounds = bounds
         self.custom_module = custom_module
         self.edge_padding_cm = edge_padding_cm
         self.spacing_cm = spacing_cm
+        self.panel_orientation = panel_orientation
         self.config = PanelConfig()
         self.module_dict = PanelModule.STANDARD.value
         self.all_panels = []
@@ -240,6 +242,7 @@ class PanelService:
             padding_cm=padding,
             gps_system=self.gps_system,
             tune_parameters=tune_params,
+            panel_orientation=self.panel_orientation,
         )
 
         return panels

@@ -64,6 +64,7 @@ class PanelGeneticOptimizer:
         padding_cm: float,
         gps_system=None,
         tune_parameters: bool = False,
+        panel_orientation: str = "best",
     ) -> List[np.ndarray]:
         """
         Optimize panel placement using a genetic algorithm with dual orientation support.
@@ -129,9 +130,7 @@ class PanelGeneticOptimizer:
             rot_min_x, rot_min_y, rot_max_x, rot_max_y = rotated_roof.bounds
 
             for _ in range(5):
-                population = self._initialize_population(
-                    spacing_cm, vertical_dims, horizontal_dims
-                )
+                population = self._initialize_population(spacing_cm, panel_orientation)
                 best_fitness = 0
 
                 for generation in range(self.generations):
@@ -230,7 +229,7 @@ class PanelGeneticOptimizer:
                         )
 
                     population = self._create_new_population(
-                        population, fitness_scores, spacing_cm
+                        population, fitness_scores, spacing_cm, panel_orientation
                     )
 
             self.metrics.generations_completed = generation + 1
@@ -313,8 +312,7 @@ class PanelGeneticOptimizer:
     def _initialize_population(
         self,
         spacing: float,
-        vertical_dims: Tuple[float, float],
-        horizontal_dims: Tuple[float, float],
+        panel_orientation: str = "best",
     ) -> List[Tuple[float, float, int, float, float]]:
         """
         Initialize a diverse population with new chromosome structure.
@@ -329,9 +327,15 @@ class PanelGeneticOptimizer:
         for _ in range(self.population_size):
             offset_x = np.random.uniform(0, max_offset)
             offset_y = np.random.uniform(0, max_offset)
-            # HARDCODED: Only horizontal orientation (1)
-            # To enable mixed orientations, change to: orientation = np.random.choice([0, 1])
-            orientation = np.random.choice([0, 1])  # 0=vertical, 1=horizontal
+
+            # Set orientation based on user preference
+            if panel_orientation == "vertical":
+                orientation = 0
+            elif panel_orientation == "horizontal":
+                orientation = 1
+            else:  # "best" - try both orientations
+                orientation = np.random.choice([0, 1])
+
             spacing_x_mult = np.random.uniform(0.5, 2.0)
             spacing_y_mult = np.random.uniform(0.5, 2.0)
 
@@ -346,6 +350,7 @@ class PanelGeneticOptimizer:
         population: List[Tuple[float, float, int, float, float]],
         fitness_scores: List[int],
         spacing: float,
+        panel_orientation: str = "best",
     ) -> List[Tuple[float, float, int, float, float]]:
         """Create a new population through selection, crossover, and mutation."""
         new_population = []
@@ -364,12 +369,22 @@ class PanelGeneticOptimizer:
             parent2 = self._tournament_selection(population, fitness_scores)
 
             if np.random.random() < self.crossover_rate:
-                child1, child2 = self._crossover(parent1, parent2)
+                child1, child2 = self._crossover(parent1, parent2, panel_orientation)
             else:
                 child1, child2 = parent1, parent2
 
-            child1 = self._mutate(child1, spacing, mutation_rate=adaptive_mutation_rate)
-            child2 = self._mutate(child2, spacing, mutation_rate=adaptive_mutation_rate)
+            child1 = self._mutate(
+                child1,
+                spacing,
+                mutation_rate=adaptive_mutation_rate,
+                panel_orientation=panel_orientation,
+            )
+            child2 = self._mutate(
+                child2,
+                spacing,
+                mutation_rate=adaptive_mutation_rate,
+                panel_orientation=panel_orientation,
+            )
 
             new_population.append(child1)
             if len(new_population) < self.population_size:
@@ -397,6 +412,7 @@ class PanelGeneticOptimizer:
         self,
         parent1: Tuple[float, float, int, float, float],
         parent2: Tuple[float, float, int, float, float],
+        panel_orientation: str = "best",
     ) -> Tuple[
         Tuple[float, float, int, float, float], Tuple[float, float, int, float, float]
     ]:
@@ -406,9 +422,13 @@ class PanelGeneticOptimizer:
 
         # Multi-point crossover
         if np.random.random() < 0.5:
-            # Swap orientation and spacing parameters
-            child1 = (p1_x, p1_y, p2_orient, p2_sx, p2_sy)
-            child2 = (p2_x, p2_y, p1_orient, p1_sx, p1_sy)
+            # Swap orientation and spacing parameters (only if "best" mode)
+            if panel_orientation == "best":
+                child1 = (p1_x, p1_y, p2_orient, p2_sx, p2_sy)
+                child2 = (p2_x, p2_y, p1_orient, p1_sx, p1_sy)
+            else:
+                child1 = (p1_x, p1_y, p1_orient, p2_sx, p2_sy)
+                child2 = (p2_x, p2_y, p2_orient, p1_sx, p1_sy)
         else:
             # Blend crossover for continuous values
             alpha = np.random.random()
@@ -416,13 +436,19 @@ class PanelGeneticOptimizer:
             child1_y = alpha * p1_y + (1 - alpha) * p2_y
             child1_sx = alpha * p1_sx + (1 - alpha) * p2_sx
             child1_sy = alpha * p1_sy + (1 - alpha) * p2_sy
-            child1_orient = np.random.choice([p1_orient, p2_orient])
+
+            # Only mix orientations in "best" mode
+            if panel_orientation == "best":
+                child1_orient = np.random.choice([p1_orient, p2_orient])
+                child2_orient = np.random.choice([p1_orient, p2_orient])
+            else:
+                child1_orient = p1_orient
+                child2_orient = p2_orient
 
             child2_x = (1 - alpha) * p1_x + alpha * p2_x
             child2_y = (1 - alpha) * p1_y + alpha * p2_y
             child2_sx = (1 - alpha) * p1_sx + alpha * p2_sx
             child2_sy = (1 - alpha) * p1_sy + alpha * p2_sy
-            child2_orient = np.random.choice([p1_orient, p2_orient])
 
             child1 = (child1_x, child1_y, child1_orient, child1_sx, child1_sy)
             child2 = (child2_x, child2_y, child2_orient, child2_sx, child2_sy)
@@ -434,6 +460,7 @@ class PanelGeneticOptimizer:
         individual: Tuple[float, float, int, float, float],
         spacing: float,
         mutation_rate: Optional[float] = None,
+        panel_orientation: str = "best",
     ) -> Tuple[float, float, int, float, float]:
         """Mutate an individual with adaptive mutation strength for new chromosome structure."""
         if mutation_rate is None:
@@ -460,10 +487,8 @@ class PanelGeneticOptimizer:
             else:
                 offset_y = max(0.0, offset_y + mutation_strength)
 
-        # Mutate orientation (flip with low probability)
-        # HARDCODED: Disabled to keep horizontal only
-        # To enable mixed orientations, uncomment the next line:
-        if np.random.random() < mutation_rate * 0.3:
+        # Mutate orientation (flip with low probability) - only in "best" mode
+        if panel_orientation == "best" and np.random.random() < mutation_rate * 0.3:
             orientation = 1 - orientation
 
         # Mutate spacing multipliers

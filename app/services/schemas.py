@@ -34,6 +34,12 @@ class GeneratePanelsSchema(Schema):
         required=False, validate=validate.Range(min=0, max=200), load_default=20
     )
     selected_roofs_only = fields.Boolean(required=False, load_default=False)
+    panelOrientation = fields.String(
+        required=False,
+        validate=validate.OneOf(["best", "vertical", "horizontal"]),
+        load_default="best",
+        data_key="panelOrientation",
+    )
 
 
 class UpdatePanelCountSchema(Schema):

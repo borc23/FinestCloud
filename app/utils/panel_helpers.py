@@ -33,6 +33,7 @@ def create_panel_generator(
         custom_module=custom_module,
         edge_padding_cm=data.get("padding", 20),
         spacing_cm=data.get("spacing", 0.5),
+        panel_orientation=data.get("panelOrientation", "best"),
     )
     generator.set_module(data["module"])
     return generator
