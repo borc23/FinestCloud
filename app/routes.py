@@ -117,7 +117,7 @@ def generate_panels() -> Response:
 
     cache_manager = get_cache_manager()
     generator = create_panel_generator(data, cache_manager)
-    results = execute_panel_generation(generator, data, cache_manager)
+    results = execute_panel_generation(generator, data)
 
     # Cache results for non-selective generation
     cache_generation_results(cache_manager, results, data)
@@ -141,7 +141,7 @@ def generate_panels_selective() -> Response:
 
     cache_manager = get_cache_manager()
     generator = create_panel_generator(data, cache_manager)
-    results = execute_panel_generation(generator, data, cache_manager)
+    results = execute_panel_generation(generator, data)
 
     logger.info(
         f"Selective panels generated for {len(data['roofs'])} roofs in session {session_id}"

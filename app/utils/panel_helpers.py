@@ -39,7 +39,7 @@ def create_panel_generator(
 
 
 def execute_panel_generation(
-    generator: PanelService, data: Dict[str, Any], cache_manager: CacheManager
+    generator: PanelService, data: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Execute panel generation with the given generator and data.

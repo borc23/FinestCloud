@@ -141,7 +141,6 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   }, [map, roofPolygons])
 
   const handleAngleConfirm = useCallback((data: { angles: number[]; edgePadding: number; panelData?: any }) => {
-    console.log('Confirmed angles and padding:', data)
 
     // Clear existing panel markers
     solarPanelMarkers.forEach(marker => marker.setMap(null))

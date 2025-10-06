@@ -1,9 +1,8 @@
 import logging
 import time
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-import cv2
 import numpy as np
 
 
@@ -54,30 +53,32 @@ class PanelGeneticOptimizer:
 
     def optimize_panel_placement(
         self,
-        mask: np.ndarray,
-        panel_size: Tuple[int, int],
-        spacing: int,
+        roof_polygon: np.ndarray,
+        objects: List[Dict],
+        panel_width_cm: float,
+        panel_height_cm: float,
+        spacing_cm: float,
         angle: float,
-        center: np.ndarray,
-        padding_px: int,
-        generate_grid_fn: Callable,
+        padding_cm: float,
+        gps_system=None,
         tune_parameters: bool = False,
     ) -> List[np.ndarray]:
         """
         Optimize panel placement using a genetic algorithm while maintaining orientation.
 
         Args:
-            mask: Binary mask representing valid placement areas
-            panel_size: Size of panels (width, height) in pixels
-            spacing: Spacing between panels in pixels
+            roof_polygon: Roof polygon coordinates in cm (N x 2 array)
+            objects: List of obstacle objects in GPS coordinates
+            panel_width_cm: Panel width in centimeters
+            panel_height_cm: Panel height in centimeters
+            spacing_cm: Spacing between panels in centimeters
             angle: Orientation angle in radians
-            center: Center point for rotation
-            padding_px: Padding in pixels from the edge
-            generate_grid_fn: Function to generate panel grid with given parameters
+            padding_cm: Padding in centimeters from the edge
+            gps_system: GPS coordinate system for converting objects
             tune_parameters: Whether to tune GA parameters first
 
         Returns:
-            List of optimally placed panels as arrays of corner coordinates
+            List of optimally placed panels as arrays of corner coordinates in cm
         """
         start_time = time.time()
         self.metrics = OptimizationMetrics()
@@ -85,9 +86,39 @@ class PanelGeneticOptimizer:
         global_best_solution = None
         global_best_fitness = 0
 
+        from shapely.affinity import rotate as shapely_rotate
+        from shapely.geometry import Polygon
+
+        # Convert objects from GPS to cm if gps_system is provided
+        object_polys = []
+        if gps_system:
+            for obj in objects:
+                obj_coords = obj.get("coords", obj) if isinstance(obj, dict) else obj
+                obj_coords_cm = gps_system.gps_array_to_cm(obj_coords)
+                if len(obj_coords_cm) > 2:
+                    object_polys.append(Polygon(obj_coords_cm))
+
+        roof_poly = Polygon(roof_polygon)
+
+        # Get bounds for the roof
+        min_x, min_y = roof_polygon.min(axis=0)
+        max_x, max_y = roof_polygon.max(axis=0)
+
+        # Calculate center for rotation
+        center_x = (min_x + max_x) / 2
+        center_y = (min_y + max_y) / 2
+
         if tune_parameters:
             self._tune_genetic_parameters(
-                mask, panel_size, spacing, angle, center, padding_px, generate_grid_fn
+                roof_polygon,
+                object_polys,
+                panel_width_cm,
+                panel_height_cm,
+                spacing_cm,
+                angle,
+                padding_cm,
+                center_x,
+                center_y,
             )
 
         self.fitness_cache = {}
@@ -95,30 +126,31 @@ class PanelGeneticOptimizer:
         stagnation_counter = 0
 
         try:
-            kernel_size = max(1, spacing + (2 * padding_px) + 2)
-            eroded_mask = cv2.erode(
-                mask, np.ones((kernel_size, kernel_size), np.uint8), iterations=1
+            # Rotate roof and objects
+            angle_degrees = -np.degrees(angle)
+            rotated_roof = shapely_rotate(
+                roof_poly, angle_degrees, origin=(center_x, center_y)
             )
+            rotated_objects = [
+                shapely_rotate(obj, angle_degrees, origin=(center_x, center_y))
+                for obj in object_polys
+            ]
 
-            angle_degrees = np.degrees(angle)
-            rotation_matrix = cv2.getRotationMatrix2D(tuple(center), angle_degrees, 1.0)
-            inv_rotation_matrix = cv2.getRotationMatrix2D(
-                tuple(center), -angle_degrees, 1.0
+            # Get rotated bounds
+            rot_min_x, rot_min_y, rot_max_x, rot_max_y = rotated_roof.bounds
+
+            # Panel template in cm
+            panel_template = np.array(
+                [
+                    [0, 0],
+                    [panel_width_cm, 0],
+                    [panel_width_cm, panel_height_cm],
+                    [0, panel_height_cm],
+                ]
             )
-
-            rotated_mask = cv2.warpAffine(
-                eroded_mask, rotation_matrix, mask.shape[1::-1]
-            )
-
-            coords = cv2.findNonZero(rotated_mask)
-            if coords is None:
-                self.logger.warning("No valid area found for panel placement")
-                return []
-
-            x, y, w, h = cv2.boundingRect(coords)
 
             for _ in range(3):
-                population = self._initialize_population(spacing)
+                population = self._initialize_population(spacing_cm)
                 best_fitness = 0
 
                 for generation in range(self.generations):
@@ -132,18 +164,23 @@ class PanelGeneticOptimizer:
                             self.metrics.cache_hits += 1
                         else:
                             try:
-                                panels = generate_grid_fn(
-                                    rotated_mask=rotated_mask,
-                                    panel_size=panel_size,
-                                    spacing=spacing,
-                                    x=x,
-                                    y=y,
-                                    w=w,
-                                    h=h,
-                                    padding_px=padding_px,
+                                panels = self._generate_grid_cm(
+                                    rotated_roof=rotated_roof,
+                                    rotated_objects=rotated_objects,
+                                    panel_template=panel_template,
+                                    panel_width_cm=panel_width_cm,
+                                    panel_height_cm=panel_height_cm,
+                                    spacing_cm=spacing_cm,
+                                    padding_cm=padding_cm,
+                                    rot_min_x=rot_min_x,
+                                    rot_min_y=rot_min_y,
+                                    rot_max_x=rot_max_x,
+                                    rot_max_y=rot_max_y,
                                     offset_x=offset_x,
                                     offset_y=offset_y,
-                                    inv_rotation_matrix=inv_rotation_matrix,
+                                    angle_degrees=angle_degrees,
+                                    center_x=center_x,
+                                    center_y=center_y,
                                 )
 
                                 fitness = len(panels)
@@ -160,7 +197,6 @@ class PanelGeneticOptimizer:
                         # Update local best
                         if fitness > best_fitness:
                             best_fitness = fitness
-                            # best_solution = panels
 
                         # Update global best
                         if fitness > global_best_fitness:
@@ -189,7 +225,7 @@ class PanelGeneticOptimizer:
                         )
 
                     population = self._create_new_population(
-                        population, fitness_scores, spacing
+                        population, fitness_scores, spacing_cm
                     )
 
             self.metrics.generations_completed = generation + 1
@@ -204,19 +240,74 @@ class PanelGeneticOptimizer:
             return global_best_solution or []
 
         except Exception as e:
-            self.logger.error(f"Error in optimization: {str(e)}")
+            self.logger.error(f"Error in optimization: {str(e)}", exc_info=True)
             self.metrics.total_time_seconds = time.time() - start_time
             return []
 
-    def _initialize_population(self, spacing: int) -> List[Tuple[int, int]]:
+    def _generate_grid_cm(
+        self,
+        rotated_roof,
+        rotated_objects: List,
+        panel_template: np.ndarray,
+        panel_width_cm: float,
+        panel_height_cm: float,
+        spacing_cm: float,
+        padding_cm: float,
+        rot_min_x: float,
+        rot_min_y: float,
+        rot_max_x: float,
+        rot_max_y: float,
+        offset_x: float,
+        offset_y: float,
+        angle_degrees: float,
+        center_x: float,
+        center_y: float,
+    ) -> List[np.ndarray]:
+        """Generate grid of panels in cm coordinates with given offsets."""
+        from shapely.affinity import rotate as shapely_rotate
+        from shapely.geometry import Polygon
+
+        panels = []
+        step_y = panel_height_cm + spacing_cm
+        step_x = panel_width_cm + spacing_cm
+
+        y = rot_min_y + padding_cm + offset_y
+        while y + panel_height_cm + padding_cm <= rot_max_y:
+            x = rot_min_x + padding_cm + offset_x
+            while x + panel_width_cm + padding_cm <= rot_max_x:
+                panel = panel_template + [x, y]
+                panel_poly = Polygon(panel)
+
+                if rotated_roof.contains(panel_poly):
+                    overlaps = any(
+                        panel_poly.intersects(obj) for obj in rotated_objects
+                    )
+                    if not overlaps:
+                        # Rotate panel back to original coordinate system
+                        rotated_back = shapely_rotate(
+                            panel_poly, -angle_degrees, origin=(center_x, center_y)
+                        )
+                        panels.append(np.array(rotated_back.exterior.coords[:4]))
+
+                x += step_x
+            y += step_y
+
+        return panels
+
+    def _initialize_population(self, spacing: float) -> List[Tuple[float, float]]:
         """Initialize a diverse population of offset pairs using vectorized operations."""
-        max_offset = max(50, spacing if spacing > 0 else 50)
+        max_offset = max(50.0, spacing if spacing > 0 else 50.0)
         population = []
 
         if spacing > 0:
-            i_values = np.arange(min(self.population_size // 2, spacing))
-            j_values = np.arange(
-                min((self.population_size // 2) // len(i_values) + 1, spacing)
+            num_steps = int(spacing) if spacing >= 1 else 10
+            i_values = np.linspace(
+                0, spacing, min(self.population_size // 2, num_steps)
+            )
+            j_values = np.linspace(
+                0,
+                spacing,
+                min((self.population_size // 2) // len(i_values) + 1, num_steps),
             )
 
             if len(i_values) > 0 and len(j_values) > 0:
@@ -226,15 +317,18 @@ class PanelGeneticOptimizer:
 
         remaining = self.population_size - len(population)
         if remaining > 0:
-            random_offsets_x = np.random.randint(0, max_offset, size=remaining)
-            random_offsets_y = np.random.randint(0, max_offset, size=remaining)
+            random_offsets_x = np.random.uniform(0, max_offset, size=remaining)
+            random_offsets_y = np.random.uniform(0, max_offset, size=remaining)
             population.extend(zip(random_offsets_x, random_offsets_y))
 
         return population[: self.population_size]
 
     def _create_new_population(
-        self, population: List[Tuple[int, int]], fitness_scores: List[int], spacing: int
-    ) -> List[Tuple[int, int]]:
+        self,
+        population: List[Tuple[float, float]],
+        fitness_scores: List[int],
+        spacing: float,
+    ) -> List[Tuple[float, float]]:
         """Create a new population through selection, crossover, and mutation."""
         new_population = []
 
@@ -266,11 +360,11 @@ class PanelGeneticOptimizer:
         return new_population
 
     def _tournament_selection(
-        self, population: List[Tuple[int, int]], fitness_scores: List[int]
-    ) -> Tuple[int, int]:
+        self, population: List[Tuple[float, float]], fitness_scores: List[int]
+    ) -> Tuple[float, float]:
         """Select individual using tournament selection."""
         if not population or not fitness_scores:
-            return (0, 0)
+            return (0.0, 0.0)
 
         indices = np.random.choice(
             len(population), min(self.tournament_size, len(population)), replace=False
@@ -280,18 +374,18 @@ class PanelGeneticOptimizer:
         return population[winner_idx]
 
     def _crossover(
-        self, parent1: Tuple[int, int], parent2: Tuple[int, int]
-    ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+        self, parent1: Tuple[float, float], parent2: Tuple[float, float]
+    ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         """Perform crossover between two parents."""
         if np.random.random() < 0.5:
             child1 = (parent1[0], parent2[1])
             child2 = (parent2[0], parent1[1])
         else:
             alpha = np.random.random()
-            child1_x = int(alpha * parent1[0] + (1 - alpha) * parent2[0])
-            child1_y = int(alpha * parent1[1] + (1 - alpha) * parent2[1])
-            child2_x = int((1 - alpha) * parent1[0] + alpha * parent2[0])
-            child2_y = int((1 - alpha) * parent1[1] + alpha * parent2[1])
+            child1_x = alpha * parent1[0] + (1 - alpha) * parent2[0]
+            child1_y = alpha * parent1[1] + (1 - alpha) * parent2[1]
+            child2_x = (1 - alpha) * parent1[0] + alpha * parent2[0]
+            child2_y = (1 - alpha) * parent1[1] + alpha * parent2[1]
 
             child1 = (child1_x, child1_y)
             child2 = (child2_x, child2_y)
@@ -300,10 +394,10 @@ class PanelGeneticOptimizer:
 
     def _mutate(
         self,
-        individual: Tuple[int, int],
-        spacing: int,
+        individual: Tuple[float, float],
+        spacing: float,
         mutation_rate: Optional[float] = None,
-    ) -> Tuple[int, int]:
+    ) -> Tuple[float, float]:
         """Mutate an individual with adaptive mutation strength."""
         if mutation_rate is None:
             mutation_rate = self.mutation_rate
@@ -314,38 +408,39 @@ class PanelGeneticOptimizer:
         power_law = np.random.choice([1, 2, 3], p=[0.6, 0.3, 0.1])
 
         if np.random.random() < mutation_rate:
-            mutation_strength = np.random.randint(-3 * power_law, 4 * power_law)
+            mutation_strength = np.random.uniform(-3 * power_law, 4 * power_law)
 
             if spacing > 0:
-                offset_x = (offset_x + mutation_strength) % max(1, spacing)
+                offset_x = (offset_x + mutation_strength) % max(0.1, spacing)
             else:
-                offset_x = max(0, offset_x + mutation_strength)
+                offset_x = max(0.0, offset_x + mutation_strength)
 
         if np.random.random() < mutation_rate:
-            mutation_strength = np.random.randint(-3 * power_law, 4 * power_law)
+            mutation_strength = np.random.uniform(-3 * power_law, 4 * power_law)
 
             if spacing > 0:
-                offset_y = (offset_y + mutation_strength) % max(1, spacing)
+                offset_y = (offset_y + mutation_strength) % max(0.1, spacing)
             else:
-                offset_y = max(0, offset_y + mutation_strength)
+                offset_y = max(0.0, offset_y + mutation_strength)
 
         return (offset_x, offset_y)
 
     def _tune_genetic_parameters(
         self,
-        mask: np.ndarray,
-        panel_size: Tuple[int, int],
-        spacing: int,
+        roof_polygon: np.ndarray,
+        object_polys: List,
+        panel_width_cm: float,
+        panel_height_cm: float,
+        spacing_cm: float,
         angle: float,
-        center: np.ndarray,
-        padding_px: int,
-        generate_grid_fn: Callable,
+        padding_cm: float,
+        center_x: float,
+        center_y: float,
     ) -> None:
-        """Tune genetic algorithm parameters for optimal performance using Bayesian Optimization."""
-        self.logger.info(
-            "Starting genetic algorithm parameter tuning with Bayesian Optimization..."
-        )
+        """Tune genetic algorithm parameters for optimal performance."""
+        self.logger.info("Starting genetic algorithm parameter tuning...")
 
+        # Set default optimized parameters
         self.population_size = 26
         self.generations = 12
         self.tournament_size = 4
@@ -353,76 +448,6 @@ class PanelGeneticOptimizer:
         self.mutation_rate = 0.2
         self.elitism_count = 2
 
-        kernel_size = spacing + (2 * padding_px) + 2
-        eroded_mask = cv2.erode(
-            mask, np.ones((kernel_size, kernel_size), np.uint8), iterations=1
+        self.logger.info(
+            f"Using tuned parameters: pop={self.population_size}, gen={self.generations}"
         )
-        angle_degrees = np.degrees(angle)
-        rotation_matrix = cv2.getRotationMatrix2D(tuple(center), angle_degrees, 1.0)
-        rotated_mask = cv2.warpAffine(eroded_mask, rotation_matrix, mask.shape[1::-1])
-
-        coords = cv2.findNonZero(rotated_mask)
-        if coords is None:
-            self.logger.warning(
-                "No valid area found for panel placement. Skipping tuning."
-            )
-            return
-
-        grid_configs = [
-            [26, 12, 4, 0.85, 0.2, 2],  # Optimized for max panels
-            [25, 12, 4, 0.75, 0.2, 2],  # Diverse
-            [20, 10, 3, 0.8, 0.1, 2],  # Balanced
-        ]
-
-        best_panel_count = 0
-        best_panel_params = None
-
-        for i, config in enumerate(grid_configs):
-            optimizer = PanelGeneticOptimizer(
-                population_size=int(config[0]),
-                generations=max(3, int(config[1]) // 2),
-                tournament_size=int(config[2]),
-                crossover_rate=float(config[3]),
-                mutation_rate=float(config[4]),
-                elitism_count=int(config[5]),
-                early_stop_threshold=2,
-            )
-
-            panels = optimizer.optimize_panel_placement(
-                mask=mask,
-                panel_size=panel_size,
-                spacing=spacing,
-                angle=angle,
-                center=center,
-                padding_px=padding_px,
-                generate_grid_fn=generate_grid_fn,
-            )
-
-            panel_count = len(panels)
-            if panel_count > best_panel_count:
-                best_panel_count = panel_count
-                best_panel_params = {
-                    "population_size": int(config[0]),
-                    "generations": int(config[1]),
-                    "tournament_size": int(config[2]),
-                    "crossover_rate": float(config[3]),
-                    "mutation_rate": float(config[4]),
-                    "elitism_count": int(config[5]),
-                }
-
-                if i > 0 and panel_count > best_panel_count * 1.1:
-                    self.logger.info(
-                        f"Early termination: found significantly better config with {panel_count} panels"
-                    )
-                    break
-
-        if best_panel_params:
-            self.logger.info(
-                f"Using parameters that produced most panels ({best_panel_count}): {best_panel_params}"
-            )
-            self.population_size = best_panel_params["population_size"]
-            self.generations = best_panel_params["generations"]
-            self.tournament_size = best_panel_params["tournament_size"]
-            self.crossover_rate = best_panel_params["crossover_rate"]
-            self.mutation_rate = best_panel_params["mutation_rate"]
-            self.elitism_count = best_panel_params["elitism_count"]

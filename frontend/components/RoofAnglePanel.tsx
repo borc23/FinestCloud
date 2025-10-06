@@ -152,9 +152,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
         body: JSON.stringify(requestBody)
       })
 
-      console.log('API call response status:', response.status)
       const responseData = await response.json()
-      console.log('API call response data:', responseData)
 
       onConfirm({
         angles: parsedAngles,
@@ -162,7 +160,6 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
         panelData: responseData.results || responseData
       })
     } catch (error) {
-      console.error('API call error:', error)
       onConfirm({ angles: parsedAngles, edgePadding: padding })
     }
   }

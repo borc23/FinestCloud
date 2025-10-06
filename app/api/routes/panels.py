@@ -54,7 +54,7 @@ async def generate_panels(
 
         logger.info(f"Received roofs data: {data['roofs']}")
         generator = create_panel_generator(data, cache_manager)
-        results = execute_panel_generation(generator, data, cache_manager)
+        results = execute_panel_generation(generator, data)
 
         cache_generation_results(cache_manager, results, data)
         session_service.mark_panels_generated()
@@ -97,7 +97,7 @@ async def generate_panels_selective(
         }
 
         generator = create_panel_generator(data, cache_manager)
-        results = execute_panel_generation(generator, data, cache_manager)
+        results = execute_panel_generation(generator, data)
 
         logger.info(
             f"Selective panels generated for {len(request.roofs)} roofs in session {session_id}"
