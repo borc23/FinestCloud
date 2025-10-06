@@ -41,6 +41,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [solarPanelMarkers, setSolarPanelMarkers] = useState<google.maps.Polygon[]>([])
   const [resultsData, setResultsData] = useState<{ panelCount: number; systemSize: number; annualProduction?: number } | null>(null)
   const [isGeneratingPanels, setIsGeneratingPanels] = useState(false)
+  const [panelProgress, setPanelProgress] = useState<{ current: number; total: number } | null>(null)
+  const [showCompletionAnimation, setShowCompletionAnimation] = useState(false)
   const solarPanelApiRef = useRef(new SolarPanelApiService())
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
@@ -172,19 +174,16 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
       // Render new solar panels if data is available
       if (panelData && map) {
-        const newMarkers: google.maps.Polygon[] = []
+        const allPanelData: Array<{ path: any[]; options: any }> = []
         let totalPanels = 0
-        let totalProduction = 0
 
-        // Check if panelData has the backend response structure
+        // Collect all panel data first
         if (panelData.roofs) {
-          // Backend response format: { roofs: [ { panels: [ {coords: [...], roof_id: 0, panel_id: 0}, ... ] } ] }
           panelData.roofs.forEach((roof: any) => {
             if (roof.panels && Array.isArray(roof.panels)) {
               totalPanels += roof.panels.length
 
               roof.panels.forEach((panel: any) => {
-                // Each panel is an object with coords array
                 const panelCoords = panel.coords || panel
                 const path = panelCoords.map((coord: { lat: number; lng: number }) => ({
                   lat: coord.lat,
@@ -192,28 +191,53 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
                 }))
 
                 const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
-                const polygon = new google.maps.Polygon({
-                  paths: path,
-                  map: map,
-                  ...panelOptions,
-                  clickable: true,
-                  isPanelElement: true,
-                  moduleType: 'STANDARD'
-                } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
-
-                newMarkers.push(polygon)
+                allPanelData.push({ path, options: panelOptions })
               })
             }
           })
 
+          // Animate panels appearing one by one
+          const newMarkers: google.maps.Polygon[] = []
+          const ANIMATION_DELAY = 15 // ms between each panel
+
+          for (let i = 0; i < allPanelData.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, ANIMATION_DELAY))
+
+            setPanelProgress({ current: i + 1, total: allPanelData.length })
+
+            const { path, options } = allPanelData[i]
+
+            const polygon = new google.maps.Polygon({
+              paths: path,
+              map: map,
+              ...options,
+              clickable: true,
+              isPanelElement: true,
+              moduleType: 'STANDARD',
+              fillOpacity: 0,
+              strokeOpacity: 0
+            } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
+
+            // Snap-in animation
+            setTimeout(() => {
+              polygon.setOptions({
+                fillOpacity: options.fillOpacity,
+                strokeOpacity: options.strokeOpacity
+              })
+            }, 10)
+
+            newMarkers.push(polygon)
+          }
+
           setSolarPanelMarkers(newMarkers)
-          console.log(`Rendered ${newMarkers.length} solar panels on the map`)
+          setPanelProgress(null)
 
-          // Calculate results for dashboard
-          // Assuming 400W per panel (standard size)
-          const systemSize = (totalPanels * 400) / 1000 // kW
+          // Show completion animation
+          setShowCompletionAnimation(true)
+          setTimeout(() => setShowCompletionAnimation(false), 1500)
 
-          // Try to get annual production from solar API data if available
+          // Calculate results
+          const systemSize = (totalPanels * 400) / 1000
           const annualProduction = solarDataResults?.reduce((sum: number, segment: any) => {
             const stats = segment.solarData?.solarPotential?.solarPanels
             return sum + (stats?.yearlyEnergyDcKwh || 0)
@@ -502,8 +526,8 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         />
       )}
 
-      {/* Panel Generation Loading */}
-      {isGeneratingPanels && (
+      {/* Panel Generation Loading - Only during API call */}
+      {isGeneratingPanels && !panelProgress && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -523,7 +547,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(40px) saturate(180%)',
             WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-            padding: '32px',
+            padding: '36px',
             borderRadius: '20px',
             display: 'flex',
             flexDirection: 'column',
@@ -531,7 +555,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
             gap: '20px',
             border: '0.5px solid rgba(0, 0, 0, 0.08)',
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
-            minWidth: '200px'
+            minWidth: '240px'
           }}>
             <div style={{
               width: '48px',
@@ -547,7 +571,9 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
               color: 'rgba(0, 0, 0, 0.85)',
               letterSpacing: '-0.02em',
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
-            }}>Generating solar panels...</span>
+            }}>
+              Generating solar panels...
+            </span>
           </div>
         </div>
       )}
