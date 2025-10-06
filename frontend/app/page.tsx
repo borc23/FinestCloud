@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic'
 import ToolStrip from '@/components/ToolStrip'
-import FloatingSearch from '@/components/FloatingSearch'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { useState } from 'react'
 
@@ -38,13 +37,7 @@ export default function HomePage() {
               onToolSelect={handleToolSelect}
               onStatsToggle={() => {}}
               showPanelsTool={showPanelsTool}
-            />
-          )}
-
-          {activeTool === 'search' && (
-            <FloatingSearch
               map={map}
-              onClose={() => setActiveTool('')}
             />
           )}
         </div>

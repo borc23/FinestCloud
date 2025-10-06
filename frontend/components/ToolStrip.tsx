@@ -4,11 +4,18 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
 import styles from './ToolStrip.module.css'
 
+declare global {
+  interface Window {
+    google: typeof google
+  }
+}
+
 interface ToolStripProps {
   activeTool: string
   onToolSelect: (tool: string) => void
   onStatsToggle: () => void
   showPanelsTool?: boolean
+  map?: any
 }
 
 const mainToolsDefinition = [
@@ -129,11 +136,17 @@ const MiddleIconStrip = ({
   )
 }
 
-export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false }: ToolStripProps) {
+export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false, map }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isSearchMode, setIsSearchMode] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<any[]>([])
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const geocoder = useRef<any>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const tools = useMemo(() =>
     mainToolsDefinition.filter(tool =>
@@ -141,6 +154,48 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     ),
     [showPanelsTool]
   )
+
+  useEffect(() => {
+    if (window.google?.maps) {
+      geocoder.current = new window.google.maps.Geocoder()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (searchQuery.length < 3) {
+      setSuggestions([])
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const { AutocompleteSuggestion } = (await window.google.maps.importLibrary(
+          'places'
+        )) as google.maps.PlacesLibrary
+
+        const { suggestions: fetchedSuggestions } =
+        await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: searchQuery,
+          includedPrimaryTypes: ['geocode'],
+          locationBias: {
+            west: -10.0,
+            south: 36.0,
+            east: 40.0,
+            north: 71.0,
+          },
+        })
+
+        const predictions = fetchedSuggestions
+        .map((suggestion: any) => suggestion.placePrediction)
+        .slice(0, 5)
+
+        setSuggestions(predictions)
+      } catch (error) {
+        console.log('Failed to fetch suggestions:', error)
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const handleToolHover = useCallback((toolId: string | null) => {
     if (hoverTimeoutRef.current) {
@@ -170,9 +225,76 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     if (toolId === 'tab') {
       setIsExpanded(!isExpanded)
     } else if (toolId === 'search') {
-      onToolSelect(toolId)
+      if (!geocoder.current && window.google?.maps) {
+        geocoder.current = new window.google.maps.Geocoder()
+      }
+      setIsSearchMode(true)
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 300)
     } else {
       onToolSelect(toolId)
+    }
+  }
+
+  const searchLocation = (address: string) => {
+    if (!map) return
+
+    if (!geocoder.current && window.google?.maps) {
+      geocoder.current = new window.google.maps.Geocoder()
+    }
+
+    if (!geocoder.current) return
+
+    geocoder.current.geocode({ address }, (results: any[], status: string) => {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location
+        map.setCenter(location)
+        map.setZoom(20)
+      }
+    })
+  }
+
+  const handleExitSearch = () => {
+    setIsSearchMode(false)
+    setSearchQuery('')
+    setSuggestions([])
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+
+    searchLocation(searchQuery.trim())
+    setSuggestions([])
+    searchInputRef.current?.blur()
+    setTimeout(() => {
+      handleExitSearch()
+    }, 500)
+  }
+
+  const handleSuggestionClick = (prediction: any) => {
+    const description = [
+      prediction.mainText?.text,
+      prediction.secondaryText?.text
+    ]
+      .filter(Boolean)
+      .join(' ')
+
+    setSuggestions([])
+    searchLocation(description)
+    setTimeout(() => {
+      handleExitSearch()
+    }, 500)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleExitSearch()
     }
   }
 
@@ -187,34 +309,106 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   return (
     <div
       ref={containerRef}
-      className={`${styles.toolStrip} ${isExpanded ? styles.expanded : ''}`}
+      className={`${styles.toolStrip} ${isExpanded ? styles.expanded : ''} ${isSearchMode ? styles.searchMode : ''}`}
       data-has-generate={showPanelsTool}
       onMouseLeave={handleContainerMouseLeave}
     >
-      {/* Tab Button - Static */}
-      <TabButton
-        isExpanded={isExpanded}
-        onHover={() => handleToolHover('tab')}
-        onClick={() => handleToolClick('tab')}
-      />
+      {isSearchMode ? (
+        <>
+          {/* Search Mode Layout */}
+          <motion.div
+            className={styles.searchIconLeft}
+            initial={{ x: 0, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <i className="fas fa-search"></i>
+          </motion.div>
 
-      {/* Middle Icon Strip - With Motion */}
-      <MiddleIconStrip
-        tools={tools}
-        activeTool={activeTool}
-        isExpanded={isExpanded}
-        hoveredTool={hoveredTool}
-        showPanelsTool={showPanelsTool}
-        onHover={handleToolHover}
-        onClick={handleToolClick}
-      />
+          <motion.div
+            className={styles.searchInputContainer}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+          >
+            <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className={styles.searchInput}
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleKeyDown}
+                autoComplete="off"
+                aria-label="Search location"
+                aria-autocomplete="list"
+                aria-controls={suggestions.length > 0 ? 'search-suggestions' : undefined}
+                aria-expanded={suggestions.length > 0}
+              />
+            </form>
 
-      {/* Search Button - Static */}
-      <SearchButton
-        isActive={activeTool === 'search'}
-        onHover={() => handleToolHover('search')}
-        onClick={() => handleToolClick('search')}
-      />
+            {suggestions.length > 0 && (
+              <div
+                id="search-suggestions"
+                ref={suggestionsRef}
+                className={styles.suggestions}
+                role="listbox"
+              >
+                {suggestions.map((prediction) => (
+                  <button
+                    key={prediction.placeId}
+                    type="button"
+                    className={styles.suggestion}
+                    onClick={() => handleSuggestionClick(prediction)}
+                    role="option"
+                  >
+                    <i className={`fas fa-map-marker-alt ${styles.suggestionIcon}`} aria-hidden="true" />
+                    <span className={styles.suggestionText}>{prediction.text.toString()}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div
+            className={styles.closeButton}
+            onClick={handleExitSearch}
+            initial={{ x: 0, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <button className={styles.tool} aria-label="Close Search">
+              <i className="fas fa-times"></i>
+            </button>
+          </motion.div>
+        </>
+      ) : (
+        <>
+          {/* Normal Mode Layout */}
+          <TabButton
+            isExpanded={isExpanded}
+            onHover={() => handleToolHover('tab')}
+            onClick={() => handleToolClick('tab')}
+          />
+
+          <MiddleIconStrip
+            tools={tools}
+            activeTool={activeTool}
+            isExpanded={isExpanded}
+            hoveredTool={hoveredTool}
+            showPanelsTool={showPanelsTool}
+            onHover={handleToolHover}
+            onClick={handleToolClick}
+          />
+
+          <SearchButton
+            isActive={activeTool === 'search'}
+            onHover={() => handleToolHover('search')}
+            onClick={() => handleToolClick('search')}
+          />
+        </>
+      )}
     </div>
   )
 }
