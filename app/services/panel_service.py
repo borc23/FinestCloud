@@ -162,19 +162,23 @@ class PanelService:
         """Generate panels on a roof in cm coordinates."""
         roof_coords_cm = self.gps_system.gps_array_to_cm(roof_data.coords)
 
-        panel_width_cm = self.module_dict["width_cm"]
+        # Calculate dimensions for both orientations with pitch adjustment
+        base_width = self.module_dict["width_cm"]
+        base_height = self.module_dict["height_cm"]
+
         if roof_data.pitch is not None and roof_data.pitch > 0:
-            panel_height_cm = self._resize_height_due_pitch(
-                self.module_dict["height_cm"], roof_data.pitch
+            vertical_dims, horizontal_dims = self._resize_dimensions_due_pitch(
+                base_width, base_height, roof_data.pitch
             )
         else:
-            panel_height_cm = self.module_dict["height_cm"]
+            vertical_dims = (base_width, base_height)
+            horizontal_dims = (base_width, base_height)
 
         panels_cm = self._generate_panel_grid_cm(
             roof_polygon=roof_coords_cm,
             objects=objects,
-            panel_width=panel_width_cm,
-            panel_height=panel_height_cm,
+            vertical_dims=vertical_dims,
+            horizontal_dims=horizontal_dims,
             spacing=self.spacing_cm,
             padding=self.edge_padding_cm,
             tune_params=tune_params,
@@ -201,22 +205,22 @@ class PanelService:
         self,
         roof_polygon: np.ndarray,
         objects: List[Dict],
-        panel_width: float,
-        panel_height: float,
+        vertical_dims: Tuple[float, float],
+        horizontal_dims: Tuple[float, float],
         spacing: float,
         padding: float,
         tune_params: bool = True,
     ) -> List[np.ndarray]:
         """
-        Generate panel grid in cm coordinates.
+        Generate panel grid in cm coordinates with support for both orientations.
         All dimensions are in cm.
 
         Args:
             roof_polygon: Roof polygon in cm coordinates (N x 2)
             objects: List of obstacle objects in GPS coordinates
-            panel_width: Panel width in cm
-            panel_height: Panel height in cm
-            spacing: Spacing between panels in cm
+            vertical_dims: (width, height) for vertical orientation with pitch adjustment
+            horizontal_dims: (width, height) for horizontal orientation with pitch adjustment
+            spacing: Base spacing between panels in cm
             padding: Edge padding in cm
             tune_params: Whether to use genetic algorithm optimization
 
@@ -229,8 +233,8 @@ class PanelService:
         panels = self.genetic_optimizer.optimize_panel_placement(
             roof_polygon=roof_polygon,
             objects=objects,
-            panel_width_cm=panel_width,
-            panel_height_cm=panel_height,
+            vertical_dims=vertical_dims,
+            horizontal_dims=horizontal_dims,
             spacing_cm=spacing,
             angle=angle,
             padding_cm=padding,
@@ -249,8 +253,21 @@ class PanelService:
         return np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
 
     @staticmethod
-    def _resize_height_due_pitch(original_height, pitch_angle_degrees):
-        """Calculate adjusted height accounting for roof pitch."""
+    def _resize_dimensions_due_pitch(width, height, pitch_angle_degrees):
+        """
+        Calculate adjusted dimensions accounting for roof pitch.
+        Returns dimensions for both vertical and horizontal orientations.
+
+        Returns:
+            tuple: ((vertical_width, vertical_height), (horizontal_width, horizontal_height))
+        """
         pitch_angle_radians = math.radians(pitch_angle_degrees)
-        bird_eye_view_height = original_height * math.cos(pitch_angle_radians)
-        return bird_eye_view_height
+        cos_pitch = math.cos(pitch_angle_radians)
+
+        # Vertical orientation: height is affected by pitch
+        vertical_dims = (width, height * cos_pitch)
+
+        # Horizontal orientation: width is affected by pitch
+        horizontal_dims = (width * cos_pitch, height)
+
+        return vertical_dims, horizontal_dims
