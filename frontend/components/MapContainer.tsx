@@ -12,6 +12,7 @@ import { useDrawingMode } from '../hooks/useDrawingMode'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import RoofAnglePanel from './RoofAnglePanel'
 import ResultsDashboard from './ResultsDashboard'
+import LoadingSpinner from './LoadingSpinner'
 import { StyleConfig } from '../utils/styleConfig'
 
 declare global {
@@ -39,6 +40,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [solarDataResults, setSolarDataResults] = useState<any>(null)
   const [solarPanelMarkers, setSolarPanelMarkers] = useState<google.maps.Polygon[]>([])
   const [resultsData, setResultsData] = useState<{ panelCount: number; systemSize: number; annualProduction?: number } | null>(null)
+  const [isGeneratingPanels, setIsGeneratingPanels] = useState(false)
   const solarPanelApiRef = useRef(new SolarPanelApiService())
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
@@ -143,74 +145,85 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [map, roofPolygons])
 
-  const handleAngleConfirm = useCallback((data: { angles: number[]; edgePadding: number; panelData?: any }) => {
+  const handleAngleConfirm = useCallback(async (data: { angles: number[]; edgePadding: number; panelData?: any }) => {
+    // Close panel immediately and hide polygons
+    setShowAnglePanel(false)
+    togglePolygonVisibility(false)
+
+    // Start loading state
+    setIsGeneratingPanels(true)
 
     // Clear existing panel markers
     solarPanelMarkers.forEach(marker => marker.setMap(null))
 
-    // Render new solar panels if data is available
-    if (data.panelData && map) {
-      const newMarkers: google.maps.Polygon[] = []
-      let totalPanels = 0
-      let totalProduction = 0
+    try {
+      // If panelData is provided (from API call in RoofAnglePanel), use it
+      // Otherwise this means we need to make the API call here
+      const panelData = data.panelData
 
-      // Check if panelData has the backend response structure
-      if (data.panelData.roofs) {
-        // Backend response format: { roofs: [ { panels: [ {coords: [...], roof_id: 0, panel_id: 0}, ... ] } ] }
-        data.panelData.roofs.forEach((roof: any) => {
-          if (roof.panels && Array.isArray(roof.panels)) {
-            totalPanels += roof.panels.length
+      // Render new solar panels if data is available
+      if (panelData && map) {
+        const newMarkers: google.maps.Polygon[] = []
+        let totalPanels = 0
+        let totalProduction = 0
 
-            roof.panels.forEach((panel: any) => {
-              // Each panel is an object with coords array
-              const panelCoords = panel.coords || panel
-              const path = panelCoords.map((coord: { lat: number; lng: number }) => ({
-                lat: coord.lat,
-                lng: coord.lng
-              }))
+        // Check if panelData has the backend response structure
+        if (panelData.roofs) {
+          // Backend response format: { roofs: [ { panels: [ {coords: [...], roof_id: 0, panel_id: 0}, ... ] } ] }
+          panelData.roofs.forEach((roof: any) => {
+            if (roof.panels && Array.isArray(roof.panels)) {
+              totalPanels += roof.panels.length
 
-              const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
-              const polygon = new google.maps.Polygon({
-                paths: path,
-                map: map,
-                ...panelOptions,
-                clickable: true,
-                isPanelElement: true,
-                moduleType: 'STANDARD'
-              } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
+              roof.panels.forEach((panel: any) => {
+                // Each panel is an object with coords array
+                const panelCoords = panel.coords || panel
+                const path = panelCoords.map((coord: { lat: number; lng: number }) => ({
+                  lat: coord.lat,
+                  lng: coord.lng
+                }))
 
-              newMarkers.push(polygon)
-            })
-          }
-        })
+                const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
+                const polygon = new google.maps.Polygon({
+                  paths: path,
+                  map: map,
+                  ...panelOptions,
+                  clickable: true,
+                  isPanelElement: true,
+                  moduleType: 'STANDARD'
+                } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
 
-        setSolarPanelMarkers(newMarkers)
-        console.log(`Rendered ${newMarkers.length} solar panels on the map`)
+                newMarkers.push(polygon)
+              })
+            }
+          })
 
-        // Calculate results for dashboard
-        // Assuming 400W per panel (standard size)
-        const systemSize = (totalPanels * 400) / 1000 // kW
+          setSolarPanelMarkers(newMarkers)
+          console.log(`Rendered ${newMarkers.length} solar panels on the map`)
 
-        // Try to get annual production from solar API data if available
-        const annualProduction = solarDataResults?.reduce((sum: number, segment: any) => {
-          const stats = segment.solarData?.solarPotential?.solarPanels
-          return sum + (stats?.yearlyEnergyDcKwh || 0)
-        }, 0)
+          // Calculate results for dashboard
+          // Assuming 400W per panel (standard size)
+          const systemSize = (totalPanels * 400) / 1000 // kW
 
-        setResultsData({
-          panelCount: totalPanels,
-          systemSize,
-          annualProduction: annualProduction || undefined
-        })
+          // Try to get annual production from solar API data if available
+          const annualProduction = solarDataResults?.reduce((sum: number, segment: any) => {
+            const stats = segment.solarData?.solarPotential?.solarPanels
+            return sum + (stats?.yearlyEnergyDcKwh || 0)
+          }, 0)
 
-        // Hide roof and object polygons after panels are generated
-        togglePolygonVisibility(false)
-      } else {
-        console.warn('Unexpected panel data format:', data.panelData)
+          setResultsData({
+            panelCount: totalPanels,
+            systemSize,
+            annualProduction: annualProduction || undefined
+          })
+        } else {
+          console.warn('Unexpected panel data format:', panelData)
+        }
       }
+    } catch (error) {
+      console.error('Error generating panels:', error)
+    } finally {
+      setIsGeneratingPanels(false)
     }
-
-    setShowAnglePanel(false)
   }, [map, solarPanelMarkers, togglePolygonVisibility, solarDataResults])
 
   const handleAngleCancel = useCallback(() => {
@@ -477,6 +490,15 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
           panelCount={resultsData.panelCount}
           systemSize={resultsData.systemSize}
           annualProduction={resultsData.annualProduction}
+        />
+      )}
+
+      {/* Panel Generation Loading */}
+      {isGeneratingPanels && (
+        <LoadingSpinner
+          message="Generating solar panels"
+          size="lg"
+          variant="spinner"
         />
       )}
 

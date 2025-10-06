@@ -110,16 +110,23 @@ class PanelService:
 
     def get_visible_panels(self, panel_count: int) -> Dict:
         """Return subset of panels based on requested count."""
-        if not 0 <= panel_count <= self.max_panels:
-            raise ValueError(f"Panel count must be between 0 and {self.max_panels}")
+        if not isinstance(panel_count, int) or not (
+            0 <= panel_count <= self.max_panels
+        ):
+            raise ValueError(
+                f"Panel count must be an integer between 0 and {self.max_panels}"
+            )
 
-        visible_roofs, remaining_count = [], panel_count
+        visible_roofs = []
+        remaining_count = panel_count
         module_power = self.module_dict["power_w"]
 
         for roof in self.all_panels:
+            if remaining_count <= 0:
+                break
             panels_to_show = min(remaining_count, len(roof["panels"]))
             if panels_to_show <= 0:
-                break
+                continue
 
             visible_roofs.append(
                 {
@@ -130,8 +137,6 @@ class PanelService:
                 }
             )
             remaining_count -= panels_to_show
-            if remaining_count <= 0:
-                break
 
         electrical_system = None
         if panel_count > 0:
