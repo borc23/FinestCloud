@@ -145,7 +145,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     }
   }, [map, roofPolygons])
 
-  const handleAngleConfirm = useCallback(async (data: { angles: number[]; edgePadding: number; panelData?: any }) => {
+  const handleAngleConfirm = useCallback(async (data: { angles: number[]; edgePadding: number; panelData?: any; _requestBody?: any }) => {
     // Close panel immediately and hide polygons
     setShowAnglePanel(false)
     togglePolygonVisibility(false)
@@ -157,9 +157,18 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
     solarPanelMarkers.forEach(marker => marker.setMap(null))
 
     try {
-      // If panelData is provided (from API call in RoofAnglePanel), use it
-      // Otherwise this means we need to make the API call here
-      const panelData = data.panelData
+      // Make API call if request body is provided
+      let panelData = data.panelData
+
+      if (data._requestBody) {
+        const response = await fetch('/api/generate_panels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data._requestBody)
+        })
+        const responseData = await response.json()
+        panelData = responseData.results || responseData
+      }
 
       // Render new solar panels if data is available
       if (panelData && map) {
@@ -495,11 +504,52 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
       {/* Panel Generation Loading */}
       {isGeneratingPanels && (
-        <LoadingSpinner
-          message="Generating solar panels"
-          size="lg"
-          variant="spinner"
-        />
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(40px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+            padding: '32px',
+            borderRadius: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            border: '0.5px solid rgba(0, 0, 0, 0.08)',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
+            minWidth: '200px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '3px solid rgba(0, 122, 255, 0.2)',
+              borderTop: '3px solid rgba(0, 122, 255, 0.9)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <span style={{
+              fontSize: '17px',
+              fontWeight: '500',
+              color: 'rgba(0, 0, 0, 0.85)',
+              letterSpacing: '-0.02em',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
+            }}>Generating solar panels...</span>
+          </div>
+        </div>
       )}
 
       {/* Error notification */}

@@ -73,7 +73,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
     }
   }, [roofPolygons, solarData])
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     const parsedAngles = angles.map((a, i) => {
       const val = parseFloat(a)
       if (isNaN(val) || val < 0 || val > 90) {
@@ -109,59 +109,39 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
       west: bounds.getSouthWest().lng()
     }
 
-    // Call the API endpoint
-    try {
-      const requestBody = {
-        angles: parsedAngles,
-        edgePadding: padding,
-        roofPolygons: roofPolygons.map(polygon => {
-          const path = polygon.getPath()
-          const coords = []
-          for (let i = 0; i < path.getLength(); i++) {
-            const point = path.getAt(i)
-            coords.push({ lat: point.lat(), lng: point.lng() })
-          }
-          return { coords }
-        }),
-        objectPolygons: objectPolygons.map(polygon => {
-          const path = polygon.getPath()
-          const coords = []
-          for (let i = 0; i < path.getLength(); i++) {
-            const point = path.getAt(i)
-            coords.push({ lat: point.lat(), lng: point.lng() })
-          }
-          return { coords }
-        }),
-        solarData,
-        mapBounds,
-        module: 'standard',
-        spacing: 0.5
-      }
-
-      console.log('RoofAnglePanel sending request:', {
-        angles: parsedAngles,
-        solarDataCount: solarData?.length,
-        roofCount: roofPolygons.length
-      })
-
-      const response = await fetch('/api/generate_panels', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      })
-
-      const responseData = await response.json()
-
-      onConfirm({
-        angles: parsedAngles,
-        edgePadding: padding,
-        panelData: responseData.results || responseData
-      })
-    } catch (error) {
-      onConfirm({ angles: parsedAngles, edgePadding: padding })
+    const requestBody = {
+      angles: parsedAngles,
+      edgePadding: padding,
+      roofPolygons: roofPolygons.map(polygon => {
+        const path = polygon.getPath()
+        const coords = []
+        for (let i = 0; i < path.getLength(); i++) {
+          const point = path.getAt(i)
+          coords.push({ lat: point.lat(), lng: point.lng() })
+        }
+        return { coords }
+      }),
+      objectPolygons: objectPolygons.map(polygon => {
+        const path = polygon.getPath()
+        const coords = []
+        for (let i = 0; i < path.getLength(); i++) {
+          const point = path.getAt(i)
+          coords.push({ lat: point.lat(), lng: point.lng() })
+        }
+        return { coords }
+      }),
+      solarData,
+      mapBounds,
+      module: 'standard',
+      spacing: 0.5
     }
+
+    // Close popup immediately, then make API call in background
+    onConfirm({
+      angles: parsedAngles,
+      edgePadding: padding,
+      _requestBody: requestBody
+    })
   }
 
   return (
