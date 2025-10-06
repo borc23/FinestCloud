@@ -91,6 +91,10 @@ class GeneratePanelsRequest(BaseModel):
     padding: Optional[float] = Field(
         default=20, ge=0.0, description="Edge padding in cm"
     )
+    panelOrientation: Optional[str] = Field(
+        default="best",
+        description="Panel orientation: 'vertical', 'horizontal', or 'best'",
+    )
 
 
 class PanelModel(BaseModel):

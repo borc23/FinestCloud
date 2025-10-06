@@ -50,6 +50,7 @@ async def generate_panels(
             "spacing": request.spacing,
             "max_panels": request.max_panels,
             "padding": request.padding,
+            "panelOrientation": request.panelOrientation,
         }
 
         logger.info(f"Received roofs data: {data['roofs']}")

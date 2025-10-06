@@ -153,16 +153,22 @@ class PanelGeneticOptimizer:
                         else:
                             try:
                                 # Select dimensions based on orientation
-                                # For horizontal (1), we swap width/height to rotate panels 90°
                                 is_vertical = orientation == 0
                                 if is_vertical:
+                                    # Vertical: panel aligned with longest edge (tall: narrow × tall)
                                     panel_width_cm, panel_height_cm = vertical_dims
+                                    if generation == 0 and len(fitness_scores) == 0:
+                                        self.logger.info(
+                                            f"VERTICAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm"
+                                        )
                                 else:
-                                    # Swap dimensions for horizontal orientation
-                                    panel_width_cm, panel_height_cm = (
-                                        horizontal_dims[1],
-                                        horizontal_dims[0],
-                                    )
+                                    # Horizontal: panel perpendicular to longest edge (wide: wide × short)
+                                    # horizontal_dims already swapped and pitch-corrected in panel_service
+                                    panel_width_cm, panel_height_cm = horizontal_dims
+                                    if generation == 0 and len(fitness_scores) == 0:
+                                        self.logger.info(
+                                            f"HORIZONTAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm"
+                                        )
 
                                 # Calculate variable spacing
                                 actual_spacing_x = spacing_cm * spacing_x_mult

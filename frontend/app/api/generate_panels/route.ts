@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
       roofs: body.roofPolygons.map((roofPoly: any, index: number) => {
         const pitch = body.angles?.[index] !== undefined ? body.angles[index] : 0
         const azimuth = body.solarData?.[index]?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees || 180
-        console.log(`Roof ${index}: pitch=${pitch}, azimuth=${azimuth}`)
         return {
           coords: roofPoly.coords.map((coord: any) => ({
             lat: coord.lat,
@@ -34,7 +33,8 @@ export async function POST(request: NextRequest) {
       module: body.module || 'standard',
       spacing: body.spacing || 0.5,
       max_panels: body.max_panels || null,
-      padding: body.edgePadding !== undefined ? body.edgePadding : 20
+      padding: body.edgePadding !== undefined ? body.edgePadding : 20,
+      panelOrientation: body.panelOrientation
     }
 
     console.log('Transformed backend request:', JSON.stringify(backendRequest, null, 2))

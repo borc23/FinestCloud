@@ -261,16 +261,25 @@ class PanelService:
         Calculate adjusted dimensions accounting for roof pitch.
         Returns dimensions for both vertical and horizontal orientations.
 
+        Args:
+            width: Panel width in cm (e.g., 104.5)
+            height: Panel height in cm (e.g., 187.9)
+            pitch_angle_degrees: Roof pitch in degrees
+
         Returns:
             tuple: ((vertical_width, vertical_height), (horizontal_width, horizontal_height))
+                   - vertical: panel is tall (104.5 × 187.9*cos), aligned with longest edge
+                   - horizontal: panel is wide (187.9 × 104.5*cos), perpendicular to longest edge
         """
         pitch_angle_radians = math.radians(pitch_angle_degrees)
         cos_pitch = math.cos(pitch_angle_radians)
 
-        # Vertical orientation: height is affected by pitch
+        # Vertical orientation: panel is tall (narrow × tall)
+        # Height is affected by pitch
         vertical_dims = (width, height * cos_pitch)
 
-        # Horizontal orientation: width is affected by pitch
-        horizontal_dims = (width * cos_pitch, height)
+        # Horizontal orientation: panel is rotated 90° (wide × short)
+        # After rotation, the new height (original width) is affected by pitch
+        horizontal_dims = (height, width * cos_pitch)
 
         return vertical_dims, horizontal_dims
