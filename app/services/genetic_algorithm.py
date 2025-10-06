@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+from shapely.affinity import rotate as shapely_rotate
+from shapely.geometry import Polygon
 
 
 @dataclass
@@ -86,9 +88,6 @@ class PanelGeneticOptimizer:
         global_best_solution = None
         global_best_fitness = 0
 
-        from shapely.affinity import rotate as shapely_rotate
-        from shapely.geometry import Polygon
-
         # Convert objects from GPS to cm if gps_system is provided
         object_polys = []
         if gps_system:
@@ -109,17 +108,7 @@ class PanelGeneticOptimizer:
         center_y = (min_y + max_y) / 2
 
         if tune_parameters:
-            self._tune_genetic_parameters(
-                roof_polygon,
-                object_polys,
-                panel_width_cm,
-                panel_height_cm,
-                spacing_cm,
-                angle,
-                padding_cm,
-                center_x,
-                center_y,
-            )
+            self._tune_genetic_parameters()
 
         self.fitness_cache = {}
         self.previous_best_fitness = 0
@@ -149,7 +138,7 @@ class PanelGeneticOptimizer:
                 ]
             )
 
-            for _ in range(3):
+            for _ in range(5):
                 population = self._initialize_population(spacing_cm)
                 best_fitness = 0
 
@@ -425,18 +414,7 @@ class PanelGeneticOptimizer:
 
         return (offset_x, offset_y)
 
-    def _tune_genetic_parameters(
-        self,
-        roof_polygon: np.ndarray,
-        object_polys: List,
-        panel_width_cm: float,
-        panel_height_cm: float,
-        spacing_cm: float,
-        angle: float,
-        padding_cm: float,
-        center_x: float,
-        center_y: float,
-    ) -> None:
+    def _tune_genetic_parameters(self) -> None:
         """Tune genetic algorithm parameters for optimal performance."""
         self.logger.info("Starting genetic algorithm parameter tuning...")
 

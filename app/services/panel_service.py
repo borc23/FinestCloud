@@ -219,22 +219,6 @@ class PanelService:
             List of panels, each panel is a (4 x 2) array with corners in cm
         """
 
-        # roof_poly = Polygon(roof_polygon)
-
-        # object_polys = []
-        # for obj in objects:
-        #     obj_coords = obj.get("coords", obj) if isinstance(obj, dict) else obj
-        #     obj_coords_cm = self.gps_system.gps_array_to_cm(obj_coords)
-        #     if len(obj_coords_cm) > 2:
-        #         object_polys.append(Polygon(obj_coords_cm))
-
-        # min_x, min_y = roof_polygon.min(axis=0)
-        # max_x, max_y = roof_polygon.max(axis=0)
-
-        # panel_template = np.array(
-        #     [[0, 0], [panel_width, 0], [panel_width, panel_height], [0, panel_height]]
-        # )
-
         angle = self._find_longest_edge(roof_polygon)
 
         panels = self.genetic_optimizer.optimize_panel_placement(
@@ -249,75 +233,7 @@ class PanelService:
             tune_parameters=tune_params,
         )
 
-        print(f"Generated {len(panels)} panels from genetic optimizer")
-        if len(panels) > 0:
-            print(
-                f"First panel shape: {panels[0].shape if hasattr(panels[0], 'shape') else type(panels[0])}"
-            )
-
         return panels
-
-    # def _generate_panels_grid(
-    #     self,
-    #     roof_poly: "Polygon",
-    #     object_polys: List["Polygon"],
-    #     panel_template: np.ndarray,
-    #     min_x: float,
-    #     min_y: float,
-    #     max_x: float,
-    #     max_y: float,
-    #     panel_width: float,
-    #     panel_height: float,
-    #     spacing: float,
-    #     padding: float,
-    #     angle: float,
-    # ) -> List[np.ndarray]:
-    #     """Generate optimized grid with rotation using genetic algorithm."""
-
-    #     # Rotate roof polygon and objects
-    #     center_x = (min_x + max_x) / 2
-    #     center_y = (min_y + max_y) / 2
-    #     rotation_degrees = -math.degrees(angle)
-
-    #     rotated_roof = shapely_rotate(
-    #         roof_poly, rotation_degrees, origin=(center_x, center_y)
-    #     )
-    #     rotated_objects = [
-    #         shapely_rotate(obj, rotation_degrees, origin=(center_x, center_y))
-    #         for obj in object_polys
-    #     ]
-
-    #     # Get rotated bounds
-    #     rot_bounds = rotated_roof.bounds  # (minx, miny, maxx, maxy)
-    #     rot_min_x, rot_min_y, rot_max_x, rot_max_y = rot_bounds
-
-    #     # Generate grid in rotated space
-    #     panels = []
-    #     step_y = panel_height + spacing
-    #     step_x = panel_width + spacing
-
-    #     y = rot_min_y + padding
-    #     while y + panel_height + padding <= rot_max_y:
-    #         x = rot_min_x + padding
-    #         while x + panel_width + padding <= rot_max_x:
-    #             panel = panel_template + [x, y]
-    #             panel_poly = Polygon(panel)
-
-    #             if rotated_roof.contains(panel_poly):
-    #                 overlaps = any(
-    #                     panel_poly.intersects(obj) for obj in rotated_objects
-    #                 )
-    #                 if not overlaps:
-    #                     # Rotate panel back to original coordinate system
-    #                     rotated_back = shapely_rotate(
-    #                         panel_poly, -rotation_degrees, origin=(center_x, center_y)
-    #                     )
-    #                     panels.append(np.array(rotated_back.exterior.coords[:4]))
-
-    #             x += step_x
-    #         y += step_y
-
-    #     return panels
 
     def _find_longest_edge(self, points: np.ndarray) -> Tuple[Dict, float]:
         """Find the longest edge and its angle from horizontal."""
