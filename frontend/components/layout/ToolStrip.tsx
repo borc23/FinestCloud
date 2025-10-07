@@ -16,6 +16,8 @@ interface ToolStripProps {
   onStatsToggle: () => void
   showPanelsTool?: boolean
   map?: any
+  isImageMode?: boolean
+  onToggleMode?: () => void
 }
 
 const mainToolsDefinition = [
@@ -46,11 +48,12 @@ const TabButton = ({ isExpanded, onHover, onClick }: {
   </div>
 )
 
-// Search button component - static, no motion
-const SearchButton = ({ isActive, onHover, onClick }: {
+// Search button component - static, no motion (or Map button in image mode)
+const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
   isActive: boolean
   onHover: () => void
   onClick: () => void
+  isImageMode?: boolean
 }) => (
   <div
     className={styles.searchButton}
@@ -59,10 +62,10 @@ const SearchButton = ({ isActive, onHover, onClick }: {
   >
     <button
       className={styles.tool}
-      aria-label="Search"
+      aria-label={isImageMode ? "Map" : "Search"}
       aria-pressed={isActive}
     >
-      <i className="fas fa-search"></i>
+      <i className={`fas fa-${isImageMode ? 'map' : 'search'}`}></i>
     </button>
   </div>
 )
@@ -75,7 +78,8 @@ const MiddleIconStrip = ({
   hoveredTool,
   showPanelsTool,
   onHover,
-  onClick
+  onClick,
+  isImageMode
 }: {
   tools: readonly typeof mainToolsDefinition[number][]
   activeTool: string
@@ -84,6 +88,7 @@ const MiddleIconStrip = ({
   showPanelsTool: boolean
   onHover: (toolId: string | null) => void
   onClick: (toolId: string) => void
+  isImageMode?: boolean
 }) => {
   const getActiveToolIndex = (targetTool: string | null = null): number => {
     const targetToolId = targetTool || activeTool
@@ -91,6 +96,20 @@ const MiddleIconStrip = ({
   }
 
   const activeIndex = getActiveToolIndex(hoveredTool)
+
+  const getToolIcon = (tool: typeof mainToolsDefinition[number]) => {
+    if (tool.id === 'upload' && isImageMode) {
+      return 'map'
+    }
+    return tool.icon
+  }
+
+  const getToolLabel = (tool: typeof mainToolsDefinition[number]) => {
+    if (tool.id === 'upload' && isImageMode) {
+      return 'Map'
+    }
+    return tool.label
+  }
 
   return (
     <div className={styles.middleStrip}>
@@ -111,12 +130,12 @@ const MiddleIconStrip = ({
             >
               <button
                 className={styles.tool}
-                aria-label={tool.label}
+                aria-label={getToolLabel(tool)}
                 aria-pressed={activeTool === tool.id}
               >
-                <i className={`fas fa-${tool.icon}`}></i>
+                <i className={`fas fa-${getToolIcon(tool)}`}></i>
                 {isExpanded && (
-                  <span className={styles.toolLabel}>{tool.label}</span>
+                  <span className={styles.toolLabel}>{getToolLabel(tool)}</span>
                 )}
               </button>
             </motion.div>
@@ -136,7 +155,7 @@ const MiddleIconStrip = ({
   )
 }
 
-export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false, map }: ToolStripProps) {
+export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false, map, isImageMode = false, onToggleMode }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isSearchMode, setIsSearchMode] = useState(false)
@@ -225,13 +244,21 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     if (toolId === 'tab') {
       setIsExpanded(!isExpanded)
     } else if (toolId === 'search') {
-      if (!geocoder.current && window.google?.maps) {
-        geocoder.current = new window.google.maps.Geocoder()
+      if (isImageMode) {
+        // In image mode, search button acts as map toggle
+        onToggleMode?.()
+      } else {
+        if (!geocoder.current && window.google?.maps) {
+          geocoder.current = new window.google.maps.Geocoder()
+        }
+        setIsSearchMode(true)
+        setTimeout(() => {
+          searchInputRef.current?.focus()
+        }, 300)
       }
-      setIsSearchMode(true)
-      setTimeout(() => {
-        searchInputRef.current?.focus()
-      }, 300)
+    } else if (toolId === 'upload') {
+      // Upload button toggles between image and map mode
+      onToggleMode?.()
     } else {
       onToolSelect(toolId)
     }
@@ -400,12 +427,14 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             showPanelsTool={showPanelsTool}
             onHover={handleToolHover}
             onClick={handleToolClick}
+            isImageMode={isImageMode}
           />
 
           <SearchButton
             isActive={activeTool === 'search'}
             onHover={() => handleToolHover('search')}
             onClick={() => handleToolClick('search')}
+            isImageMode={isImageMode}
           />
         </>
       )}
