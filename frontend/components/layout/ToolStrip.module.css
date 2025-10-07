@@ -4,7 +4,7 @@
   left: 50%;
   top: 5%;
   transform: translate(-50%, -50%);
-  width: 470px;
+  width: clamp(360px, 95vw, 470px);
   height: var(--toolbar-height);
   display: flex;
   flex-direction: row;
@@ -382,21 +382,66 @@
   transform: translateX(274.5px);
 }
 
-@media (max-width: 768px) {
-  .toolStrip {
-    left: 50%;
-    top: 5%;
-    padding: var(--spacing-base);
-    transform: translate(-50%, -50%);
+@media (max-width: 500px) {
+  .tabButton,
+  .searchButton {
+    width: clamp(40px, 11vw, 52px);
+  }
+
+  .middleStrip {
+    width: auto;
+    flex: 1;
   }
 
   .iconWrapper {
+    flex: 1;
+    width: auto;
     padding: calc(var(--tool-gap) / 1.5);
     margin: calc(-1 * var(--tool-gap) / 1.5);
   }
+
+  .toolStrip[data-has-generate="true"] .iconWrapper {
+    width: auto;
+  }
+
+  .frostedOverlay {
+    width: calc(100% / 3);
+  }
+
+  .frostedOverlay[data-tool-index="0"] {
+    transform: translateX(0);
+  }
+
+  .frostedOverlay[data-tool-index="1"] {
+    transform: translateX(100%);
+  }
+
+  .frostedOverlay[data-tool-index="2"] {
+    transform: translateX(200%);
+  }
+
+  .toolStrip[data-has-generate="true"] .frostedOverlay {
+    width: 25%;
+  }
+
+  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="0"] {
+    transform: translateX(0);
+  }
+
+  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="1"] {
+    transform: translateX(100%);
+  }
+
+  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="2"] {
+    transform: translateX(200%);
+  }
+
+  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="3"] {
+    transform: translateX(300%);
+  }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 380px) {
   .iconWrapper {
     padding: var(--tool-gap);
     margin: calc(-1 * var(--tool-gap));
