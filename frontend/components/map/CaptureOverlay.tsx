@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import Button from './Button'
-import Spinner from './Spinner'
+import Button from '../ui/Button'
+import Spinner from '../ui/Spinner'
 import styles from './CaptureOverlay.module.css'
 
 interface CaptureOverlayProps {

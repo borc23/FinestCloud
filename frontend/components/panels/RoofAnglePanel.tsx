@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useRef } from 'react'
 import polylabel from 'polylabel'
-import Button from './Button'
+import Button from '../ui/Button'
 import styles from './RoofAnglePanel.module.css'
-import { extractPolygonCoordinates } from '../utils/polygonUtils'
+import { extractPolygonCoordinates } from '../../utils/polygonUtils'
 
 interface RoofSegment {
   polygonIndex: number

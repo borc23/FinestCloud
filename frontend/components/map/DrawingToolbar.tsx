@@ -2,7 +2,7 @@
 
 import { memo, useCallback } from 'react'
 import styles from './DrawingToolbar.module.css'
-import type { DrawingMode } from '../types/drawing'
+import type { DrawingMode } from '../../types/drawing'
 
 export const DRAWING_MODES = {
   ROOF: 'roof' as const,

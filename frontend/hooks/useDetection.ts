@@ -2,14 +2,12 @@ import { useState, useCallback, useRef } from 'react'
 import { DetectionBounds, DetectionResponse, DetectionRequest } from '../types/detection'
 
 interface UseDetectionReturn {
-  // isDetecting: boolean
   error: string | null
   detectRoofs: (map: google.maps.Map, bounds: google.maps.LatLngBounds) => Promise<DetectionResponse | null>
   clearError: () => void
 }
 
 export function useDetection(): UseDetectionReturn {
-  // const [isDetecting, setIsDetecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isDetectingRef = useRef(false)
 
@@ -32,7 +30,6 @@ export function useDetection(): UseDetectionReturn {
     if (isDetectingRef.current) return null
 
     isDetectingRef.current = true
-    // setIsDetecting(true)
     setError(null)
 
     try {
@@ -85,7 +82,6 @@ export function useDetection(): UseDetectionReturn {
       return null
     } finally {
       isDetectingRef.current = false
-      // setIsDetecting(false)
     }
   }, [convertBoundsToDetectionBounds])
 
@@ -94,7 +90,6 @@ export function useDetection(): UseDetectionReturn {
   }, [])
 
   return {
-    // isDetecting,
     error,
     detectRoofs,
     clearError

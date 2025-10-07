@@ -1,11 +1,11 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import ToolStrip from '@/components/ToolStrip'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import ToolStrip from '@/components/layout/ToolStrip'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useState } from 'react'
 
-const MapContainer = dynamic(() => import('@/components/MapContainer'), {
+const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
   loading: () => <LoadingSpinner />
 })
