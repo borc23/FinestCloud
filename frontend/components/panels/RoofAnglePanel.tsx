@@ -75,6 +75,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
     }
   }, [roofPolygons, solarData])
 
+
   const handleConfirm = () => {
     const parsedAngles = angles.map((a, i) => {
       const val = parseFloat(a)
@@ -147,6 +148,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
           const apiAngle = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.pitchDegrees
           const azimuth = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees
           const isLoading = solarData === null
+          const noDataAvailable = solarData !== null && !apiAngle
 
           return (
             <div key={index} className={styles.roofItem}>
@@ -159,6 +161,8 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
                   <small className={styles.hint}>
                     Pitch: {apiAngle.toFixed(1)}°, Azimuth: {azimuth?.toFixed(0)}°
                   </small>
+                ) : noDataAvailable ? (
+                  <small className={styles.hint}>Enter manually</small>
                 ) : null}
               </label>
               <div className={styles.inputGroup}>
