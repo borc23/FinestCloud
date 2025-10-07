@@ -3,16 +3,7 @@
  * Modern React implementation for calling Solar API and generating panel data
  */
 
-interface PolygonCoordinates {
-  lat: number
-  lng: number
-}
-
-interface RoofData {
-  coords: PolygonCoordinates[]
-  pitch?: number | null
-  azimuth?: number | null
-}
+import { extractPolygonCoordinates, type PolygonCoordinates } from '../utils/polygonUtils'
 
 interface SolarApiResponse {
   success: boolean
@@ -33,7 +24,7 @@ export class SolarPanelApiService {
     try {
       const polygonDataPromises = roofPolygons.map(async (polygon, index) => {
         // Get polygon center for the API call
-        const coords = this.extractPolygonCoordinates(polygon)
+        const coords = extractPolygonCoordinates(polygon)
         const center = this.calculatePolygonCenter(coords)
 
         // Call the solar API proxy for this polygon via Next.js API route
@@ -93,25 +84,6 @@ export class SolarPanelApiService {
     }
   }
 
-  /**
-   * Extract coordinates from a Google Maps Polygon
-   * @param polygon - Google Maps Polygon
-   * @returns Array of coordinates
-   */
-  private extractPolygonCoordinates(polygon: google.maps.Polygon): PolygonCoordinates[] {
-    const path = polygon.getPath()
-    const coords: PolygonCoordinates[] = []
-
-    for (let i = 0; i < path.getLength(); i++) {
-      const point = path.getAt(i)
-      coords.push({
-        lat: point.lat(),
-        lng: point.lng()
-      })
-    }
-
-    return coords
-  }
 
   /**
    * Get map bounds from a Google Maps instance

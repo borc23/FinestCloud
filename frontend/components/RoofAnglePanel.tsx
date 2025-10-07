@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import polylabel from 'polylabel'
 import Button from './Button'
 import styles from './RoofAnglePanel.module.css'
+import { extractPolygonCoordinates } from '../utils/polygonUtils'
 
 interface RoofSegment {
   polygonIndex: number
@@ -114,24 +115,12 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
       angles: parsedAngles,
       edgePadding: padding,
       panelOrientation,
-      roofPolygons: roofPolygons.map(polygon => {
-        const path = polygon.getPath()
-        const coords = []
-        for (let i = 0; i < path.getLength(); i++) {
-          const point = path.getAt(i)
-          coords.push({ lat: point.lat(), lng: point.lng() })
-        }
-        return { coords }
-      }),
-      objectPolygons: objectPolygons.map(polygon => {
-        const path = polygon.getPath()
-        const coords = []
-        for (let i = 0; i < path.getLength(); i++) {
-          const point = path.getAt(i)
-          coords.push({ lat: point.lat(), lng: point.lng() })
-        }
-        return { coords }
-      }),
+      roofPolygons: roofPolygons.map(polygon => ({
+        coords: extractPolygonCoordinates(polygon)
+      })),
+      objectPolygons: objectPolygons.map(polygon => ({
+        coords: extractPolygonCoordinates(polygon)
+      })),
       solarData,
       mapBounds,
       module: 'standard',

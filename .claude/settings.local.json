@@ -8,7 +8,8 @@
       "Bash(cat:*)",
       "Bash(mkdir:*)",
       "Bash(python test_gps_standalone.py:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

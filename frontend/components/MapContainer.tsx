@@ -11,7 +11,7 @@ import { usePolygonManager } from '../hooks/usePolygonManager'
 import { useDrawingMode } from '../hooks/useDrawingMode'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import RoofAnglePanel from './RoofAnglePanel'
-import EnhancedResultsDashboard from './EnhancedResultsDashboard'
+import SolarResultsDashboard from './SolarResultsDashboard'
 import LoadingSpinner from './LoadingSpinner'
 import { StyleConfig } from '../utils/styleConfig'
 
@@ -523,7 +523,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
 
       {/* Results Dashboard with PVWatts Integration */}
       {panelGenerationData && map && (
-        <EnhancedResultsDashboard
+        <SolarResultsDashboard
           panelGenerationData={panelGenerationData}
           mapCenter={map.getCenter() ? { lat: map.getCenter()!.lat(), lng: map.getCenter()!.lng() } : undefined}
         />

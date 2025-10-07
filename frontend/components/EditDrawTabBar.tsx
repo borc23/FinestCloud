@@ -1,8 +1,8 @@
 'use client'
 
 import styles from './EditDrawTabBar.module.css'
+import type { DrawingMode } from '../types/drawing'
 
-export type DrawingMode = 'roof' | 'object'
 export type EditTab = 'edit' | 'draw'
 
 interface EditDrawTabBarProps {

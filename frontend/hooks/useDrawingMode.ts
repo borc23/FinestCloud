@@ -1,11 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import type { DrawingMode } from '../types/drawing'
 
 const COLORS = {
   ROOF: '#34c759',
   OBJECT: '#ff453a'
 } as const
-
-export type DrawingMode = 'roof' | 'object'
 
 interface UseDrawingModeProps {
   map: google.maps.Map | null
