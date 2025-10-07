@@ -180,16 +180,18 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
               value={`$${costEstimate.toLocaleString()}`}
             />
           )}
+        </div>
 
-          {pvwattsData && (
+        {pvwattsData && (
+          <div className={styles.monthlyButtonContainer}>
             <button
               className={styles.monthlyButton}
               onClick={() => setShowMonthlyChart(!showMonthlyChart)}
             >
               {showMonthlyChart ? 'Hide' : 'View'} Monthly Breakdown
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Monthly Chart Modal */}
