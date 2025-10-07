@@ -32,6 +32,17 @@
   flex-shrink: 0;
 }
 
+.tabButton::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .tabButton:active .tool {
   transform: scale(0.95);
 }
@@ -46,6 +57,17 @@
   height: 36px;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.searchButton::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .searchButton:active .tool {
