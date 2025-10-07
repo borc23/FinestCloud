@@ -1,18 +1,24 @@
+import { MonthlyProductionDisplay } from './monthly_production_display.js';
+
 export class PanelUIManager {
     #calculator;
     #financialCalculator;
     #financialConfigManager;
+    #monthlyDisplay;
     #elements = {};
     #isMinimized = false;
 
     static #UI_STATES = {
         HIDDEN: 'none',
         VISIBLE: 'block'
-    };constructor(calculator, financialCalculator = null, financialConfigManager = null) {
+    };
+
+    constructor(calculator, financialCalculator = null, financialConfigManager = null) {
         if (!calculator) throw new Error('Calculator is required');
         this.#calculator = calculator;
         this.#financialCalculator = financialCalculator;
         this.#financialConfigManager = financialConfigManager;
+        this.#monthlyDisplay = new MonthlyProductionDisplay();
         this.#initElements();
     }    #initElements() {
         // Cache all DOM elements once during initialization
@@ -114,7 +120,9 @@ export class PanelUIManager {
         
         // Update stats with actual panel count and electrical system data
         this.updateStatsPanel(currentPanelCount, maxPanels, electricalSystem);
-    }updateStatsPanel(currentPanels, maxPanels, electricalSystem = null) {
+    }
+
+    updateStatsPanel(currentPanels, maxPanels, electricalSystem = null) {
         const { statsPanelsCurrent, statsPanelsMax, statsEnergyOutput, panelsProgressBar, energyProgressBar } = this.#elements;
         if (!statsPanelsCurrent || !statsPanelsMax || !statsEnergyOutput || !panelsProgressBar || !energyProgressBar) return;
 
@@ -124,19 +132,61 @@ export class PanelUIManager {
         const panelsPercentage = maxPanels > 0 ? (currentPanels / maxPanels) : 0;
         panelsProgressBar.style.setProperty('--progress', panelsPercentage);
 
+        // Try to use PVWatts data for more accurate calculations
+        this.#updateEnergyStatsAsync(currentPanels, maxPanels);
+
+        // Update summary values and financial stats (will be called again in async)
         const yearlyEnergy = this.#calculator.calculateYearlyEnergy(currentPanels);
-        const maxYearlyEnergy = this.#calculator.calculateYearlyEnergy(maxPanels);
-
-        statsEnergyOutput.textContent = yearlyEnergy.toLocaleString();
-
-        const energyPercentage = maxYearlyEnergy > 0 ? (yearlyEnergy / maxYearlyEnergy) : 0;
-        energyProgressBar.style.setProperty('--progress', energyPercentage);
-
-        // Update summary values for minimized state
         this.#updateSummaryValues(currentPanels, yearlyEnergy);
-
-        // Add financial analysis if available
         this.#updateFinancialStats(currentPanels, yearlyEnergy);
+    }
+
+    /**
+     * Update energy stats asynchronously using PVWatts if available
+     * @private
+     */
+    async #updateEnergyStatsAsync(currentPanels, maxPanels) {
+        const { statsEnergyOutput, energyProgressBar } = this.#elements;
+
+        try {
+            // Try to get PVWatts data
+            const yearlyEnergy = await this.#calculator.calculateYearlyEnergyAsync(currentPanels);
+            const maxYearlyEnergy = await this.#calculator.calculateYearlyEnergyAsync(maxPanels);
+
+            statsEnergyOutput.textContent = yearlyEnergy.toLocaleString();
+
+            const energyPercentage = maxYearlyEnergy > 0 ? (yearlyEnergy / maxYearlyEnergy) : 0;
+            energyProgressBar.style.setProperty('--progress', energyPercentage);
+
+            // Update summary and financial stats with accurate data
+            this.#updateSummaryValues(currentPanels, yearlyEnergy);
+            this.#updateFinancialStats(currentPanels, yearlyEnergy);
+
+        } catch (error) {
+            console.warn('Failed to update energy stats with PVWatts:', error);
+        }
+    }
+
+    /**
+     * Show monthly production breakdown
+     */
+    showMonthlyProduction() {
+        const pvwattsData = this.#calculator.getPVWattsData();
+        if (pvwattsData) {
+            this.#monthlyDisplay.show(pvwattsData);
+        } else {
+            console.warn('No PVWatts data available for monthly breakdown');
+        }
+    }
+
+    /**
+     * Toggle monthly production display
+     */
+    toggleMonthlyProduction() {
+        const pvwattsData = this.#calculator.getPVWattsData();
+        if (pvwattsData) {
+            this.#monthlyDisplay.toggle(pvwattsData);
+        }
     }
 
     /**

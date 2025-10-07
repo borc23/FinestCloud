@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.routes import detection, modules, panels, utilities
+from app.api.routes import detection, modules, panels, pvwatts, utilities
 from app.core.config import get_settings
 from app.utils.model_loader import initialize_models
 
@@ -73,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(detection.router, prefix="/api", tags=["detection"])
     app.include_router(panels.router, prefix="/api", tags=["panels"])
     app.include_router(modules.router, prefix="/api", tags=["modules"])
+    app.include_router(pvwatts.router, prefix="/api/pvwatts", tags=["pvwatts"])
     app.include_router(utilities.router, prefix="/api", tags=["utilities"])
 
     # Add a simple health check endpoint

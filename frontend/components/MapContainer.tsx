@@ -11,7 +11,7 @@ import { usePolygonManager } from '../hooks/usePolygonManager'
 import { useDrawingMode } from '../hooks/useDrawingMode'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import RoofAnglePanel from './RoofAnglePanel'
-import ResultsDashboard from './ResultsDashboard'
+import EnhancedResultsDashboard from './EnhancedResultsDashboard'
 import LoadingSpinner from './LoadingSpinner'
 import { StyleConfig } from '../utils/styleConfig'
 
@@ -40,6 +40,7 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
   const [solarDataResults, setSolarDataResults] = useState<any>(null)
   const [solarPanelMarkers, setSolarPanelMarkers] = useState<google.maps.Polygon[]>([])
   const [resultsData, setResultsData] = useState<{ panelCount: number; systemSize: number; annualProduction?: number } | null>(null)
+  const [panelGenerationData, setPanelGenerationData] = useState<any>(null)
   const [isGeneratingPanels, setIsGeneratingPanels] = useState(false)
   const [panelProgress, setPanelProgress] = useState<{ current: number; total: number } | null>(null)
   const [showCompletionAnimation, setShowCompletionAnimation] = useState(false)
@@ -170,6 +171,9 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         })
         const responseData = await response.json()
         panelData = responseData.results || responseData
+
+        // Store the full panel generation data for PVWatts
+        setPanelGenerationData(panelData)
       }
 
       // Render new solar panels if data is available
@@ -517,12 +521,11 @@ export default function MapContainer({ activeTool, onMapReady, onToolChange, onP
         />
       )}
 
-      {/* Results Dashboard */}
-      {resultsData && (
-        <ResultsDashboard
-          panelCount={resultsData.panelCount}
-          systemSize={resultsData.systemSize}
-          annualProduction={resultsData.annualProduction}
+      {/* Results Dashboard with PVWatts Integration */}
+      {panelGenerationData && map && (
+        <EnhancedResultsDashboard
+          panelGenerationData={panelGenerationData}
+          mapCenter={map.getCenter() ? { lat: map.getCenter()!.lat(), lng: map.getCenter()!.lng() } : undefined}
         />
       )}
 

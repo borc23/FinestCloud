@@ -34,6 +34,10 @@ class Settings(BaseSettings):
         default="AIzaSyDIQk97vo58fJ8xGE0ozHJKkv-nqoB1YU4",
         description="Google Maps API key",
     )
+    nrel_api_key: str = Field(
+        default="A6hfJTMkiTt8U5jrmXbbKGqnRj5meT6TQrD5ROgu",
+        description="NREL API key for PVWatts (Get free key at https://developer.nrel.gov/signup/)",
+    )
 
     # ML Model Configuration
     enable_gpu: bool = Field(default=True, description="Enable GPU acceleration")

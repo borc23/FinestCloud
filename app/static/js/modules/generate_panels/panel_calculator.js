@@ -1,9 +1,17 @@
+import { PVWattsService } from './pvwatts_service.js';
+
 export class PanelCalculator {
     #currentModule = 'standard';
     #maxSunshineHoursPerYear = 1300; // Updated average for Germany (peak sun hours)
     #currentPanelCount = 0;
-    
-    constructor() {}
+    #pvwattsService = null;
+    #pvwattsData = null;
+    #locationData = null;
+    #usePVWatts = true; // Flag to enable/disable PVWatts
+
+    constructor() {
+        this.#pvwattsService = new PVWattsService();
+    }
     
     setCurrentModule(moduleId) {
       this.#currentModule = moduleId;
@@ -96,11 +104,111 @@ export class PanelCalculator {
     }
 
     /**
+     * Set location data for PVWatts calculations
+     * @param {number} latitude - Site latitude
+     * @param {number} longitude - Site longitude
+     * @param {number} tilt - Roof tilt/pitch angle
+     * @param {number} azimuth - Roof azimuth (direction)
+     */
+    setLocation(latitude, longitude, tilt = 20, azimuth = 180) {
+        this.#locationData = { latitude, longitude, tilt, azimuth };
+        // Clear cached PVWatts data when location changes
+        this.#pvwattsData = null;
+        if (this.#pvwattsService) {
+            this.#pvwattsService.clearCache();
+        }
+    }
+
+    /**
+     * Enable or disable PVWatts API usage
+     * @param {boolean} enabled - Whether to use PVWatts
+     */
+    setPVWattsEnabled(enabled) {
+        this.#usePVWatts = enabled;
+    }
+
+    /**
+     * Calculate yearly energy using PVWatts API or fallback to simple calculation
+     * @param {number} panelCount - Number of panels
+     * @returns {Promise<number>} Yearly energy in kWh
+     */
+    async calculateYearlyEnergyAsync(panelCount) {
+        // If PVWatts is enabled and we have location data, use it
+        if (this.#usePVWatts && this.#locationData) {
+            try {
+                const panelWattage = this.#getPanelWattage();
+
+                const pvwattsData = await this.#pvwattsService.calculateProduction({
+                    latitude: this.#locationData.latitude,
+                    longitude: this.#locationData.longitude,
+                    panelCount: panelCount,
+                    panelWattage: panelWattage,
+                    tilt: this.#locationData.tilt,
+                    azimuth: this.#locationData.azimuth
+                });
+
+                // Cache the PVWatts data
+                this.#pvwattsData = pvwattsData;
+
+                return Math.round(pvwattsData.annual_production);
+            } catch (error) {
+                console.warn('PVWatts calculation failed, falling back to simple calculation:', error);
+                // Fall through to simple calculation
+            }
+        }
+
+        // Fallback to simple calculation
+        return this.calculateYearlyEnergy(panelCount);
+    }
+
+    /**
+     * Get monthly production data from PVWatts
+     * @returns {Array<Object>|null} Monthly production data or null if not available
+     */
+    getMonthlyProduction() {
+        if (!this.#pvwattsData) {
+            return null;
+        }
+
+        return this.#pvwattsService.formatMonthlyData(
+            this.#pvwattsData.monthly_production
+        );
+    }
+
+    /**
+     * Get detailed PVWatts data
+     * @returns {Object|null} PVWatts data or null
+     */
+    getPVWattsData() {
+        return this.#pvwattsData;
+    }
+
+    /**
+     * Get panel wattage based on current module
+     * @private
+     * @returns {number} Panel wattage in watts
+     */
+    #getPanelWattage() {
+        switch(this.#currentModule) {
+            case 'standard':
+                return 400;
+            case 'premium':
+                return 450;
+            case 'compact':
+                return 350;
+            default:
+                return 400;
+        }
+    }
+
+    /**
      * Reset calculator state to defaults
      */
     resetState() {
         this.#currentModule = 'standard';
         this.#maxSunshineHoursPerYear = 1300;
         this.#currentPanelCount = 0;
+        this.#pvwattsData = null;
+        this.#locationData = null;
     }
   }
