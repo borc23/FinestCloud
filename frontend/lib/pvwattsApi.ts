@@ -35,8 +35,6 @@ export class PVWattsApiService {
       azimuth: params.azimuth || 180
     }
 
-    console.log('Requesting PVWatts calculation:', requestData)
-
     const response = await fetch(`${this.baseUrl}/calculate`, {
       method: 'POST',
       headers: {
@@ -56,7 +54,6 @@ export class PVWattsApiService {
     this.cachedData = data
     this.lastRequestParams = params
 
-    console.log('PVWatts data received:', data)
     return data
   }
 

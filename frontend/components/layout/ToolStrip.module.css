@@ -313,6 +313,12 @@
   padding: 0;
 }
 
+.tool.inactive {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .tabButton:hover .tool,
 .searchButton:hover .tool,
 .iconWrapper:hover .tool {

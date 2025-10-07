@@ -48,7 +48,7 @@ const TabButton = ({ isExpanded, onHover, onClick }: {
   </div>
 )
 
-// Search button component - static, no motion (or Map button in image mode)
+// Search button component - static, no motion (inactive in image mode)
 const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
   isActive: boolean
   onHover: () => void
@@ -58,14 +58,15 @@ const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
   <div
     className={styles.searchButton}
     onMouseEnter={onHover}
-    onClick={onClick}
+    onClick={isImageMode ? undefined : onClick}
   >
     <button
-      className={styles.tool}
-      aria-label={isImageMode ? "Map" : "Search"}
+      className={`${styles.tool} ${isImageMode ? styles.inactive : ''}`}
+      aria-label="Search"
       aria-pressed={isActive}
+      disabled={isImageMode}
     >
-      <i className={`fas fa-${isImageMode ? 'map' : 'search'}`}></i>
+      <i className="fas fa-search"></i>
     </button>
   </div>
 )
@@ -244,18 +245,13 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     if (toolId === 'tab') {
       setIsExpanded(!isExpanded)
     } else if (toolId === 'search') {
-      if (isImageMode) {
-        // In image mode, search button acts as map toggle
-        onToggleMode?.()
-      } else {
-        if (!geocoder.current && window.google?.maps) {
-          geocoder.current = new window.google.maps.Geocoder()
-        }
-        setIsSearchMode(true)
-        setTimeout(() => {
-          searchInputRef.current?.focus()
-        }, 300)
+      if (!geocoder.current && window.google?.maps) {
+        geocoder.current = new window.google.maps.Geocoder()
       }
+      setIsSearchMode(true)
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 300)
     } else if (toolId === 'upload') {
       // Upload button toggles between image and map mode
       onToggleMode?.()
