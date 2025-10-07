@@ -56,16 +56,17 @@ export default function HomePage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#1a1a1a',
-                overflow: 'hidden'
+                backgroundColor: '#2a2a2a',
+                overflow: 'hidden',
+                padding: '20px'
               }}
             >
               <img
                 src={uploadedImage}
                 alt="Uploaded"
                 style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
+                  width: '100%',
+                  height: '100%',
                   objectFit: 'contain',
                   display: 'block'
                 }}
