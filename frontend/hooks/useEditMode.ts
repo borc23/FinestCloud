@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useSingleMapListener } from './useMapListener'
 
 interface UseEditModeProps {
   map: google.maps.Map | null
@@ -13,7 +14,6 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
   const [isClickable, setIsClickable] = useState(true)
   const [polygonEditMode, setPolygonEditMode] = useState<'roof' | 'object'>('roof')
 
-  const mapClickListenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const deleteSelectedRef = useRef<() => void>(() => {})
   const clearSelectionRef = useRef<() => void>(() => {})
 
@@ -104,23 +104,15 @@ export function useEditMode({ map, onDeletePolygons }: UseEditModeProps) {
     }
   }, [isEditMode])
 
-  // Handle map clicks to deselect
-  useEffect(() => {
-    if (!map) return
-
-    if (isEditMode && !isDrawingPolygon) {
-      mapClickListenerRef.current = map.addListener('click', () => {
-        clearSelectionRef.current()
-      })
-    }
-
-    return () => {
-      if (mapClickListenerRef.current) {
-        google.maps.event.removeListener(mapClickListenerRef.current)
-        mapClickListenerRef.current = null
-      }
-    }
-  }, [map, isEditMode, isDrawingPolygon])
+  // Handle map clicks to deselect using the custom hook
+  useSingleMapListener(
+    isEditMode && !isDrawingPolygon ? map : null,
+    'click',
+    () => {
+      clearSelectionRef.current()
+    },
+    []
+  )
 
   return useMemo(() => ({
     isEditMode,

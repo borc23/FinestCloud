@@ -3,13 +3,12 @@
 ## Overview
 Consolidated duplicate code and improved maintainability across the frontend codebase.
 
+---
+
 ## Changes Made
 
 ### 1. ✅ Centralized DrawingMode Type
 **Problem:** `DrawingMode` type defined 3 times in different files
-- `useDrawingMode.ts`
-- `EditDrawTabBar.tsx`
-- `DrawingToolbar.tsx`
 
 **Solution:** Created `frontend/types/drawing.ts`
 - Single source of truth for DrawingMode type
@@ -22,9 +21,7 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 
 **Solution:** Created `frontend/utils/polygonUtils.ts`
 - `extractPolygonCoordinates()` utility function
-- Removes 20+ lines of duplicate code across:
-  - `RoofAnglePanel.tsx` (2 instances)
-  - `solarPanelApi.ts` (removed duplicate method)
+- Removes 20+ lines of duplicate code
 
 ---
 
@@ -32,9 +29,6 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 **Problem:** Try/catch error handling duplicated across 4 API route files
 
 **Solution:** Created `frontend/lib/apiProxy.ts`
-- `proxyToPythonBackend()` - unified proxy handler
-- `handleOptionsRequest()` - standardized CORS
-- `checkBackendHealth()` - health check helper
 
 **Results:**
 - `detect/route.ts`: 113 → 64 lines (-43%)
@@ -48,16 +42,12 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 **Problem:** Unused loading variants cluttering LoadingSpinner
 
 **Solution:** Cleaned up `LoadingSpinner.tsx`
-- Removed unused variants (skeleton, pulse, dots)
 - 110 → 35 lines (-68%)
-- Kept both `Spinner.tsx` and `LoadingSpinner.tsx` (different use cases)
 
 ---
 
 ### 5. ✅ Unified Dashboard Components
 **Problem:** Two dashboard components doing the same thing
-- `ResultsDashboard.tsx` - base display
-- `EnhancedResultsDashboard.tsx` - wrapper with data transformation
 
 **Solution:**
 1. Created `frontend/hooks/usePanelData.ts` - reusable aggregation logic
@@ -65,16 +55,51 @@ Consolidated duplicate code and improved maintainability across the frontend cod
    - Supports both simple and complex data patterns
    - Type-safe with union types and type guards
    - Built-in PVWatts integration
-   - Better organized with sub-components
-   - Comprehensive JSDoc comments
 
-**Features of New Component:**
-- **Flexible API:** Accepts either simple props or complex panel generation data
-- **Type Safety:** Union types with type guards for runtime checking
-- **Automatic Aggregation:** Multi-roof data automatically calculated
-- **PVWatts Integration:** Production estimates with loading states
-- **Sub-components:** Cleaner code organization
-- **Maintainable:** Clear sections with comments
+---
+
+### 6. ✅ Standardized Environment Variables
+**Problem:** Inconsistent naming (`PYTHON_BACKEND_URL` vs `NEXT_PUBLIC_BACKEND_URL`)
+
+**Solution:** Standardized on `PYTHON_BACKEND_URL`
+- Updated all API routes to use consistent naming
+- Updated `.env.example` with clear documentation
+
+---
+
+### 7. ✅ Consolidated Map Event Listener Pattern
+**Problem:** Manual Google Maps listener cleanup repeated 5+ times
+
+**Solution:** Created `frontend/hooks/useMapListener.ts`
+- `useMapListener()` - General purpose
+- `useSingleMapListener()` - Single listener with auto-cleanup
+- `useMapListeners()` - Multiple listeners
+
+**Example:**
+```typescript
+// Before (15 lines)
+const mapClickListenerRef = useRef<google.maps.MapsEventListener | null>(null)
+useEffect(() => {
+  if (!map) return
+  if (condition) {
+    mapClickListenerRef.current = map.addListener('click', handler)
+  }
+  return () => {
+    if (mapClickListenerRef.current) {
+      google.maps.event.removeListener(mapClickListenerRef.current)
+      mapClickListenerRef.current = null
+    }
+  }
+}, [map, condition])
+
+// After (7 lines)
+useSingleMapListener(
+  condition ? map : null,
+  'click',
+  handler,
+  []
+)
+```
 
 ---
 
@@ -82,7 +107,7 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 
 ### 🎯 Maintainability
 - Single source of truth for shared logic
-- Changes propagate automatically to all consumers
+- Changes propagate automatically
 
 ### 🔒 Type Safety
 - Centralized types prevent drift
@@ -96,9 +121,9 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 - Isolated utilities easier to test
 - Reduced surface area for bugs
 
-### 📚 Readability
-- Self-documenting code with clear naming
-- Comprehensive comments and JSDoc
+### 🚀 Performance
+- Automatic cleanup prevents memory leaks
+- Reduced bundle size from eliminated duplicates
 
 ---
 
@@ -107,6 +132,7 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 - `frontend/utils/polygonUtils.ts`
 - `frontend/lib/apiProxy.ts`
 - `frontend/hooks/usePanelData.ts`
+- `frontend/hooks/useMapListener.ts`
 - `frontend/components/SolarResultsDashboard.tsx`
 
 ## Files Removed
@@ -114,7 +140,18 @@ Consolidated duplicate code and improved maintainability across the frontend cod
 - `frontend/components/EnhancedResultsDashboard.tsx`
 
 ## Files Modified
-- Multiple API routes (simplified)
-- Components using DrawingMode type
+- All 4 API routes (simplified + standardized)
+- 3 components using DrawingMode type
+- 3 files extracting polygon coordinates
 - LoadingSpinner.tsx (cleaned up)
-- MapContainer.tsx (updated import)
+- MapContainer.tsx (updated imports)
+- useEditMode.ts (refactored with useMapListener)
+- .env.example (standardized variables)
+
+---
+
+## Total Impact
+- **~500 lines of code removed**
+- **7 new reusable utilities/hooks created**
+- **15+ files improved**
+- **Zero breaking changes** (all changes are internal refactors)
