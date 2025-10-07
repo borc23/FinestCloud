@@ -166,7 +166,7 @@ class PanelGeneticOptimizer:
                                     panel_width_cm, panel_height_cm = vertical_dims
                                     if generation == 0 and len(fitness_scores) == 0:
                                         self.logger.info(
-                                            f"VERTICAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm"
+                                            f"VERTICAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm | Offset: ({offset_x:.1f}, {offset_y:.1f})"
                                         )
                                 else:
                                     # Horizontal: panel perpendicular to longest edge (wide: wide × short)
@@ -174,7 +174,7 @@ class PanelGeneticOptimizer:
                                     panel_width_cm, panel_height_cm = horizontal_dims
                                     if generation == 0 and len(fitness_scores) == 0:
                                         self.logger.info(
-                                            f"HORIZONTAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm"
+                                            f"HORIZONTAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm | Offset: ({offset_x:.1f}, {offset_y:.1f})"
                                         )
 
                                 # Calculate variable spacing
@@ -344,6 +344,7 @@ class PanelGeneticOptimizer:
         """
         Initialize a diverse population with enhanced chromosome structure.
         Chromosome: (offset_x, offset_y, orientation, spacing_x_mult, spacing_y_mult, stagger_offset)
+        - offset_x, offset_y: grid offsets in increments of 0.5 cm only
         - orientation: 0 = vertical, 1 = horizontal
         - spacing_x_mult, spacing_y_mult: multipliers for spacing (0.5 to 2.0)
         - stagger_offset: horizontal offset for alternating rows (0.0 to 1.0 = 0% to 100% of panel width)
@@ -353,8 +354,9 @@ class PanelGeneticOptimizer:
 
         # Create diverse initial population
         for _ in range(self.population_size):
-            offset_x = np.random.uniform(0, max_offset)
-            offset_y = np.random.uniform(0, max_offset)
+            # Generate offsets in 0.5 cm increments only
+            offset_x = np.round(np.random.uniform(0, max_offset) * 2) / 2
+            offset_y = np.round(np.random.uniform(0, max_offset) * 2) / 2
 
             # Set orientation based on user preference
             if panel_orientation == "vertical":
@@ -367,9 +369,8 @@ class PanelGeneticOptimizer:
             spacing_x_mult = np.random.uniform(0.5, 2.0)
             spacing_y_mult = np.random.uniform(0.5, 2.0)
 
-            # Stagger offset for brick-pattern layouts (0.0 to 1.0)
-            # 0.0 = no stagger, 0.5 = half panel width offset (classic brick pattern)
-            stagger_offset = np.random.uniform(0, 0.5)
+            # No stagger - pure grid only
+            stagger_offset = 0.0
 
             population.append(
                 (
@@ -594,19 +595,23 @@ class PanelGeneticOptimizer:
         if np.random.random() < 0.5:
             # Swap orientation and spacing parameters (only if "best" mode)
             if panel_orientation == "best":
-                child1 = (p1_x, p1_y, p2_orient, p2_sx, p2_sy, p2_stagger)
-                child2 = (p2_x, p2_y, p1_orient, p1_sx, p1_sy, p1_stagger)
+                child1 = (p1_x, p1_y, p2_orient, p2_sx, p2_sy, 0.0)
+                child2 = (p2_x, p2_y, p1_orient, p1_sx, p1_sy, 0.0)
             else:
-                child1 = (p1_x, p1_y, p1_orient, p2_sx, p2_sy, p2_stagger)
-                child2 = (p2_x, p2_y, p2_orient, p1_sx, p1_sy, p1_stagger)
+                child1 = (p1_x, p1_y, p1_orient, p2_sx, p2_sy, 0.0)
+                child2 = (p2_x, p2_y, p2_orient, p1_sx, p1_sy, 0.0)
         else:
             # Blend crossover for continuous values
             alpha = np.random.random()
-            child1_x = alpha * p1_x + (1 - alpha) * p2_x
-            child1_y = alpha * p1_y + (1 - alpha) * p2_y
+
+            # Blend offsets and round to nearest 0.5 cm
+            child1_x = np.round((alpha * p1_x + (1 - alpha) * p2_x) * 2) / 2
+            child1_y = np.round((alpha * p1_y + (1 - alpha) * p2_y) * 2) / 2
+            child2_x = np.round(((1 - alpha) * p1_x + alpha * p2_x) * 2) / 2
+            child2_y = np.round(((1 - alpha) * p1_y + alpha * p2_y) * 2) / 2
+
             child1_sx = alpha * p1_sx + (1 - alpha) * p2_sx
             child1_sy = alpha * p1_sy + (1 - alpha) * p2_sy
-            child1_stagger = alpha * p1_stagger + (1 - alpha) * p2_stagger
 
             # Only mix orientations in "best" mode
             if panel_orientation == "best":
@@ -616,11 +621,8 @@ class PanelGeneticOptimizer:
                 child1_orient = p1_orient
                 child2_orient = p2_orient
 
-            child2_x = (1 - alpha) * p1_x + alpha * p2_x
-            child2_y = (1 - alpha) * p1_y + alpha * p2_y
             child2_sx = (1 - alpha) * p1_sx + alpha * p2_sx
             child2_sy = (1 - alpha) * p1_sy + alpha * p2_sy
-            child2_stagger = (1 - alpha) * p1_stagger + alpha * p2_stagger
 
             child1 = (
                 child1_x,
@@ -628,7 +630,7 @@ class PanelGeneticOptimizer:
                 child1_orient,
                 child1_sx,
                 child1_sy,
-                child1_stagger,
+                0.0,  # No stagger
             )
             child2 = (
                 child2_x,
@@ -636,7 +638,7 @@ class PanelGeneticOptimizer:
                 child2_orient,
                 child2_sx,
                 child2_sy,
-                child2_stagger,
+                0.0,  # No stagger
             )
 
         return child1, child2
@@ -688,25 +690,25 @@ class PanelGeneticOptimizer:
         else:  # Top performers
             power_law = np.random.choice([1, 2], p=[0.8, 0.2])
 
-        # Mutate offset_x
+        # Mutate offset_x in 0.5 cm increments only
         if np.random.random() < mutation_rate:
-            mutation_strength = (
-                np.random.uniform(-3 * power_law, 4 * power_law) * strength_multiplier
-            )
-            if spacing > 0:
-                offset_x = (offset_x + mutation_strength) % max(0.1, spacing)
-            else:
-                offset_x = max(0.0, offset_x + mutation_strength)
+            # Generate mutation in 0.5 cm steps
+            mutation_steps = np.random.randint(-power_law * 3, power_law * 4 + 1)
+            mutation_strength = mutation_steps * 0.5 * strength_multiplier
+            max_offset = max(50.0, spacing if spacing > 0 else 50.0)
+            offset_x = np.clip(offset_x + mutation_strength, 0, max_offset)
+            # Ensure it stays on 0.5 cm grid
+            offset_x = np.round(offset_x * 2) / 2
 
-        # Mutate offset_y
+        # Mutate offset_y in 0.5 cm increments only
         if np.random.random() < mutation_rate:
-            mutation_strength = (
-                np.random.uniform(-3 * power_law, 4 * power_law) * strength_multiplier
-            )
-            if spacing > 0:
-                offset_y = (offset_y + mutation_strength) % max(0.1, spacing)
-            else:
-                offset_y = max(0.0, offset_y + mutation_strength)
+            # Generate mutation in 0.5 cm steps
+            mutation_steps = np.random.randint(-power_law * 3, power_law * 4 + 1)
+            mutation_strength = mutation_steps * 0.5 * strength_multiplier
+            max_offset = max(50.0, spacing if spacing > 0 else 50.0)
+            offset_y = np.clip(offset_y + mutation_strength, 0, max_offset)
+            # Ensure it stays on 0.5 cm grid
+            offset_y = np.round(offset_y * 2) / 2
 
         # Mutate orientation (flip with low probability) - only in "best" mode
         if panel_orientation == "best" and np.random.random() < mutation_rate * 0.3:
@@ -721,10 +723,7 @@ class PanelGeneticOptimizer:
             spacing_delta = np.random.uniform(-0.3, 0.3) * strength_multiplier
             spacing_y_mult = np.clip(spacing_y_mult + spacing_delta, 0.5, 2.0)
 
-        # Mutate stagger offset
-        if np.random.random() < mutation_rate:
-            stagger_delta = np.random.uniform(-0.2, 0.2) * strength_multiplier
-            stagger_offset = np.clip(stagger_offset + stagger_delta, 0.0, 1.0)
+        # No stagger mutation - keep grid aligned (stagger_offset remains 0.0)
 
         return (
             offset_x,
@@ -732,7 +731,7 @@ class PanelGeneticOptimizer:
             orientation,
             spacing_x_mult,
             spacing_y_mult,
-            stagger_offset,
+            0.0,  # stagger_offset always 0
         )
 
     def _tune_genetic_parameters(self) -> None:

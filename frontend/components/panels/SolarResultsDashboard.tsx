@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import styles from './ResultsDashboard.module.css'
+import styles from './SolarResultsDashboard.module.css'
 import MonthlyProductionChart from './MonthlyProductionChart'
 import { usePVWatts } from '@/hooks/usePVWatts'
 import { usePanelData } from '@/hooks/usePanelData'
