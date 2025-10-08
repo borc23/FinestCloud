@@ -9,6 +9,7 @@ interface GeneratePanelsParams {
   panelData: any
   map: google.maps.Map
   onProgress?: (current: number, total: number) => void
+  onFirstPanelPlaced?: () => void
 }
 
 interface PanelGenerationResult {
@@ -25,7 +26,8 @@ interface PanelGenerationResult {
 export async function generateAndAnimatePanels({
   panelData,
   map,
-  onProgress
+  onProgress,
+  onFirstPanelPlaced
 }: GeneratePanelsParams): Promise<PanelGenerationResult> {
   const allPanelData: PanelData[] = []
   let totalPanels = 0
@@ -81,6 +83,11 @@ export async function generateAndAnimatePanels({
     }, 10)
 
     newMarkers.push(polygon)
+
+    // Call callback after first panel is placed
+    if (i === 0) {
+      onFirstPanelPlaced?.()
+    }
   }
 
   return { markers: newMarkers, totalPanels }

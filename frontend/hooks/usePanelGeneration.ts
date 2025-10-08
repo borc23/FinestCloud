@@ -122,11 +122,18 @@ export function usePanelGeneration({
 
       // Generate and animate panels
       if (panelData) {
+        // Hide loading overlay before starting panel placement animation
+        setState(prev => ({ ...prev, isGenerating: false }))
+
         const { markers, totalPanels } = await generateAndAnimatePanels({
           panelData,
           map,
           onProgress: (current, total) => {
             setState(prev => ({ ...prev, progress: { current, total } }))
+          },
+          onFirstPanelPlaced: () => {
+            // Hide roof polygons when first panel is placed
+            onPanelsGenerated?.(panelData)
           }
         })
 
@@ -150,9 +157,6 @@ export function usePanelGeneration({
         setTimeout(() => {
           setState(prev => ({ ...prev, showCompletionAnimation: false }))
         }, 1500)
-
-        // Notify parent
-        onPanelsGenerated?.(panelData)
       }
     } catch (error) {
       console.error('Error generating panels:', error)

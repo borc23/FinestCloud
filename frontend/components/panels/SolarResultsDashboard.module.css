@@ -1,13 +1,62 @@
 .dashboard {
   composes: glass-dark from global;
   position: fixed;
-  right: 20px;
+  left: 20px;
   bottom: 20px;
   border-radius: var(--radius-2xl);
   overflow: hidden;
   z-index: 1000;
   min-width: 300px;
   max-width: 400px;
+}
+
+@media (max-width: 796px) {
+  .dashboard {
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    max-width: calc(100vw - 32px);
+    bottom: 16px;
+  }
+
+  .summary {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .metric {
+    font-size: 13px;
+  }
+
+  .separator {
+    font-size: 13px;
+  }
+
+  .details {
+    padding: 0;
+  }
+
+  .detailItem {
+    padding: 10px 12px;
+  }
+
+  .label {
+    font-size: 13px;
+  }
+
+  .value {
+    font-size: 14px;
+  }
+
+  .monthlyButtonContainer {
+    padding: 10px 12px;
+  }
+
+  .monthlyButton {
+    height: 42px;
+    font-size: 15px;
+    padding: 0 20px;
+  }
 }
 
 .summary {
