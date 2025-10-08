@@ -5,78 +5,16 @@ import styles from './SolarResultsDashboard.module.css'
 import MonthlyProductionChart from './MonthlyProductionChart'
 import { usePVWatts } from '@/hooks/usePVWatts'
 import { usePanelData } from '@/hooks/usePanelData'
-
-// ========================================
-// Type Definitions
-// ========================================
-
-interface RoofPanelsData {
-  roof_id: number
-  panels: any[]
-  panel_count: number
-  module_type: string
-  module_specs: any
-  coords: any[]
-  pitch: number
-  azimuth: number
-}
-
-interface PanelGenerationData {
-  roofs: RoofPanelsData[]
-  max_panels: number
-  module: string
-}
-
-interface Location {
-  lat: number
-  lng: number
-}
-
-interface SimpleDataProps {
-  panelCount: number
-  systemSize: number
-  annualProduction?: number
-  costEstimate?: number
-  latitude?: number
-  longitude?: number
-  panelWattage?: number
-  tilt?: number
-  azimuth?: number
-}
-
-interface ComplexDataProps {
-  panelGenerationData: PanelGenerationData
-  mapCenter?: Location
-  costEstimate?: number
-}
-
-type SolarResultsDashboardProps = SimpleDataProps | ComplexDataProps
-
-// ========================================
-// Type Guards
-// ========================================
-
-function isComplexData(props: SolarResultsDashboardProps): props is ComplexDataProps {
-  return 'panelGenerationData' in props
-}
+import {
+  SolarResultsDashboardProps,
+  DashboardSummaryProps,
+  MetricItemProps,
+  isComplexData
+} from '@/types/result_dashboard'
 
 // ========================================
 // Main Component
 // ========================================
-
-/**
- * Unified Solar Results Dashboard
- *
- * Supports two usage patterns:
- * 1. Simple: Direct panel data (panelCount, systemSize, etc.)
- * 2. Complex: Panel generation data from backend (automatically aggregates multi-roof data)
- *
- * Features:
- * - Automatic PVWatts integration for production estimates
- * - Monthly production breakdown chart
- * - Responsive design
- * - Loading states
- */
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
 
@@ -212,12 +150,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
 // Sub-Components
 // ========================================
 
-interface DashboardSummaryProps {
-  panelCount: number
-  systemSize: number
-  annualProduction?: number
-}
-
 function DashboardSummary({ panelCount, systemSize, annualProduction }: DashboardSummaryProps) {
   return (
     <div className={styles.summary}>
@@ -234,12 +166,6 @@ function DashboardSummary({ panelCount, systemSize, annualProduction }: Dashboar
       )}
     </div>
   )
-}
-
-interface MetricItemProps {
-  label: string
-  value: string | number
-  isLoading?: boolean
 }
 
 function MetricItem({ label, value, isLoading = false }: MetricItemProps) {
