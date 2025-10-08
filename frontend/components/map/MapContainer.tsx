@@ -399,7 +399,11 @@ export default function MapContainer({
       />
 
       {/* Map Controls */}
-      <MapControls map={map} />
+      <MapControls
+        map={map}
+        hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0}
+        onClearAll={clearAllPolygons}
+      />
     </div>
   )
 }

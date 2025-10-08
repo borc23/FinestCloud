@@ -1,43 +1,95 @@
 .mapControls {
+  composes: glass-dark from global;
   position: absolute;
   right: 16px;
   bottom: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
   z-index: 100;
+  animation: fadeIn var(--transition-base) ease-out;
 }
 
 .zoomControl {
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.95);
+  background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.7);
+  transition: all var(--transition-base);
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .zoomControl:hover {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transform: translateY(-2px);
-  color: rgba(0, 0, 0, 0.9);
+  background: rgba(120, 120, 128, 0.24);
+  color: rgba(255, 255, 255, 1);
 }
 
 .zoomControl:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: scale(0.96);
+  background: rgba(120, 120, 128, 0.32);
+}
+
+.clearControl {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: 15px;
+  color: rgba(255, 69, 58, 0.85);
+  margin-top: 4px;
+  position: relative;
+}
+
+.clearControl::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.clearControl:hover {
+  background: rgba(255, 69, 58, 0.15);
+  color: rgba(255, 69, 58, 1);
+}
+
+.clearControl:active {
+  transform: scale(0.96);
+  background: rgba(255, 69, 58, 0.2);
 }
 
 @media (max-width: 796px) {
   .mapControls {
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .zoomControl {
+    display: none;
+  }
+
+  .clearControl {
+    margin-top: 0;
+  }
+
+  .clearControl::before {
     display: none;
   }
 }

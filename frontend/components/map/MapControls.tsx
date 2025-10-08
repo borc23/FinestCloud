@@ -4,13 +4,15 @@ import styles from './MapControls.module.css'
 
 interface MapControlsProps {
   map: google.maps.Map | null
+  hasPolygons?: boolean
+  onClearAll?: () => void
 }
 
 /**
  * Floating map zoom controls component
- * Provides + and - buttons for map zoom
+ * Provides + and - buttons for map zoom and clear all functionality
  */
-export default function MapControls({ map }: MapControlsProps) {
+export default function MapControls({ map, hasPolygons = false, onClearAll }: MapControlsProps) {
   if (!map) return null
 
   const handleZoomIn = () => {
@@ -24,6 +26,12 @@ export default function MapControls({ map }: MapControlsProps) {
     const currentZoom = map.getZoom()
     if (currentZoom !== undefined) {
       map.setZoom(currentZoom - 1)
+    }
+  }
+
+  const handleClearAll = () => {
+    if (window.confirm('Clear all polygons and reset map? This cannot be undone.')) {
+      onClearAll?.()
     }
   }
 
@@ -43,6 +51,16 @@ export default function MapControls({ map }: MapControlsProps) {
       >
         <i className="fas fa-minus"></i>
       </button>
+      {hasPolygons && (
+        <button
+          className={styles.clearControl}
+          onClick={handleClearAll}
+          aria-label="Clear all polygons"
+          title="Clear all polygons"
+        >
+          <i className="fas fa-redo-alt"></i>
+        </button>
+      )}
     </div>
   )
 }
