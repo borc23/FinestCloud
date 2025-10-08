@@ -10,6 +10,20 @@
   z-index: 1000;
 }
 
+@media (max-width: 768px) {
+  .panel {
+    left: 50%;
+    top: auto;
+    bottom: 16px;
+    transform: translateX(-50%);
+    width: calc(100vw - 32px);
+    max-width: 400px;
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+  }
+}
+
 .header {
   padding: 14px;
   border-bottom: var(--glass-border);
@@ -20,6 +34,12 @@
   );
 }
 
+@media (max-width: 768px) {
+  .header {
+    padding: 12px;
+  }
+}
+
 .header h3 {
   margin: 0;
   font-size: 17px;
@@ -28,10 +48,25 @@
   color: rgba(255, 255, 255, 0.95);
 }
 
+@media (max-width: 768px) {
+  .header h3 {
+    font-size: 16px;
+  }
+}
+
 .content {
   max-height: 60vh;
   overflow-y: auto;
   padding: var(--spacing-sm) 0;
+}
+
+@media (max-width: 768px) {
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    max-height: none;
+    padding: 8px 0;
+  }
 }
 
 .content::-webkit-scrollbar {
@@ -47,6 +82,17 @@
   border-radius: var(--radius-xs);
 }
 
+@media (max-width: 768px) {
+  .content {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .content::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .roofItem {
   padding: 14px 14px;
   border-bottom: var(--glass-border);
@@ -57,6 +103,20 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+@media (max-width: 768px) {
+  .roofItem {
+    padding: 12px;
+  }
+
+  .roofItem:hover {
+    background: transparent;
+  }
+
+  .roofItem:active {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
 
 .roofItem label {
   display: block;
@@ -65,6 +125,13 @@
   letter-spacing: -0.3px;
   color: rgba(255, 255, 255, 0.95);
   margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .roofItem label {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
 }
 
 .badge {
@@ -97,6 +164,12 @@
   margin-top: 4px;
 }
 
+@media (max-width: 768px) {
+  .hint {
+    font-size: 11px;
+  }
+}
+
 .inputGroup {
   display: flex;
   align-items: center;
@@ -106,6 +179,19 @@
   padding: 0 14px;
   height: var(--input-height-sm);
   transition: all var(--transition-base);
+}
+
+@media (max-width: 768px) {
+  .inputGroup {
+    padding: 0 12px;
+    height: 42px;
+    border-radius: 10px;
+  }
+
+  .inputGroup:focus-within {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(0, 145, 255, 0.5);
+  }
 }
 
 
@@ -119,6 +205,12 @@
   letter-spacing: -0.3px;
   color: rgba(255, 255, 255, 0.95);
   outline: none;
+}
+
+@media (max-width: 768px) {
+  .inputGroup input {
+    font-size: 15px;
+  }
 }
 
 .inputGroup input::-webkit-outer-spin-button,
@@ -164,9 +256,21 @@
   );
 }
 
+@media (max-width: 768px) {
+  .footer {
+    flex-shrink: 0;
+  }
+}
+
 .globalSetting {
   padding: 14px;
   border-bottom: var(--glass-border);
+}
+
+@media (max-width: 768px) {
+  .globalSetting {
+    padding: 12px;
+  }
 }
 
 .globalSetting label {
@@ -178,10 +282,25 @@
   margin-bottom: 10px;
 }
 
+@media (max-width: 768px) {
+  .globalSetting label {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+}
+
 .actions {
   display: flex;
   justify-content: space-between;
   padding: 14px;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .actions {
+    padding: 12px;
+    gap: 10px;
+  }
 }
 
 .actions button {
@@ -194,6 +313,16 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 768px) {
+  .actions button {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: 44px;
+  }
+}
+
 .actions :global(.btn) {
   flex: 0 0 115px;
   width: 115px;
@@ -202,6 +331,16 @@
   max-width: 115px;
   padding: 0;
   box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .actions :global(.btn) {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: 44px;
+  }
 }
 
 .orientationToggle {
@@ -225,12 +364,20 @@
     0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+@media (max-width: 768px) {
+  .orientationSwitch {
+    width: 100%;
+    height: 56px;
+    border-radius: 28px;
+  }
+}
+
 .orientationSlider {
   position: absolute;
-  width: 90px;
-  height: 54px;
-  top: 4px;
-  left: 4px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   border-radius: 27px;
   background: linear-gradient(
     180deg,
@@ -248,30 +395,14 @@
     -1.5px -1.5px 0.25px 0 inset rgba(26, 26, 26, 1),
     -1.5px -1.5px 0.25px -1.25px inset rgba(77, 77, 77, 0.4),
     0 0 8px 0 inset rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
-.orientationSlider.verticalActive {
-  transform: translateX(0);
-}
-
-.orientationSlider.horizontalActive {
-  transform: translateX(76px);
-}
-
-.orientationSlider.bestActive {
-  transform: translateX(152px);
-}
-
-.orientationLabels {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  z-index: 2;
+@media (max-width: 768px) {
+  .orientationSlider {
+    border-radius: 24px;
+  }
 }
 
 .orientationOption {
@@ -291,6 +422,18 @@
   border-radius: 27px;
   outline: none;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .orientationOption {
+    flex: 1;
+    width: auto;
+    border-radius: 24px;
+  }
 }
 
 .orientationOption:nth-child(2) {
@@ -298,8 +441,23 @@
   margin-right: -14px;
 }
 
+@media (max-width: 768px) {
+  .orientationOption:nth-child(2) {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
 .orientationOption:active {
   transform: scale(0.96);
+}
+
+.orientationOption:focus {
+  outline: none;
+}
+
+.orientationOption:focus-visible {
+  outline: none;
 }
 
 .orientationIcon {
@@ -308,6 +466,15 @@
   color: rgba(255, 255, 255, 0.6);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   stroke-width: 2.5;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .orientationIcon {
+    width: 22px;
+    height: 22px;
+  }
 }
 
 .orientationOption.active .orientationIcon {
@@ -325,6 +492,15 @@
   text-align: center;
   line-height: 12px;
   user-select: none;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .orientationLabel {
+    font-size: 9px;
+    line-height: 11px;
+  }
 }
 
 .orientationOption.active .orientationLabel {

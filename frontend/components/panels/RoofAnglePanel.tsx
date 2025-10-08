@@ -206,59 +206,51 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
           <label>Panel Orientation</label>
           <div className={styles.orientationToggle}>
             <div
-              className={`${styles.orientationSwitch} ${
-                panelOrientation === 'vertical' ? styles.verticalActive :
-                panelOrientation === 'horizontal' ? styles.horizontalActive :
-                styles.bestActive
-              }`}
+              className={styles.orientationSwitch}
               role="radiogroup"
               aria-label="Panel orientation"
             >
-              <div className={`${styles.orientationSlider} ${
-                panelOrientation === 'vertical' ? styles.verticalActive :
-                panelOrientation === 'horizontal' ? styles.horizontalActive :
-                styles.bestActive
-              }`} />
-              <div className={styles.orientationLabels}>
-                <button
-                  type="button"
-                  className={`${styles.orientationOption} ${panelOrientation === 'vertical' ? styles.active : ''}`}
-                  onClick={() => setPanelOrientation('vertical')}
-                  role="radio"
-                  aria-checked={panelOrientation === 'vertical'}
-                >
-                  <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="9" y="4" width="6" height="16" rx="1" />
-                  </svg>
-                  <span className={styles.orientationLabel}>Vertical</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.orientationOption} ${panelOrientation === 'horizontal' ? styles.active : ''}`}
-                  onClick={() => setPanelOrientation('horizontal')}
-                  role="radio"
-                  aria-checked={panelOrientation === 'horizontal'}
-                >
-                  <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="4" y="9" width="16" height="6" rx="1" />
-                  </svg>
-                  <span className={styles.orientationLabel}>Horizontal</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.orientationOption} ${panelOrientation === 'best' ? styles.active : ''}`}
-                  onClick={() => setPanelOrientation('best')}
-                  role="radio"
-                  aria-checked={panelOrientation === 'best'}
-                >
-                  <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                  <span className={styles.orientationLabel}>Best</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                className={`${styles.orientationOption} ${panelOrientation === 'vertical' ? styles.active : ''}`}
+                onClick={() => setPanelOrientation('vertical')}
+                role="radio"
+                aria-checked={panelOrientation === 'vertical'}
+              >
+                {panelOrientation === 'vertical' && <div className={styles.orientationSlider} />}
+                <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <rect x="9" y="4" width="6" height="16" rx="1" />
+                </svg>
+                <span className={styles.orientationLabel}>Vertical</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.orientationOption} ${panelOrientation === 'horizontal' ? styles.active : ''}`}
+                onClick={() => setPanelOrientation('horizontal')}
+                role="radio"
+                aria-checked={panelOrientation === 'horizontal'}
+              >
+                {panelOrientation === 'horizontal' && <div className={styles.orientationSlider} />}
+                <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <rect x="4" y="9" width="16" height="6" rx="1" />
+                </svg>
+                <span className={styles.orientationLabel}>Horizontal</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.orientationOption} ${panelOrientation === 'best' ? styles.active : ''}`}
+                onClick={() => setPanelOrientation('best')}
+                role="radio"
+                aria-checked={panelOrientation === 'best'}
+              >
+                {panelOrientation === 'best' && <div className={styles.orientationSlider} />}
+                <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+                <span className={styles.orientationLabel}>Best</span>
+              </button>
             </div>
           </div>
         </div>
