@@ -78,7 +78,8 @@ export default function MapContainer({
     selectPolygon
   } = useEditMode({
     map,
-    onDeletePolygons: removePolygons
+    onDeletePolygons: removePolygons,
+    allPolygons: [...roofPolygons, ...objectPolygons]
   })
 
   // Handle polygon creation from drawing
