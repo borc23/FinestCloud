@@ -54,14 +54,14 @@ export class StyleConfig {
 
   static PANEL_STYLES = {
     DEFAULT_STROKE_OPACITY: 0.9,
-    SELECTED_STROKE_OPACITY: 1.0,
+    SELECTED_STROKE_OPACITY: 0.5,
     HOVER_STROKE_OPACITY: 0.95,
     DEFAULT_STROKE_WEIGHT: 1.5,
-    SELECTED_STROKE_WEIGHT: 2.5,
+    SELECTED_STROKE_WEIGHT: 2.0,
     HOVER_STROKE_WEIGHT: 2.0,
     DEFAULT_FILL_OPACITY: 0.95,
     HOVER_FILL_OPACITY: 0.97,
-    SELECTED_FILL_OPACITY: 0.98,
+    SELECTED_FILL_OPACITY: 0.95,
     DEFAULT_Z_INDEX: 1101,
     SELECTED_Z_INDEX: 1802
   }
@@ -89,23 +89,26 @@ export class StyleConfig {
     let fillOpacity = this.PANEL_STYLES.DEFAULT_FILL_OPACITY
     let zIndex = this.PANEL_STYLES.DEFAULT_Z_INDEX
     let draggable = false
+    let strokeColor = this.COLORS.PANEL.STROKE
 
     if (state === 'selected') {
       strokeOpacity = this.PANEL_STYLES.SELECTED_STROKE_OPACITY
       strokeWeight = this.PANEL_STYLES.SELECTED_STROKE_WEIGHT
       fillOpacity = this.PANEL_STYLES.SELECTED_FILL_OPACITY
       zIndex = this.PANEL_STYLES.SELECTED_Z_INDEX
+      strokeColor = '#FFFFFF' // Soft white glow/shadow for selected
       draggable = true
     } else if (state === 'hover') {
       strokeOpacity = this.PANEL_STYLES.HOVER_STROKE_OPACITY
       strokeWeight = this.PANEL_STYLES.HOVER_STROKE_WEIGHT
       fillOpacity = this.PANEL_STYLES.HOVER_FILL_OPACITY
+      strokeColor = this.COLORS.PANEL.STROKE_HIGHLIGHT
     }
 
     const fillColor = this.COLORS.PANEL[moduleType] ?? this.COLORS.PANEL.STANDARD
 
     return {
-      strokeColor: this.COLORS.PANEL.STROKE,
+      strokeColor,
       strokeOpacity,
       strokeWeight,
       fillColor,

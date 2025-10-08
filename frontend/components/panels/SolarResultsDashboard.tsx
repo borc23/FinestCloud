@@ -12,17 +12,8 @@ import {
   isComplexData
 } from '@/types/result_dashboard'
 
-// ========================================
-// Main Component
-// ========================================
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
-
-  // ========================================
-  // Data Processing
-  // ========================================
-
-  // Extract or calculate panel data based on input type
   const panelData = isComplexData(props)
     ? usePanelData(props.panelGenerationData)
     : {
@@ -43,10 +34,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
   // Extract cost estimate
   const costEstimate = props.costEstimate
 
-  // ========================================
-  // PVWatts Integration
-  // ========================================
-
   const { data: pvwattsData, isLoading } = usePVWatts({
     latitude: location?.lat,
     longitude: location?.lng,
@@ -59,24 +46,12 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
     autoFetch: true
   })
 
-  // ========================================
-  // Computed Values
-  // ========================================
-
   const annualProduction = pvwattsData?.annual_production ||
     (!isComplexData(props) ? props.annualProduction : undefined)
-
-  // ========================================
-  // Early Returns
-  // ========================================
 
   if (!panelData) {
     return null
   }
-
-  // ========================================
-  // Render
-  // ========================================
 
   return (
     <>
@@ -132,6 +107,30 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
               </button>
             </div>
           )}
+
+          {/* Grid Toggle Button */}
+          {isComplexData(props) && props.onToggleGrid && (
+            <div className={styles.monthlyButtonContainer}>
+              <button
+                className={styles.monthlyButton}
+                onClick={props.onToggleGrid}
+              >
+                {props.showGrid ? 'Hide' : 'Show'} Grid
+              </button>
+            </div>
+          )}
+
+          {/* Half Step Grid Toggle Button */}
+          {isComplexData(props) && props.onToggleHalfStepGrid && (
+            <div className={styles.monthlyButtonContainer}>
+              <button
+                className={styles.monthlyButton}
+                onClick={props.onToggleHalfStepGrid}
+              >
+                {props.showHalfStepGrid ? 'Hide' : 'Show'} Half Step Grid
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -145,10 +144,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
     </>
   )
 }
-
-// ========================================
-// Sub-Components
-// ========================================
 
 function DashboardSummary({ panelCount, systemSize, annualProduction }: DashboardSummaryProps) {
   return (

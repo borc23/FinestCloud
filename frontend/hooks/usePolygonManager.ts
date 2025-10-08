@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { StyleConfig } from '../utils/styleConfig'
+import { snapPolygonToGrid } from '../utils/gridSnapping'
 
 interface ExtendedPolygon extends google.maps.Polygon {
   isPanelElement?: boolean
@@ -45,7 +46,9 @@ export function usePolygonManager({
 
       polygon.setOptions({
         ...options,
-        clickable: isEditMode && !isDrawing
+        clickable: isEditMode && !isDrawing,
+        draggable: isSelected && isEditMode && !isDrawing,
+        editable: false
       })
     } else {
       const options = StyleConfig.getOptionsForType(isRoof, isSelected)
@@ -109,24 +112,56 @@ export function usePolygonManager({
 
     listeners.push(
       polygon.addListener('drag', () => {
-        if (selectedPolygonsRef.current.size <= 1) return
+        const extendedPolygon = polygon as ExtendedPolygon
+        if (extendedPolygon.isPanelElement) {
+          // Snap during drag for panels
+          const currentPath = polygon.getPath().getArray()
+          const snappedPath = snapPolygonToGrid(currentPath)
 
-        const draggedPath = polygon.getPath().getArray()
-        const draggedStart = dragStartPositions.get(polygon)
-        if (!draggedStart) return
+          // Only update if position changed (avoid infinite loop)
+          if (currentPath[0].lat() !== snappedPath[0].lat() || currentPath[0].lng() !== snappedPath[0].lng()) {
+            polygon.setPath(snappedPath)
+          }
 
-        const latDiff = draggedPath[0].lat() - draggedStart[0].lat()
-        const lngDiff = draggedPath[0].lng() - draggedStart[0].lng()
+          // Multi-polygon drag - snap all together
+          if (selectedPolygonsRef.current.size > 1) {
+            const draggedStart = dragStartPositions.get(polygon)
+            if (draggedStart) {
+              const latDiff = snappedPath[0].lat() - draggedStart[0].lat()
+              const lngDiff = snappedPath[0].lng() - draggedStart[0].lng()
 
-        selectedPolygonsRef.current.forEach(p => {
-          if (p === polygon) return
+              selectedPolygonsRef.current.forEach(p => {
+                if (p === polygon) return
 
-          const startPath = dragStartPositions.get(p)
-          if (!startPath) return
+                const startPath = dragStartPositions.get(p)
+                if (!startPath) return
 
-          const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
-          p.setPath(newPath)
-        })
+                const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
+                p.setPath(newPath)
+              })
+            }
+          }
+        } else {
+          // Non-panel polygons: original multi-drag behavior
+          if (selectedPolygonsRef.current.size <= 1) return
+
+          const draggedPath = polygon.getPath().getArray()
+          const draggedStart = dragStartPositions.get(polygon)
+          if (!draggedStart) return
+
+          const latDiff = draggedPath[0].lat() - draggedStart[0].lat()
+          const lngDiff = draggedPath[0].lng() - draggedStart[0].lng()
+
+          selectedPolygonsRef.current.forEach(p => {
+            if (p === polygon) return
+
+            const startPath = dragStartPositions.get(p)
+            if (!startPath) return
+
+            const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
+            p.setPath(newPath)
+          })
+        }
       })
     )
 

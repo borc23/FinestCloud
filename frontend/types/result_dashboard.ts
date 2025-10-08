@@ -41,6 +41,10 @@ export interface ComplexDataProps {
   panelGenerationData: PanelGenerationData
   mapCenter?: Location
   costEstimate?: number
+  onToggleGrid?: () => void
+  showGrid?: boolean
+  onToggleHalfStepGrid?: () => void
+  showHalfStepGrid?: boolean
 }
 
 export type SolarResultsDashboardProps = SimpleDataProps | ComplexDataProps

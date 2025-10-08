@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import { generateAndAnimatePanels, calculateSystemResults } from '../lib/panelGenerator'
+import { setGridVectors, clearGridVectors } from '../utils/gridSnapping'
 
 interface UsePanelGenerationProps {
   map: google.maps.Map | null
@@ -140,6 +141,9 @@ export function usePanelGeneration({
         // Calculate results
         const results = calculateSystemResults(totalPanels, state.solarData)
 
+        // Set grid vectors for snapping
+        setGridVectors(panelData)
+
         // Update state with final results
         setState(prev => ({
           ...prev,
@@ -177,6 +181,7 @@ export function usePanelGeneration({
    */
   const clearPanels = useCallback(() => {
     state.markers.forEach(marker => marker.setMap(null))
+    clearGridVectors()
     setState(prev => ({
       ...prev,
       markers: [],
@@ -194,6 +199,7 @@ export function usePanelGeneration({
     showAnglePanel: state.showAnglePanel,
     showCompletionAnimation: state.showCompletionAnimation,
     resultsData: state.resultsData,
+    panelMarkers: state.markers,
 
     // Actions
     startPanelGeneration,

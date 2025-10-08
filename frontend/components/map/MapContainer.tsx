@@ -8,6 +8,7 @@ import MapControls from './MapControls'
 import PanelGenerationOverlay from '../panels/PanelGenerationOverlay'
 import RoofAnglePanel from '../panels/RoofAnglePanel'
 import SolarResultsDashboard from '../panels/SolarResultsDashboard'
+import GridOverlay from '../panels/GridOverlay'
 import { useMapInitialization } from '../../hooks/useMapInitialization'
 import { useDetection } from '../../hooks/useDetection'
 import { usePolygons } from '../../hooks/usePolygons'
@@ -45,6 +46,8 @@ export default function MapContainer({
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
+  const [showGrid, setShowGrid] = useState(false)
+  const [showHalfStepGrid, setShowHalfStepGrid] = useState(false)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
@@ -70,6 +73,9 @@ export default function MapContainer({
     hasRoofs
   } = usePolygons(map)
 
+  // Get panel markers first (temporary workaround - will be populated after panels are generated)
+  const [allPolygonsForEdit, setAllPolygonsForEdit] = useState<google.maps.Polygon[]>([])
+
   // Edit mode
   const {
     isEditMode,
@@ -81,7 +87,7 @@ export default function MapContainer({
   } = useEditMode({
     map,
     onDeletePolygons: removePolygons,
-    allPolygons: [...roofPolygons, ...objectPolygons]
+    allPolygons: allPolygonsForEdit
   })
 
   // Handle polygon creation from drawing
@@ -117,6 +123,7 @@ export default function MapContainer({
     solarData,
     panelData,
     showAnglePanel,
+    panelMarkers,
     startPanelGeneration,
     handleAngleConfirm: handleAngleConfirmHook,
     handleAngleCancel: handleAngleCancelHook,
@@ -259,14 +266,17 @@ export default function MapContainer({
   // Sync polygon refs and update polygon states
   const roofPolygonsRef = useRef<google.maps.Polygon[]>([])
   const objectPolygonsRef = useRef<google.maps.Polygon[]>([])
+  const panelMarkersRef = useRef<google.maps.Polygon[]>([])
 
   useEffect(() => {
     roofPolygonsRef.current = roofPolygons
     objectPolygonsRef.current = objectPolygons
-  }, [roofPolygons, objectPolygons])
+    panelMarkersRef.current = panelMarkers
+  }, [roofPolygons, objectPolygons, panelMarkers])
 
+  // Update all polygons including panels
   useEffect(() => {
-    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current]
+    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current, ...panelMarkersRef.current]
 
     allPolygons.forEach(polygon => {
       if (polygon) {
@@ -280,7 +290,16 @@ export default function MapContainer({
     if (objectPolygonsRef.current.length > 0) {
       updateAllPolygons(objectPolygonsRef.current, false)
     }
-  }, [isEditMode, selectedPolygons, isDrawing, updateAllPolygons])
+    if (panelMarkersRef.current.length > 0) {
+      // Treat panels as "non-roof" but they'll be identified by isPanelElement
+      updateAllPolygons(panelMarkersRef.current, false)
+    }
+  }, [isEditMode, selectedPolygons, isDrawing, updateAllPolygons, panelMarkers])
+
+  // Update allPolygonsForEdit when any polygon set changes
+  useEffect(() => {
+    setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...panelMarkers])
+  }, [roofPolygons, objectPolygons, panelMarkers])
 
   // ========================================
   // Render
@@ -363,8 +382,28 @@ export default function MapContainer({
             lat: map.getCenter()!.lat(),
             lng: map.getCenter()!.lng()
           } : undefined}
+          onToggleGrid={() => setShowGrid(prev => !prev)}
+          showGrid={showGrid}
+          onToggleHalfStepGrid={() => setShowHalfStepGrid(prev => !prev)}
+          showHalfStepGrid={showHalfStepGrid}
         />
       )}
+
+      {/* Grid Overlay */}
+      <GridOverlay
+        map={map}
+        panelData={panelData}
+        visible={showGrid}
+        halfStepOffset={0}
+      />
+
+      {/* Half Step Grid Overlay */}
+      <GridOverlay
+        map={map}
+        panelData={panelData}
+        visible={showHalfStepGrid}
+        halfStepOffset={0.5}
+      />
 
       {/* Panel Generation Overlay */}
       <PanelGenerationOverlay
