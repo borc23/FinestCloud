@@ -96,6 +96,40 @@ export function usePolygonManager({
       })
     )
 
+    // Multi-polygon drag support
+    const dragStartPositions = new WeakMap<google.maps.Polygon, google.maps.LatLng[]>()
+
+    listeners.push(
+      polygon.addListener('dragstart', () => {
+        selectedPolygonsRef.current.forEach(p => {
+          dragStartPositions.set(p, p.getPath().getArray().map(ll => new google.maps.LatLng(ll.lat(), ll.lng())))
+        })
+      })
+    )
+
+    listeners.push(
+      polygon.addListener('drag', () => {
+        if (selectedPolygonsRef.current.size <= 1) return
+
+        const draggedPath = polygon.getPath().getArray()
+        const draggedStart = dragStartPositions.get(polygon)
+        if (!draggedStart) return
+
+        const latDiff = draggedPath[0].lat() - draggedStart[0].lat()
+        const lngDiff = draggedPath[0].lng() - draggedStart[0].lng()
+
+        selectedPolygonsRef.current.forEach(p => {
+          if (p === polygon) return
+
+          const startPath = dragStartPositions.get(p)
+          if (!startPath) return
+
+          const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
+          p.setPath(newPath)
+        })
+      })
+    )
+
     // Right-click for vertex removal
     listeners.push(
       polygon.addListener('rightclick', (e: any) => {
