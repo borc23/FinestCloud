@@ -38,8 +38,9 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
     // Hover effects - simple and efficient
     const mouseoverListener = polygon.addListener('mouseover', () => {
-      // Don't apply hover effect if polygon is selected (draggable means selected) or not clickable
-      if (!polygon.getDraggable() && polygon.get('clickable')) {
+      // Don't apply hover effect if polygon is selected (draggable means selected), being drag-selected, or not clickable
+      const currentStrokeColor = polygon.get('strokeColor')
+      if (!polygon.getDraggable() && polygon.get('clickable') && currentStrokeColor !== '#3498db') {
         polygon.setOptions({
           strokeColor: baseColor.HOVER,
           fillColor: baseColor.HOVER
@@ -48,8 +49,9 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     })
 
     const mouseoutListener = polygon.addListener('mouseout', () => {
-      // Don't revert hover effect if polygon is selected
-      if (!polygon.getDraggable()) {
+      // Don't revert hover effect if polygon is selected or being drag-selected
+      const currentStrokeColor = polygon.get('strokeColor')
+      if (!polygon.getDraggable() && currentStrokeColor !== '#3498db') {
         polygon.setOptions(defaultOptions)
       }
     })

@@ -116,31 +116,35 @@ const MiddleIconStrip = ({
     <div className={styles.middleStrip}>
       <LayoutGroup>
         <div className={styles.iconsContainer}>
-          {tools.map((tool) => (
-            <motion.div
-              key={tool.id}
-              layout
-              transition={{
-                type: 'spring',
-                stiffness: 350,
-                damping: 25
-              }}
-              className={styles.iconWrapper}
-              onMouseEnter={() => onHover(tool.id)}
-              onClick={() => onClick(tool.id)}
-            >
-              <button
-                className={styles.tool}
-                aria-label={getToolLabel(tool)}
-                aria-pressed={activeTool === tool.id}
+          {tools.map((tool) => {
+            const isDisabled = tool.id === 'upload' && !isImageMode
+            return (
+              <motion.div
+                key={tool.id}
+                layout
+                transition={{
+                  type: 'spring',
+                  stiffness: 350,
+                  damping: 25
+                }}
+                className={styles.iconWrapper}
+                onMouseEnter={isDisabled ? undefined : () => onHover(tool.id)}
+                onClick={isDisabled ? undefined : () => onClick(tool.id)}
               >
-                <i className={`fas fa-${getToolIcon(tool)}`}></i>
-                {isExpanded && (
-                  <span className={styles.toolLabel}>{getToolLabel(tool)}</span>
-                )}
-              </button>
-            </motion.div>
-          ))}
+                <button
+                  className={`${styles.tool} ${isDisabled ? styles.inactive : ''}`}
+                  aria-label={getToolLabel(tool)}
+                  aria-pressed={activeTool === tool.id}
+                  disabled={isDisabled}
+                >
+                  <i className={`fas fa-${getToolIcon(tool)}`}></i>
+                  {isExpanded && (
+                    <span className={styles.toolLabel}>{getToolLabel(tool)}</span>
+                  )}
+                </button>
+              </motion.div>
+            )
+          })}
         </div>
       </LayoutGroup>
 
@@ -253,6 +257,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
         searchInputRef.current?.focus()
       }, 300)
     } else if (toolId === 'upload') {
+      // Upload button is disabled in map mode
+      if (!isImageMode) return
       // Upload button toggles between image and map mode
       onToggleMode?.()
     } else {

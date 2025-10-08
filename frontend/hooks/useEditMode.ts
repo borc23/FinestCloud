@@ -12,7 +12,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   const [selectedPolygons, setSelectedPolygons] = useState<Set<google.maps.Polygon>>(new Set())
   const [isCtrlPressed, setIsCtrlPressed] = useState(false)
   const [isDrawingPolygon, setIsDrawingPolygon] = useState(false)
-  const [isClickable, setIsClickable] = useState(true)
   const [polygonEditMode, setPolygonEditMode] = useState<'roof' | 'object'>('roof')
 
   const deleteSelectedRef = useRef<() => void>(() => {})
@@ -49,7 +48,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
 
       return newIsEditMode
     })
-    setSelectedPolygons(new Set()) // Clear selection when toggling
+    setSelectedPolygons(new Set())
   }, [map])
 
   const selectPolygon = useCallback((polygon: google.maps.Polygon, ctrlKey: boolean = false) => {
@@ -173,9 +172,8 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       selectedDuringDragRef.current = new Set()
       trailPointCount = 0
 
-      // Change cursor and disable map dragging
+      // Disable map dragging
       map.setOptions({
-        draggableCursor: 'crosshair',
         draggable: false
       })
 
@@ -211,7 +209,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
 
       // Restore map settings
       map.setOptions({
-        draggableCursor: null,
         draggable: !isEditMode
       })
 
@@ -263,7 +260,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
 
       polylineRef.current?.setMap(null)
       map.setOptions({
-        draggableCursor: null,
         draggable: true
       })
       isDraggingRef.current = false
@@ -287,7 +283,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     selectedPolygons,
     isCtrlPressed,
     isDrawingPolygon,
-    isClickable,
     polygonEditMode,
     setIsDrawingPolygon,
     setPolygonEditMode,
@@ -300,7 +295,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     selectedPolygons,
     isCtrlPressed,
     isDrawingPolygon,
-    isClickable,
     polygonEditMode,
     toggleEditMode,
     selectPolygon,
