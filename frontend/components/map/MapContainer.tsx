@@ -15,6 +15,7 @@ import { useEditMode } from '../../hooks/useEditMode'
 import { usePolygonManager } from '../../hooks/usePolygonManager'
 import { useDrawingMode } from '../../hooks/useDrawingMode'
 import { usePanelGeneration } from '../../hooks/usePanelGeneration'
+import EditModeIndicator from './EditModeIndicator'
 
 declare global {
   interface Window {
@@ -75,7 +76,8 @@ export default function MapContainer({
     selectedPolygons,
     isCtrlPressed,
     toggleEditMode,
-    selectPolygon
+    selectPolygon,
+    deleteSelected
   } = useEditMode({
     map,
     onDeletePolygons: removePolygons,
@@ -334,6 +336,13 @@ export default function MapContainer({
           onDrawingTypeChange={handleDrawingTypeChange}
         />
       )}
+
+      {/* Edit Mode Indicator with Trash Zone */}
+      <EditModeIndicator
+        isActive={isEditMode}
+        selectedCount={selectedPolygons.size}
+        onDeleteSelected={deleteSelected}
+      />
 
       {/* Roof Angle Panel */}
       {showAnglePanel && (
