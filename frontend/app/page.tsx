@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import ToolStrip from '@/components/layout/ToolStrip'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ImageUploadModal from '@/components/ui/ImageUploadModal'
+import ZoomableImage from '@/components/ui/ZoomableImage'
 import { useState } from 'react'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
@@ -49,29 +50,7 @@ export default function HomePage() {
       <div className="app-layout">
         <div className="main-content">
           {isImageMode && uploadedImage ? (
-            <div
-              style={{
-                width: '100%',
-                height: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#2a2a2a',
-                overflow: 'hidden',
-                padding: '20px'
-              }}
-            >
-              <img
-                src={uploadedImage}
-                alt="Uploaded"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  display: 'block'
-                }}
-              />
-            </div>
+            <ZoomableImage src={uploadedImage} alt="Uploaded" />
           ) : (
             <MapContainer
               activeTool={activeTool}
