@@ -8,7 +8,6 @@ import MapControls from './MapControls'
 import PanelGenerationOverlay from '../panels/PanelGenerationOverlay'
 import RoofAnglePanel from '../panels/RoofAnglePanel'
 import SolarResultsDashboard from '../panels/SolarResultsDashboard'
-import GridOverlay from '../panels/GridOverlay'
 import { useMapInitialization } from '../../hooks/useMapInitialization'
 import { useDetection } from '../../hooks/useDetection'
 import { usePolygons } from '../../hooks/usePolygons'
@@ -46,8 +45,6 @@ export default function MapContainer({
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
-  const [showGrid, setShowGrid] = useState(false)
-  const [showHalfStepGrid, setShowHalfStepGrid] = useState(false)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
@@ -382,28 +379,8 @@ export default function MapContainer({
             lat: map.getCenter()!.lat(),
             lng: map.getCenter()!.lng()
           } : undefined}
-          onToggleGrid={() => setShowGrid(prev => !prev)}
-          showGrid={showGrid}
-          onToggleHalfStepGrid={() => setShowHalfStepGrid(prev => !prev)}
-          showHalfStepGrid={showHalfStepGrid}
         />
       )}
-
-      {/* Grid Overlay */}
-      <GridOverlay
-        map={map}
-        panelData={panelData}
-        visible={showGrid}
-        halfStepOffset={0}
-      />
-
-      {/* Half Step Grid Overlay */}
-      <GridOverlay
-        map={map}
-        panelData={panelData}
-        visible={showHalfStepGrid}
-        halfStepOffset={0.5}
-      />
 
       {/* Panel Generation Overlay */}
       <PanelGenerationOverlay

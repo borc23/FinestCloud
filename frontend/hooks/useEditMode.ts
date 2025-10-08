@@ -137,12 +137,11 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
           console.log('[checkPolygonIntersection] Polygon selected!')
           selectedDuringDragRef.current.add(polygon)
 
-          // Immediate visual feedback during drag
-          polygon.setOptions({
-            strokeColor: '#3498db',
-            strokeWeight: 3,
-            fillColor: '#3498db',
-            fillOpacity: 0.4
+          // Update selection state immediately for visual feedback
+          setSelectedPolygons(prev => {
+            const newSet = new Set(prev)
+            newSet.add(polygon)
+            return newSet
           })
         }
       })
@@ -206,8 +205,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const onMouseUp = () => {
       if (!isDraggingRef.current) return
 
-      const polygonsToAdd = Array.from(selectedDuringDragRef.current)
-
       // Restore map settings
       map.setOptions({
         draggable: !isEditMode
@@ -225,14 +222,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         justCompletedDragRef.current = false
       }, 100)
 
-      // Finalize selection
-      if (polygonsToAdd.length > 0) {
-        setSelectedPolygons(prev => {
-          const newSet = new Set(isCtrlPressedRef.current ? prev : [])
-          polygonsToAdd.forEach(p => newSet.add(p))  // ✅ Use captured array
-          return newSet
-        })
-      }
+      // Selection already updated during drag, no need to update again
 
       // Cleanup
       polylineRef.current?.setMap(null)

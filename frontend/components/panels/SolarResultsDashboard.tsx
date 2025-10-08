@@ -107,30 +107,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
               </button>
             </div>
           )}
-
-          {/* Grid Toggle Button */}
-          {isComplexData(props) && props.onToggleGrid && (
-            <div className={styles.monthlyButtonContainer}>
-              <button
-                className={styles.monthlyButton}
-                onClick={props.onToggleGrid}
-              >
-                {props.showGrid ? 'Hide' : 'Show'} Grid
-              </button>
-            </div>
-          )}
-
-          {/* Half Step Grid Toggle Button */}
-          {isComplexData(props) && props.onToggleHalfStepGrid && (
-            <div className={styles.monthlyButtonContainer}>
-              <button
-                className={styles.monthlyButton}
-                onClick={props.onToggleHalfStepGrid}
-              >
-                {props.showHalfStepGrid ? 'Hide' : 'Show'} Half Step Grid
-              </button>
-            </div>
-          )}
         </div>
       )}
 
