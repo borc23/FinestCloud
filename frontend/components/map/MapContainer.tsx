@@ -117,7 +117,8 @@ export default function MapContainer({
     showAnglePanel,
     startPanelGeneration,
     handleAngleConfirm: handleAngleConfirmHook,
-    handleAngleCancel: handleAngleCancelHook
+    handleAngleCancel: handleAngleCancelHook,
+    clearPanels
   } = usePanelGeneration({
     map,
     roofPolygons,
@@ -150,6 +151,24 @@ export default function MapContainer({
     handleAngleCancelHook()
     onToolChange?.('')
   }, [handleAngleCancelHook, onToolChange])
+
+  const handleReset = useCallback(() => {
+    // Clear all polygons
+    clearAllPolygons()
+
+    // Clear panel markers
+    clearPanels()
+
+    // Clear capture overlay
+    setShowCaptureOverlay(false)
+
+    // Reset tool to default
+    onToolChange?.('')
+
+    // Exit edit/draw mode if active
+    if (isEditMode) toggleEditMode()
+    if (isDrawing) stopDrawing()
+  }, [clearAllPolygons, clearPanels, onToolChange, isEditMode, isDrawing, toggleEditMode, stopDrawing])
 
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
     if (!map || !bounds) return
@@ -401,8 +420,8 @@ export default function MapContainer({
       {/* Map Controls */}
       <MapControls
         map={map}
-        hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0}
-        onClearAll={clearAllPolygons}
+        hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0 || panelData !== null}
+        onClearAll={handleReset}
       />
     </div>
   )
