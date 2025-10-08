@@ -142,57 +142,60 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
 
   return (
     <>
-      <div className={styles.dashboard}>
-        {/* Summary Bar */}
-        <DashboardSummary
-          panelCount={panelData.totalPanels}
-          systemSize={panelData.systemSize}
-          annualProduction={annualProduction}
-        />
-
-        {/* Detailed Metrics */}
-        <div className={styles.details}>
-          <MetricItem label="Panel Count" value={panelData.totalPanels} />
-
-          <MetricItem
-            label="System Size"
-            value={`${panelData.systemSize.toFixed(1)} kW`}
+      {/* Results Dashboard - Hidden when monthly chart is open */}
+      {!showMonthlyChart && (
+        <div className={styles.dashboard}>
+          {/* Summary Bar */}
+          <DashboardSummary
+            panelCount={panelData.totalPanels}
+            systemSize={panelData.systemSize}
+            annualProduction={annualProduction}
           />
 
-          {annualProduction && (
+          {/* Detailed Metrics */}
+          <div className={styles.details}>
+            <MetricItem label="Panel Count" value={panelData.totalPanels} />
+
             <MetricItem
-              label="Annual Production"
-              value={`${annualProduction.toLocaleString()} kWh/year`}
-              isLoading={isLoading}
+              label="System Size"
+              value={`${panelData.systemSize.toFixed(1)} kW`}
             />
-          )}
+
+            {annualProduction && (
+              <MetricItem
+                label="Annual Production"
+                value={`${annualProduction.toLocaleString()} kWh/year`}
+                isLoading={isLoading}
+              />
+            )}
+
+            {pvwattsData && (
+              <MetricItem
+                label="Capacity Factor"
+                value={`${pvwattsData.capacity_factor.toFixed(1)}%`}
+              />
+            )}
+
+            {costEstimate && (
+              <MetricItem
+                label="Estimated Cost"
+                value={`$${costEstimate.toLocaleString()}`}
+              />
+            )}
+          </div>
 
           {pvwattsData && (
-            <MetricItem
-              label="Capacity Factor"
-              value={`${pvwattsData.capacity_factor.toFixed(1)}%`}
-            />
-          )}
-
-          {costEstimate && (
-            <MetricItem
-              label="Estimated Cost"
-              value={`$${costEstimate.toLocaleString()}`}
-            />
+            <div className={styles.monthlyButtonContainer}>
+              <button
+                className={styles.monthlyButton}
+                onClick={() => setShowMonthlyChart(!showMonthlyChart)}
+              >
+                {showMonthlyChart ? 'Hide' : 'View'} Monthly Breakdown
+              </button>
+            </div>
           )}
         </div>
-
-        {pvwattsData && (
-          <div className={styles.monthlyButtonContainer}>
-            <button
-              className={styles.monthlyButton}
-              onClick={() => setShowMonthlyChart(!showMonthlyChart)}
-            >
-              {showMonthlyChart ? 'Hide' : 'View'} Monthly Breakdown
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Monthly Chart Modal */}
       {showMonthlyChart && pvwattsData && (
