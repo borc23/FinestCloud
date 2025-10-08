@@ -1,8 +1,10 @@
 import { StyleConfig } from '../utils/styleConfig'
+import { tagPanelWithGrid } from '../utils/gridSnapping'
 
 interface PanelData {
   path: any[]
   options: any
+  gridId: number
 }
 
 interface GeneratePanelsParams {
@@ -32,9 +34,9 @@ export async function generateAndAnimatePanels({
   const allPanelData: PanelData[] = []
   let totalPanels = 0
 
-  // Collect all panel data first
+  // Collect all panel data first, tagging each with its roof's gridId
   if (panelData.roofs) {
-    panelData.roofs.forEach((roof: any) => {
+    panelData.roofs.forEach((roof: any, roofIndex: number) => {
       if (roof.panels && Array.isArray(roof.panels)) {
         totalPanels += roof.panels.length
 
@@ -46,7 +48,7 @@ export async function generateAndAnimatePanels({
           }))
 
           const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
-          allPanelData.push({ path, options: panelOptions })
+          allPanelData.push({ path, options: panelOptions, gridId: roofIndex })
         })
       }
     })
@@ -61,7 +63,7 @@ export async function generateAndAnimatePanels({
 
     onProgress?.(i + 1, allPanelData.length)
 
-    const { path, options } = allPanelData[i]
+    const { path, options, gridId } = allPanelData[i]
 
     const polygon = new google.maps.Polygon({
       paths: path,
@@ -73,6 +75,9 @@ export async function generateAndAnimatePanels({
       fillOpacity: 0,
       strokeOpacity: 0
     } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
+
+    // Tag panel with its grid ID for O(1) snapping lookup
+    tagPanelWithGrid(polygon, gridId)
 
     // Snap-in animation
     setTimeout(() => {

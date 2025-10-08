@@ -114,16 +114,16 @@ export function usePolygonManager({
       polygon.addListener('drag', () => {
         const extendedPolygon = polygon as ExtendedPolygon
         if (extendedPolygon.isPanelElement) {
-          // Snap during drag for panels
+          // Snap during drag for panels - pass polygon for gridId lookup
           const currentPath = polygon.getPath().getArray()
-          const snappedPath = snapPolygonToGrid(currentPath)
+          const snappedPath = snapPolygonToGrid(currentPath, polygon)
 
           // Only update if position changed (avoid infinite loop)
           if (currentPath[0].lat() !== snappedPath[0].lat() || currentPath[0].lng() !== snappedPath[0].lng()) {
             polygon.setPath(snappedPath)
           }
 
-          // Multi-polygon drag - snap all together
+          // Multi-polygon drag - move all as a unit (no individual snapping during drag)
           if (selectedPolygonsRef.current.size > 1) {
             const draggedStart = dragStartPositions.get(polygon)
             if (draggedStart) {
@@ -136,6 +136,7 @@ export function usePolygonManager({
                 const startPath = dragStartPositions.get(p)
                 if (!startPath) return
 
+                // Move with same offset - no snapping during drag to keep formation
                 const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
                 p.setPath(newPath)
               })
@@ -160,6 +161,21 @@ export function usePolygonManager({
 
             const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
             p.setPath(newPath)
+          })
+        }
+      })
+    )
+
+    // Dragend - snap all panels to their respective grids after multi-drag
+    listeners.push(
+      polygon.addListener('dragend', () => {
+        const extendedPolygon = polygon as ExtendedPolygon
+        if (extendedPolygon.isPanelElement && selectedPolygonsRef.current.size > 1) {
+          // Snap all selected panels to their respective grids
+          selectedPolygonsRef.current.forEach(p => {
+            const currentPath = p.getPath().getArray()
+            const snappedPath = snapPolygonToGrid(currentPath, p)
+            p.setPath(snappedPath)
           })
         }
       })
