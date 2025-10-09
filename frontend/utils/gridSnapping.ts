@@ -134,6 +134,7 @@ class Grid {
 class GridManager {
   private grids: Grid[] = []
   private polygonToGridId = new WeakMap<google.maps.Polygon, number>()
+  private snapCache = new Map<string, { gridId: number; timestamp: number }>()
 
   /**
    * Initialize grids from panel data
@@ -181,6 +182,7 @@ class GridManager {
    */
   clear(): void {
     this.grids = []
+    this.snapCache.clear()
   }
 
   /**
@@ -236,14 +238,30 @@ class GridManager {
 
   /**
    * Snap to the closest grid (fallback when gridId is unknown)
+   * Uses spatial cache to avoid O(n) grid search on every operation
    */
   private snapToClosestGrid(latLng: LatLng): LatLng {
     if (this.grids.length === 0) return latLng
 
+    // Create cache key based on quantized position (100m resolution)
+    const cacheKey = `${Math.round(latLng.lat * 1000)},${Math.round(latLng.lng * 1000)}`
+    const now = Date.now()
+    const cached = this.snapCache.get(cacheKey)
+
+    // Use cached grid if available and recent (< 5 seconds)
+    if (cached && now - cached.timestamp < 5000) {
+      const grid = this.grids[cached.gridId]
+      if (grid) {
+        return grid.snapToGrid(latLng)
+      }
+    }
+
+    // Find closest grid
+    let closestGridId = 0
     let closestSnap = latLng
     let minDistance = Infinity
 
-    this.grids.forEach(grid => {
+    this.grids.forEach((grid, index) => {
       const snapped = grid.snapToGrid(latLng)
       const distance = Math.sqrt(
         Math.pow(snapped.lat - latLng.lat, 2) +
@@ -253,8 +271,18 @@ class GridManager {
       if (distance < minDistance) {
         minDistance = distance
         closestSnap = snapped
+        closestGridId = index
       }
     })
+
+    // Cache the result
+    this.snapCache.set(cacheKey, { gridId: closestGridId, timestamp: now })
+
+    // Limit cache size to prevent memory leaks
+    if (this.snapCache.size > 1000) {
+      const oldestKey = this.snapCache.keys().next().value
+      this.snapCache.delete(oldestKey)
+    }
 
     return closestSnap
   }
