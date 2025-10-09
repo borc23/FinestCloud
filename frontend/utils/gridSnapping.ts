@@ -62,7 +62,7 @@ class Grid {
    * Uses matrix inversion to solve: fromOrigin = x * vecX + y * vecY
    */
   worldToGrid(latLng: LatLng): GridCoords {
-    const fromOrigin: Vec2 = {
+    const fromOrigin = {
       lat: latLng.lat - this.origin.lat,
       lng: latLng.lng - this.origin.lng
     }
@@ -208,11 +208,12 @@ class GridManager {
 
   /**
    * Snap a polygon's path to its grid
+   * @param polygon Optional - if provided and tagged, uses its specific grid; otherwise finds closest grid
    */
   snapPolygonToGrid(path: google.maps.LatLng[], polygon?: google.maps.Polygon): google.maps.LatLng[] {
     if (this.grids.length === 0 || path.length === 0) return path
 
-    const firstCorner: LatLng = { lat: path[0].lat(), lng: path[0].lng() }
+    const firstCorner = { lat: path[0].lat(), lng: path[0].lng() }
     let snappedFirst: LatLng
 
     if (polygon) {
