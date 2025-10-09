@@ -8,6 +8,7 @@ import MapControls from './MapControls'
 import PanelGenerationOverlay from '../panels/PanelGenerationOverlay'
 import RoofAnglePanel from '../panels/RoofAnglePanel'
 import SolarResultsDashboard from '../panels/SolarResultsDashboard'
+import GridSelector from '../panels/GridSelector'
 import { useMapInitialization } from '../../hooks/useMapInitialization'
 import { useDetection } from '../../hooks/useDetection'
 import { usePolygons } from '../../hooks/usePolygons'
@@ -141,7 +142,10 @@ export default function MapContainer({
   const {
     isPlacing,
     startPlacement,
-    stopPlacement
+    stopPlacement,
+    selectedGridId,
+    availableGrids,
+    setSelectedGridId
   } = usePanelPlacement({
     map,
     isEditMode,
@@ -388,6 +392,14 @@ export default function MapContainer({
           onToolChange?.('')
         }}
         map={map}
+      />
+
+      {/* Grid Selector */}
+      <GridSelector
+        selectedGridId={selectedGridId}
+        availableGrids={availableGrids}
+        onGridSelect={setSelectedGridId}
+        isVisible={isPlacing}
       />
 
       {/* Edit/Draw Tab Bar */}

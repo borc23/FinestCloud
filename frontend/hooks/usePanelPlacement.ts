@@ -25,11 +25,19 @@ export function usePanelPlacement({
   onPanelPlaced
 }: UsePanelPlacementProps) {
   const [isPlacing, setIsPlacing] = useState(false)
+  const [selectedGridId, setSelectedGridId] = useState<number | null>(null)
+  const [availableGrids, setAvailableGrids] = useState<number[]>([])
   const ghostPanelRef = useRef<google.maps.Polygon | null>(null)
+  const gridHighlightRef = useRef<google.maps.Polygon | null>(null)
   const mouseMoveListenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null)
   const lastValidPositionRef = useRef<{ coords: Coordinate[]; gridId: number } | null>(null)
   const panelTemplatesRef = useRef<Map<number, GridPanelTemplate>>(new Map())
+
+  // Performance optimization refs
+  const lastGridPosRef = useRef<{ gridId: number; x: number; y: number } | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const pendingUpdateRef = useRef<google.maps.LatLng | null>(null)
 
   /**
    * Extract panel dimensions from generated panel data for each grid
@@ -37,10 +45,13 @@ export function usePanelPlacement({
   useEffect(() => {
     if (!panelData || !panelData.roofs) {
       panelTemplatesRef.current.clear()
+      setAvailableGrids([])
+      setSelectedGridId(null)
       return
     }
 
     const templates = new Map<number, GridPanelTemplate>()
+    const grids: number[] = []
 
     panelData.roofs.forEach((roof, gridId) => {
       if (!roof.panels || roof.panels.length === 0) return
@@ -65,10 +76,17 @@ export function usePanelPlacement({
       const height = Math.abs(p3.y - p0.y)
 
       templates.set(gridId, { gridId, width, height })
+      grids.push(gridId)
     })
 
     panelTemplatesRef.current = templates
-  }, [panelData])
+    setAvailableGrids(grids)
+
+    // Auto-select first grid if none selected
+    if (grids.length > 0 && selectedGridId === null) {
+      setSelectedGridId(grids[0])
+    }
+  }, [panelData, selectedGridId])
 
   /**
    * Create panel coordinates from grid position using the actual panel template for that grid
@@ -119,53 +137,48 @@ export function usePanelPlacement({
   }, [existingPanels])
 
   /**
-   * Find closest grid and snap position to it
+   * Find position on selected grid only
    */
   const findBestGridPosition = useCallback((latLng: google.maps.LatLng): { coords: Coordinate[]; gridId: number; hasCollision: boolean } | null => {
+    if (selectedGridId === null) return null
+
     const lat = latLng.lat()
     const lng = latLng.lng()
 
-    // Try all available grids and find the closest valid position
-    let bestResult: { coords: Coordinate[]; gridId: number; distance: number; hasCollision: boolean } | null = null
+    const grid = getGrid(selectedGridId)
+    if (!grid) return null
 
-    // Iterate through all grids that have templates
-    panelTemplatesRef.current.forEach((template, gridId) => {
-      const grid = getGrid(gridId)
-      if (!grid) return
+    // Convert cursor position to grid space
+    const gridPos = worldToGrid({ lat, lng }, selectedGridId)
+    if (!gridPos) return null
 
-      // Convert cursor position to grid space
-      const gridPos = worldToGrid({ lat, lng }, gridId)
-      if (!gridPos) return
+    // Round to nearest grid point
+    const gridX = Math.round(gridPos.x)
+    const gridY = Math.round(gridPos.y)
 
-      // Round to nearest grid point
-      const gridX = Math.round(gridPos.x)
-      const gridY = Math.round(gridPos.y)
+    // Check if this is the same position we already calculated
+    if (lastGridPosRef.current &&
+        lastGridPosRef.current.gridId === selectedGridId &&
+        lastGridPosRef.current.x === gridX &&
+        lastGridPosRef.current.y === gridY) {
+      return null // Skip - already at this position
+    }
 
-      // Create panel at this position
-      const coords = createPanelCoords(gridId, gridX, gridY)
-      if (!coords || coords.length !== 4) return
+    // Create panel at this position
+    const coords = createPanelCoords(selectedGridId, gridX, gridY)
+    if (!coords || coords.length !== 4) return null
 
-      // Check collision
-      const hasCollision = checkCollision(coords)
+    // Check collision
+    const hasCollision = checkCollision(coords)
 
-      // Calculate distance from cursor to panel center
-      const centerLat = (coords[0].lat + coords[2].lat) / 2
-      const centerLng = (coords[0].lng + coords[2].lng) / 2
-      const distance = Math.sqrt(
-        Math.pow(centerLat - lat, 2) + Math.pow(centerLng - lng, 2)
-      )
+    // Store grid position to avoid redundant calculations
+    lastGridPosRef.current = { gridId: selectedGridId, x: gridX, y: gridY }
 
-      // Keep track of best (closest) result
-      if (!bestResult || distance < bestResult.distance) {
-        bestResult = { coords, gridId, distance, hasCollision }
-      }
-    })
-
-    return bestResult ? { coords: bestResult.coords, gridId: bestResult.gridId, hasCollision: bestResult.hasCollision } : null
-  }, [createPanelCoords, checkCollision])
+    return { coords, gridId: selectedGridId, hasCollision }
+  }, [selectedGridId, createPanelCoords, checkCollision])
 
   /**
-   * Update ghost panel preview
+   * Update ghost panel preview (optimized with RAF)
    */
   const updateGhostPanel = useCallback((latLng: google.maps.LatLng) => {
     if (!map) return
@@ -200,6 +213,23 @@ export function usePanelPlacement({
       zIndex: 3000
     })
   }, [map, findBestGridPosition])
+
+  /**
+   * Throttled update with requestAnimationFrame
+   */
+  const scheduleUpdate = useCallback((latLng: google.maps.LatLng) => {
+    pendingUpdateRef.current = latLng
+
+    if (rafRef.current !== null) return // Already scheduled
+
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      if (pendingUpdateRef.current) {
+        updateGhostPanel(pendingUpdateRef.current)
+        pendingUpdateRef.current = null
+      }
+    })
+  }, [updateGhostPanel])
 
   /**
    * Place panel at current position
@@ -240,7 +270,13 @@ export function usePanelPlacement({
       return
     }
 
+    // Require grid selection first
+    if (selectedGridId === null && availableGrids.length > 0) {
+      setSelectedGridId(availableGrids[0])
+    }
+
     setIsPlacing(true)
+    lastGridPosRef.current = null
 
     map.setOptions({
       draggable: false,
@@ -249,7 +285,7 @@ export function usePanelPlacement({
       disableDoubleClickZoom: true,
       clickableIcons: false
     })
-  }, [map, isEditMode])
+  }, [map, isEditMode, selectedGridId, availableGrids])
 
   /**
    * Stop panel placement mode
@@ -257,12 +293,25 @@ export function usePanelPlacement({
   const stopPlacement = useCallback(() => {
     setIsPlacing(false)
 
+    // Cancel pending RAF
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+
     if (ghostPanelRef.current) {
       ghostPanelRef.current.setMap(null)
       ghostPanelRef.current = null
     }
 
+    if (gridHighlightRef.current) {
+      gridHighlightRef.current.setMap(null)
+      gridHighlightRef.current = null
+    }
+
     lastValidPositionRef.current = null
+    lastGridPosRef.current = null
+    pendingUpdateRef.current = null
 
     if (map) {
       map.setOptions({
@@ -274,7 +323,7 @@ export function usePanelPlacement({
     }
   }, [map, isEditMode])
 
-  // Mouse move listener - update ghost panel
+  // Mouse move listener - update ghost panel with RAF throttling
   useEffect(() => {
     if (!map || !isPlacing) {
       if (mouseMoveListenerRef.current) {
@@ -286,7 +335,7 @@ export function usePanelPlacement({
 
     mouseMoveListenerRef.current = map.addListener('mousemove', (e: google.maps.MapMouseEvent) => {
       if (e.latLng) {
-        updateGhostPanel(e.latLng)
+        scheduleUpdate(e.latLng)
       }
     })
 
@@ -296,7 +345,7 @@ export function usePanelPlacement({
         mouseMoveListenerRef.current = null
       }
     }
-  }, [map, isPlacing, updateGhostPanel])
+  }, [map, isPlacing, scheduleUpdate])
 
   // Click listener - place panel
   useEffect(() => {
@@ -336,8 +385,14 @@ export function usePanelPlacement({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+      }
       if (ghostPanelRef.current) {
         ghostPanelRef.current.setMap(null)
+      }
+      if (gridHighlightRef.current) {
+        gridHighlightRef.current.setMap(null)
       }
     }
   }, [])
@@ -345,6 +400,9 @@ export function usePanelPlacement({
   return {
     isPlacing,
     startPlacement,
-    stopPlacement
+    stopPlacement,
+    selectedGridId,
+    availableGrids,
+    setSelectedGridId
   }
 }
