@@ -146,15 +146,21 @@ export function usePanelPlacement({
     const lng = latLng.lng()
 
     const grid = getGrid(selectedGridId)
-    if (!grid) return null
+    const template = panelTemplatesRef.current.get(selectedGridId)
+    if (!grid || !template) return null
 
     // Convert cursor position to grid space
     const gridPos = worldToGrid({ lat, lng }, selectedGridId)
     if (!gridPos) return null
 
+    // Offset to center the panel under the cursor
+    // Subtract half the panel dimensions so cursor is at panel center
+    const offsetX = gridPos.x - (template.width / 2)
+    const offsetY = gridPos.y - (template.height / 2)
+
     // Round to nearest grid point
-    const gridX = Math.round(gridPos.x)
-    const gridY = Math.round(gridPos.y)
+    const gridX = Math.round(offsetX)
+    const gridY = Math.round(offsetY)
 
     // Check if this is the same position we already calculated
     if (lastGridPosRef.current &&
