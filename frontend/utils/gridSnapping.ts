@@ -44,14 +44,17 @@ class Grid {
   private readonly origin: LatLng
   private readonly vecX: Vec2
   private readonly vecY: Vec2
-  private readonly det: number // Determinant for inverse transform
+  private readonly det: number
 
   constructor(origin: LatLng, vecX: Vec2, vecY: Vec2) {
     this.origin = origin
     this.vecX = vecX
     this.vecY = vecY
-    // Calculate determinant for 2x2 matrix inverse
     this.det = vecX.lat * vecY.lng - vecX.lng * vecY.lat
+
+    if (Math.abs(this.det) < 1e-10) {
+      throw new Error('Grid vectors are collinear or near-collinear (determinant ≈ 0). Cannot create valid grid.')
+    }
   }
 
   /**
@@ -63,14 +66,6 @@ class Grid {
       lat: latLng.lat - this.origin.lat,
       lng: latLng.lng - this.origin.lng
     }
-
-    // Solve the linear system using inverse of [vecX, vecY] matrix
-    // [fromOrigin.lat]   [vecX.lat  vecY.lat] [x]
-    // [fromOrigin.lng] = [vecX.lng  vecY.lng] [y]
-    //
-    // Inverse matrix formula:
-    // x = (vecY.lng * fromOrigin.lat - vecY.lat * fromOrigin.lng) / det
-    // y = (vecX.lat * fromOrigin.lng - vecX.lng * fromOrigin.lat) / det
 
     return {
       x: (this.vecY.lng * fromOrigin.lat - this.vecY.lat * fromOrigin.lng) / this.det,
@@ -161,7 +156,7 @@ class GridManager {
   /**
    * Create a Grid instance from panel coordinates
    */
-  private createGridFromPanels(panels: Array<{ coords?: Array<LatLng> } | Array<LatLng>>): Grid | null {
+  private createGridFromPanels(panels: Array<{ coords?: Array<LatLng> }>): Grid | null {
     if (!panels || panels.length === 0) return null
 
     const panel = panels[0]
@@ -318,7 +313,8 @@ export function getGrid(gridId: number): Grid | null {
  */
 export function worldToGrid(latLng: LatLng, gridId: number): GridCoords | null {
   const grid = gridManager.getGrid(gridId)
-  return grid ? grid.worldToGrid(latLng) : null
+  if (!grid) throw new Error(`Invalid gridId: ${gridId}`)
+  return grid.worldToGrid(latLng)
 }
 
 /**
@@ -326,7 +322,8 @@ export function worldToGrid(latLng: LatLng, gridId: number): GridCoords | null {
  */
 export function gridToWorld(gridCoords: GridCoords, gridId: number): LatLng | null {
   const grid = gridManager.getGrid(gridId)
-  return grid ? grid.gridToWorld(gridCoords) : null
+  if (!grid) throw new Error(`Invalid gridId: ${gridId}`)
+  return grid.gridToWorld(gridCoords)
 }
 
 /**
@@ -334,7 +331,8 @@ export function gridToWorld(gridCoords: GridCoords, gridId: number): LatLng | nu
  */
 export function calculateGridDelta(from: LatLng, to: LatLng, gridId: number): GridDelta | null {
   const grid = gridManager.getGrid(gridId)
-  return grid ? grid.calculateGridDelta(from, to) : null
+  if (!grid) throw new Error(`Invalid gridId: ${gridId}`)
+  return grid.calculateGridDelta(from, to)
 }
 
 /**
@@ -342,5 +340,6 @@ export function calculateGridDelta(from: LatLng, to: LatLng, gridId: number): Gr
  */
 export function applyGridDelta(startPos: LatLng, delta: GridDelta, gridId: number, snap = true): LatLng | null {
   const grid = gridManager.getGrid(gridId)
-  return grid ? grid.applyGridDelta(startPos, delta, snap) : null
+  if (!grid) throw new Error(`Invalid gridId: ${gridId}`)
+  return grid.applyGridDelta(startPos, delta, snap)
 }
