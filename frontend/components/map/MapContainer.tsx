@@ -86,7 +86,11 @@ export default function MapContainer({
     deleteSelected
   } = useEditMode({
     map,
-    onDeletePolygons: removePolygons,
+    onDeletePolygons: (deletedPolygons) => {
+      removePolygons(deletedPolygons)
+      // Remove from unified panel array
+      setAllPanels(prev => prev.filter(p => !deletedPolygons.includes(p)))
+    },
     allPolygons: allPolygonsForEdit
   })
 
@@ -116,6 +120,9 @@ export default function MapContainer({
     removeClickListener
   })
 
+  // Unified panel state - single source of truth for all panels
+  const [allPanels, setAllPanels] = useState<google.maps.Polygon[]>([])
+
   // Panel generation
   const {
     isGenerating,
@@ -135,8 +142,19 @@ export default function MapContainer({
     onPanelsGenerated: (data) => togglePolygonVisibility(false)
   })
 
-  // Panel placement state
-  const [placedPanels, setPlacedPanels] = useState<google.maps.Polygon[]>([])
+  // Sync generated panels to unified array
+  useEffect(() => {
+    setAllPanels(prev => {
+      // Remove old generated panels, keep manually placed ones
+      const manualPanels = prev.filter(p => !(p as any).__isGenerated)
+      // Add new generated panels with marker
+      const markedGeneratedPanels = panelMarkers.map(p => {
+        (p as any).__isGenerated = true
+        return p
+      })
+      return [...manualPanels, ...markedGeneratedPanels]
+    })
+  }, [panelMarkers])
 
   // Panel placement
   const {
@@ -149,11 +167,11 @@ export default function MapContainer({
   } = usePanelPlacement({
     map,
     isEditMode,
-    existingPanels: [...panelMarkers, ...placedPanels],
+    existingPanels: allPanels,
     panelData,
     onPanelPlaced: (panel, gridId) => {
       tagPanelWithGrid(panel, gridId)
-      setPlacedPanels(prev => [...prev, panel])
+      setAllPanels(prev => [...prev, panel])
     }
   })
 
@@ -196,9 +214,9 @@ export default function MapContainer({
     // Clear panel markers
     clearPanels()
 
-    // Clear placed panels
-    placedPanels.forEach(panel => panel.setMap(null))
-    setPlacedPanels([])
+    // Clear all panels
+    allPanels.forEach(panel => panel.setMap(null))
+    setAllPanels([])
 
     // Clear capture overlay
     setShowCaptureOverlay(false)
@@ -210,7 +228,7 @@ export default function MapContainer({
     if (isEditMode) toggleEditMode()
     if (isDrawing) stopDrawing()
     if (isPlacing) stopPlacement()
-  }, [clearAllPolygons, clearPanels, placedPanels, onToolChange, isEditMode, isDrawing, isPlacing, toggleEditMode, stopDrawing, stopPlacement])
+  }, [clearAllPolygons, clearPanels, allPanels, onToolChange, isEditMode, isDrawing, isPlacing, toggleEditMode, stopDrawing, stopPlacement])
 
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
     if (!map || !bounds) return
@@ -308,19 +326,17 @@ export default function MapContainer({
   // Sync polygon refs and update polygon states
   const roofPolygonsRef = useRef<google.maps.Polygon[]>([])
   const objectPolygonsRef = useRef<google.maps.Polygon[]>([])
-  const panelMarkersRef = useRef<google.maps.Polygon[]>([])
-  const placedPanelsRef = useRef<google.maps.Polygon[]>([])
+  const allPanelsRef = useRef<google.maps.Polygon[]>([])
 
   useEffect(() => {
     roofPolygonsRef.current = roofPolygons
     objectPolygonsRef.current = objectPolygons
-    panelMarkersRef.current = panelMarkers
-    placedPanelsRef.current = placedPanels
-  }, [roofPolygons, objectPolygons, panelMarkers, placedPanels])
+    allPanelsRef.current = allPanels
+  }, [roofPolygons, objectPolygons, allPanels])
 
   // Update all polygons including panels
   useEffect(() => {
-    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current, ...panelMarkersRef.current, ...placedPanelsRef.current]
+    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current, ...allPanelsRef.current]
 
     allPolygons.forEach(polygon => {
       if (polygon) {
@@ -334,20 +350,16 @@ export default function MapContainer({
     if (objectPolygonsRef.current.length > 0) {
       updateAllPolygons(objectPolygonsRef.current, false)
     }
-    if (panelMarkersRef.current.length > 0) {
+    if (allPanelsRef.current.length > 0) {
       // Treat panels as "non-roof" but they'll be identified by isPanelElement
-      updateAllPolygons(panelMarkersRef.current, false)
+      updateAllPolygons(allPanelsRef.current, false)
     }
-    if (placedPanelsRef.current.length > 0) {
-      // Treat placed panels as "non-roof" but they'll be identified by isPanelElement
-      updateAllPolygons(placedPanelsRef.current, false)
-    }
-  }, [isEditMode, selectedPolygons, isDrawing, isPlacing, updateAllPolygons, panelMarkers, placedPanels])
+  }, [isEditMode, selectedPolygons, isDrawing, isPlacing, updateAllPolygons, allPanels])
 
   // Update allPolygonsForEdit when any polygon set changes
   useEffect(() => {
-    setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...panelMarkers, ...placedPanels])
-  }, [roofPolygons, objectPolygons, panelMarkers, placedPanels])
+    setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...allPanels])
+  }, [roofPolygons, objectPolygons, allPanels])
 
   // ========================================
   // Render
@@ -409,7 +421,7 @@ export default function MapContainer({
           drawingType={drawingTypeSelection}
           onTabChange={handleTabChange}
           onDrawingTypeChange={handleDrawingTypeChange}
-          hasPanels={panelMarkers.length > 0}
+          hasPanels={allPanels.length > 0}
         />
       )}
 

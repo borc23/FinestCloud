@@ -186,7 +186,6 @@ export function usePanelPlacement({
   const checkCollision = useCallback((coords: Coordinate[]): boolean => {
     if (coords.length !== 4) return true
 
-    // Calculate center of test panel
     const testCenterLat = (coords[0].lat + coords[2].lat) / 2
     const testCenterLng = (coords[0].lng + coords[2].lng) / 2
     const testCenter = new google.maps.LatLng(testCenterLat, testCenterLng)
@@ -292,9 +291,7 @@ export function usePanelPlacement({
 
   const scheduleUpdate = useCallback((latLng: google.maps.LatLng) => {
     pendingUpdateRef.current = latLng
-
     if (rafRef.current !== null) return
-
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null
       if (pendingUpdateRef.current) {
@@ -317,7 +314,7 @@ export function usePanelPlacement({
       return
     }
 
-    const path = coords.map(c => new google.maps.LatLng(c.lat, c.lng))
+    const path = coords.map(c => ({ lat: c.lat, lng: c.lng }))
     const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
 
     const panel = new google.maps.Polygon({
