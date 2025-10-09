@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { pvwattsApi } from '@/lib/pvwattsApi'
+import { pvwattsApi, PVWattsApiService } from '@/lib/pvwattsApi'
 import type { PVWattsResponse } from '@/types/pvwatts'
 
 interface RoofData {
@@ -19,6 +19,7 @@ interface UsePVWattsParams {
   panelWattage?: number
   roofData?: RoofData
   autoFetch?: boolean
+  apiService?: PVWattsApiService
 }
 
 interface UsePVWattsReturn {
@@ -38,7 +39,8 @@ export function usePVWatts({
   panelCount,
   panelWattage = 400,
   roofData,
-  autoFetch = true
+  autoFetch = true,
+  apiService = pvwattsApi
 }: UsePVWattsParams): UsePVWattsReturn {
   const [data, setData] = useState<PVWattsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -53,7 +55,7 @@ export function usePVWatts({
     setError(null)
 
     try {
-      const result = await pvwattsApi.calculateProduction({
+      const result = await apiService.calculateProduction({
         latitude,
         longitude,
         panelCount,
@@ -70,7 +72,7 @@ export function usePVWatts({
     } finally {
       setIsLoading(false)
     }
-  }, [latitude, longitude, panelCount, panelWattage, roofData?.pitch, roofData?.azimuth])
+  }, [latitude, longitude, panelCount, panelWattage, roofData?.pitch, roofData?.azimuth, apiService])
 
   useEffect(() => {
     if (autoFetch) {
@@ -79,10 +81,10 @@ export function usePVWatts({
   }, [autoFetch, fetchData])
 
   const clearCache = useCallback(() => {
-    pvwattsApi.clearCache()
+    apiService.clearCache()
     setData(null)
     setError(null)
-  }, [])
+  }, [apiService])
 
   return {
     data,

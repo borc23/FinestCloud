@@ -15,6 +15,8 @@ export class PVWattsApiService {
   private baseUrl = '/api/pvwatts'
   private cachedData: PVWattsResponse | null = null
   private lastRequestParams: PVWattsCalculationParams | null = null
+  private inFlightRequest: Promise<PVWattsResponse> | null = null
+  private inFlightParams: PVWattsCalculationParams | null = null
 
   /**
    * Calculate solar production using PVWatts API
@@ -26,6 +28,29 @@ export class PVWattsApiService {
       return this.cachedData!
     }
 
+    // Check if there's an in-flight request with the same parameters
+    if (this.inFlightRequest && this.paramsMatch(this.inFlightParams, params)) {
+      console.log('Reusing in-flight PVWatts request')
+      return this.inFlightRequest
+    }
+
+    // Create new request
+    this.inFlightParams = params
+    this.inFlightRequest = this.executeCalculation(params)
+
+    try {
+      const data = await this.inFlightRequest
+      // Cache the result
+      this.cachedData = data
+      this.lastRequestParams = params
+      return data
+    } finally {
+      this.inFlightRequest = null
+      this.inFlightParams = null
+    }
+  }
+
+  private async executeCalculation(params: PVWattsCalculationParams): Promise<PVWattsResponse> {
     const requestData: PVWattsRequest = {
       latitude: params.latitude,
       longitude: params.longitude,
@@ -44,17 +69,18 @@ export class PVWattsApiService {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || 'PVWatts API request failed')
+      let errorMessage = `PVWatts API request failed with status ${response.status}`
+      try {
+        const error = await response.json()
+        errorMessage = error.detail || errorMessage
+      } catch {
+        // Response is not JSON, use status text or default message
+        errorMessage = response.statusText || errorMessage
+      }
+      throw new Error(errorMessage)
     }
 
-    const data: PVWattsResponse = await response.json()
-
-    // Cache the result
-    this.cachedData = data
-    this.lastRequestParams = params
-
-    return data
+    return await response.json()
   }
 
   /**
@@ -84,8 +110,15 @@ export class PVWattsApiService {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || 'PVWatts API request failed')
+      let errorMessage = `PVWatts API request failed with status ${response.status}`
+      try {
+        const error = await response.json()
+        errorMessage = error.detail || errorMessage
+      } catch {
+        // Response is not JSON, use status text or default message
+        errorMessage = response.statusText || errorMessage
+      }
+      throw new Error(errorMessage)
     }
 
     return await response.json()
@@ -124,6 +157,27 @@ export class PVWattsApiService {
   }
 
   /**
+   * Check if two parameter sets match
+   */
+  private paramsMatch(
+    params1: PVWattsCalculationParams | null,
+    params2: PVWattsCalculationParams
+  ): boolean {
+    if (!params1) {
+      return false
+    }
+
+    return (
+      params1.latitude === params2.latitude &&
+      params1.longitude === params2.longitude &&
+      params1.panelCount === params2.panelCount &&
+      params1.panelWattage === params2.panelWattage &&
+      (params1.tilt || 20) === (params2.tilt || 20) &&
+      (params1.azimuth || 180) === (params2.azimuth || 180)
+    )
+  }
+
+  /**
    * Check if cached data is valid for given parameters
    */
   private isCachedDataValid(params: PVWattsCalculationParams): boolean {
@@ -131,15 +185,7 @@ export class PVWattsApiService {
       return false
     }
 
-    const lastParams = this.lastRequestParams
-    return (
-      lastParams.latitude === params.latitude &&
-      lastParams.longitude === params.longitude &&
-      lastParams.panelCount === params.panelCount &&
-      lastParams.panelWattage === params.panelWattage &&
-      (lastParams.tilt || 20) === (params.tilt || 20) &&
-      (lastParams.azimuth || 180) === (params.azimuth || 180)
-    )
+    return this.paramsMatch(this.lastRequestParams, params)
   }
 
   /**
@@ -158,5 +204,6 @@ export class PVWattsApiService {
   }
 }
 
-// Export singleton instance
+// Export default instance for convenience
+// Consumers can import the class to create their own instances for testing/DI
 export const pvwattsApi = new PVWattsApiService()

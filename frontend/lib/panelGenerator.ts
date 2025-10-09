@@ -85,10 +85,8 @@ export async function generateAndAnimatePanels({
       strokeOpacity: 0
     } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
 
-    // Tag panel with its grid ID for O(1) snapping lookup
     tagPanelWithGrid(polygon, gridId)
 
-    // Snap-in animation - await to ensure deterministic timing
     await new Promise(resolve => setTimeout(resolve, 10))
     polygon.setOptions({
       fillOpacity: options.fillOpacity,
@@ -97,7 +95,6 @@ export async function generateAndAnimatePanels({
 
     newMarkers.push(polygon)
 
-    // Call callback after first panel is placed
     if (i === 0) {
       onFirstPanelPlaced?.()
     }
