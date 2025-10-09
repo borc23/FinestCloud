@@ -49,22 +49,18 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     })
 
     const mouseoutListener = polygon.addListener('mouseout', () => {
-      // Don't revert hover effect if polygon is selected or being drag-selected
       const currentStrokeColor = polygon.get('strokeColor')
       if (!polygon.getDraggable() && currentStrokeColor !== '#3498db') {
         polygon.setOptions(defaultOptions)
       }
     })
 
-    // Click to zoom - this gets removed in edit mode
     const clickListener = polygon.addListener('click', (event: google.maps.MapMouseEvent) => {
-      // Only handle click if polygon is clickable
       if (!polygon.get('clickable')) {
         return
       }
 
       if (event.latLng && currentMap) {
-        // Fit bounds to clicked polygon (only when NOT in edit mode)
         const bounds = new google.maps.LatLngBounds()
         const path = polygon.getPath()
 
@@ -79,8 +75,6 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
     listeners.push(mouseoverListener, mouseoutListener, clickListener)
 
-    // Store listeners so they can be removed later
-    // Store click listener separately so it can be removed independently
     polygonListenersRef.current.set(polygon, listeners)
     interface PolygonWithClickListener extends google.maps.Polygon {
       __clickListener?: google.maps.MapsEventListener
@@ -123,7 +117,6 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   const clearPolygonGroup = useCallback((polygons: google.maps.Polygon[]) => {
     polygons.forEach(polygon => {
       if (polygon) {
-        // Remove listeners first
         const listeners = polygonListenersRef.current.get(polygon)
         if (listeners) {
           listeners.forEach(listener => google.maps.event.removeListener(listener))
@@ -164,16 +157,13 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     })
   }, [setPolygonGroupVisibility])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Clear all listeners
       polygonListenersRef.current.forEach((listeners) => {
         listeners.forEach(listener => google.maps.event.removeListener(listener))
       })
       polygonListenersRef.current.clear()
 
-      // Clear polygons directly to avoid dependency issues
       setRoofPolygons(prevRoof => {
         prevRoof.forEach(polygon => polygon.setMap(null))
         return []
@@ -201,7 +191,6 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     interface PolygonWithClickListener extends google.maps.Polygon {
       __clickListener?: google.maps.MapsEventListener
     }
-    // Only remove the click listener (for edit mode), keep hover effects
     const clickListener = (polygon as PolygonWithClickListener).__clickListener
     if (clickListener) {
       google.maps.event.removeListener(clickListener)

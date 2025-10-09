@@ -1,29 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-/**
- * Custom hook for managing Google Maps event listeners with automatic cleanup
- *
- * Benefits:
- * - Automatic cleanup on unmount
- * - Prevents memory leaks
- * - Type-safe listener management
- * - Reusable pattern for all map event listeners
- *
- * @example
- * ```tsx
- * const addClickListener = useMapListener(map)
- *
- * useEffect(() => {
- *   if (!map) return
- *
- *   const listener = addClickListener('click', (e) => {
- *     console.log('Map clicked at:', e.latLng)
- *   })
- *
- *   return () => listener.remove()
- * }, [map, addClickListener])
- * ```
- */
 export function useMapListener(
   mapInstance: google.maps.Map | google.maps.Polygon | google.maps.Marker | null
 ) {
@@ -176,6 +152,5 @@ export function useMapListeners<T extends Record<string, (event: unknown) => voi
       })
       listenersRef.current = []
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapInstance, ...deps])
 }

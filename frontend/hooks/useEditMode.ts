@@ -119,11 +119,10 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     }
   }, [isEditMode])
 
-  // Drag selection with trail - COMPLETELY REFACTORED
   useEffect(() => {
     if (!map || !isEditMode || isDrawingPolygon) return
 
-    const TRAIL_SAMPLE_INTERVAL = 2 // Check every N trail points
+    const TRAIL_SAMPLE_INTERVAL = 2
     let trailPointCount = 0
     const polygonListeners: google.maps.MapsEventListener[] = []
 
@@ -131,12 +130,10 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       allPolygonsRef.current.forEach((polygon) => {
         if (selectedDuringDragRef.current.has(polygon)) return
 
-        // Use containsLocation - reliable polygon intersection test
         if (google.maps.geometry.poly.containsLocation(point, polygon)) {
           console.log('[checkPolygonIntersection] Polygon selected!')
           selectedDuringDragRef.current.add(polygon)
 
-          // Update selection state immediately for visual feedback
           setSelectedPolygons(prev => {
             const newSet = new Set(prev)
             newSet.add(polygon)
@@ -149,7 +146,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const handleMouseMove = (e: google.maps.MapMouseEvent) => {
       if (!isDraggingRef.current || !e.latLng || !polylineRef.current) return
 
-      // Update trail visualization
       trailRef.current.push(e.latLng)
       if (trailRef.current.length > 10) {
         trailRef.current.shift()
@@ -157,7 +153,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
 
       polylineRef.current.setPath(trailRef.current)
 
-      // Check for polygon intersection (throttled)
       trailPointCount++
       if (trailPointCount % TRAIL_SAMPLE_INTERVAL === 0) {
         checkPolygonIntersection(e.latLng)
@@ -171,25 +166,21 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       selectedDuringDragRef.current = new Set()
       trailPointCount = 0
 
-      // Disable map dragging
       map.setOptions({
         draggable: false
       })
 
-      // Add mousemove listeners to polygons (for trail continuity)
       allPolygonsRef.current.forEach((polygon) => {
         const listener = polygon.addListener('mousemove', handleMouseMove)
         polygonListeners.push(listener)
       })
 
-      // Clear previous selection if Ctrl not pressed
       if (!isCtrlPressedRef.current) {
         setSelectedPolygons(new Set())
       }
 
       trailRef.current = [e.latLng]
 
-      // Create trail visualization
       polylineRef.current = new google.maps.Polyline({
         map,
         path: trailRef.current,
@@ -204,26 +195,20 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const onMouseUp = () => {
       if (!isDraggingRef.current) return
 
-      // Restore map settings
       map.setOptions({
         draggable: !isEditMode
       })
 
-      // Remove polygon mousemove listeners
       polygonListeners.forEach(listener => {
         google.maps.event.removeListener(listener)
       })
       polygonListeners.length = 0
 
-      // Flag that we just completed a drag to prevent click from clearing
       justCompletedDragRef.current = true
       setTimeout(() => {
         justCompletedDragRef.current = false
       }, 100)
 
-      // Selection already updated during drag, no need to update again
-
-      // Cleanup
       polylineRef.current?.setMap(null)
       polylineRef.current = null
       trailRef.current = []
@@ -243,7 +228,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       google.maps.event.removeListener(upListener)
       document.removeEventListener('mouseup', onMouseUp)
 
-      // Clean up polygon listeners
       polygonListeners.forEach(listener => {
         google.maps.event.removeListener(listener)
       })
@@ -256,12 +240,10 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     }
   }, [map, isEditMode, isDrawingPolygon])
 
-  // Handle map clicks to deselect using the custom hook
   useSingleMapListener(
     isEditMode && !isDrawingPolygon ? map : null,
     'click',
     () => {
-      // Don't clear if we just completed a drag selection
       if (justCompletedDragRef.current) return
       clearSelectionRef.current()
     },

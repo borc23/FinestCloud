@@ -170,10 +170,6 @@ export function usePolygonManager({
               if (gridDelta) {
                 const { dx, dy } = gridDelta
 
-                // Early exit if no movement
-                if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return
-
-                // Apply same grid delta to all other panels in their own grid space
                 selectedPolygonsRef.current.forEach(p => {
                   if (p === polygon) return
 

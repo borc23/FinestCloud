@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { RoofPanelsData, PanelGenerationData } from '../types/result_dashboard'
+import type { PanelGenerationData } from '../types/result_dashboard'
 
 interface AggregatedPanelData {
   totalPanels: number
@@ -24,7 +24,6 @@ export function usePanelData(panelGenerationData: PanelGenerationData | null): A
       0
     )
 
-    // Get panel wattage from first roof's module specs
     const firstRoof = panelGenerationData.roofs[0]
     const panelWattage = firstRoof?.module_specs?.power || 400
 
