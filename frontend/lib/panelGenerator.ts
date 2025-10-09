@@ -1,14 +1,21 @@
 import { StyleConfig } from '../utils/styleConfig'
 import { tagPanelWithGrid } from '../utils/gridSnapping'
+import type {
+  PanelGenerationResponse,
+  RoofPanelData,
+  Panel,
+  Coordinate,
+  SolarDataSegment
+} from '../types/panel'
 
 interface PanelData {
-  path: any[]
-  options: any
+  path: Coordinate[]
+  options: google.maps.PolygonOptions
   gridId: number
 }
 
 interface GeneratePanelsParams {
-  panelData: any
+  panelData: PanelGenerationResponse
   map: google.maps.Map
   onProgress?: (current: number, total: number) => void
   onFirstPanelPlaced?: () => void
@@ -36,16 +43,18 @@ export async function generateAndAnimatePanels({
 
   // Collect all panel data first, tagging each with its roof's gridId
   if (panelData.roofs) {
-    panelData.roofs.forEach((roof: any, roofIndex: number) => {
+    panelData.roofs.forEach((roof: RoofPanelData, roofIndex: number) => {
       if (roof.panels && Array.isArray(roof.panels)) {
         totalPanels += roof.panels.length
 
-        roof.panels.forEach((panel: any) => {
+        roof.panels.forEach((panel: Panel) => {
           const panelCoords = panel.coords || panel
-          const path = panelCoords.map((coord: { lat: number; lng: number }) => ({
-            lat: coord.lat,
-            lng: coord.lng
-          }))
+          const path = Array.isArray(panelCoords)
+            ? panelCoords.map((coord: Coordinate) => ({
+                lat: coord.lat,
+                lng: coord.lng
+              }))
+            : []
 
           const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
           allPanelData.push({ path, options: panelOptions, gridId: roofIndex })
@@ -79,13 +88,12 @@ export async function generateAndAnimatePanels({
     // Tag panel with its grid ID for O(1) snapping lookup
     tagPanelWithGrid(polygon, gridId)
 
-    // Snap-in animation
-    setTimeout(() => {
-      polygon.setOptions({
-        fillOpacity: options.fillOpacity,
-        strokeOpacity: options.strokeOpacity
-      })
-    }, 10)
+    // Snap-in animation - await to ensure deterministic timing
+    await new Promise(resolve => setTimeout(resolve, 10))
+    polygon.setOptions({
+      fillOpacity: options.fillOpacity,
+      strokeOpacity: options.strokeOpacity
+    })
 
     newMarkers.push(polygon)
 
@@ -103,14 +111,14 @@ export async function generateAndAnimatePanels({
  */
 export function calculateSystemResults(
   totalPanels: number,
-  solarDataResults: any[]
+  solarDataResults: SolarDataSegment[] | null
 ): {
   systemSize: number
   annualProduction?: number
 } {
   const systemSize = (totalPanels * 400) / 1000
 
-  const annualProduction = solarDataResults?.reduce((sum: number, segment: any) => {
+  const annualProduction = solarDataResults?.reduce((sum: number, segment: SolarDataSegment) => {
     const stats = segment.solarData?.solarPotential?.solarPanels
     return sum + (stats?.yearlyEnergyDcKwh || 0)
   }, 0)

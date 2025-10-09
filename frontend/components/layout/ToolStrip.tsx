@@ -15,7 +15,7 @@ interface ToolStripProps {
   onToolSelect: (tool: string) => void
   onStatsToggle: () => void
   showPanelsTool?: boolean
-  map?: any
+  map?: google.maps.Map | null
   isImageMode?: boolean
   onToggleMode?: () => void
 }
@@ -165,11 +165,11 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const [isExpanded, setIsExpanded] = useState(false)
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const geocoder = useRef<any>(null)
+  const geocoder = useRef<google.maps.Geocoder | null>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const tools = useMemo(() =>
@@ -210,10 +210,10 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
         })
 
         const predictions = fetchedSuggestions
-        .map((suggestion: any) => suggestion.placePrediction)
+        .map((suggestion) => suggestion.placePrediction)
         .slice(0, 5)
 
-        setSuggestions(predictions)
+        setSuggestions(predictions as google.maps.places.AutocompletePrediction[])
       } catch (error) {
         console.log('Failed to fetch suggestions:', error)
       }
@@ -275,8 +275,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
 
     if (!geocoder.current) return
 
-    geocoder.current.geocode({ address }, (results: any[], status: string) => {
-      if (status === 'OK' && results[0]) {
+    geocoder.current.geocode({ address }, (results: google.maps.GeocoderResult[] | null, status: google.maps.GeocoderStatus) => {
+      if (status === 'OK' && results && results[0]) {
         const location = results[0].geometry.location
         map.setCenter(location)
         map.setZoom(20)
@@ -306,13 +306,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     }, 500)
   }
 
-  const handleSuggestionClick = (prediction: any) => {
-    const description = [
-      prediction.mainText?.text,
-      prediction.secondaryText?.text
-    ]
-      .filter(Boolean)
-      .join(' ')
+  const handleSuggestionClick = (prediction: google.maps.places.AutocompletePrediction) => {
+    const description = prediction.text?.toString() || ''
 
     setSuggestions([])
     searchLocation(description)

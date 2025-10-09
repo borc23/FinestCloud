@@ -1,21 +1,5 @@
 import { useMemo } from 'react'
-
-interface RoofPanelsData {
-  roof_id: number
-  panels: any[]
-  panel_count: number
-  module_type: string
-  module_specs: any
-  coords: any[]
-  pitch: number
-  azimuth: number
-}
-
-interface PanelGenerationData {
-  roofs: RoofPanelsData[]
-  max_panels: number
-  module: string
-}
+import type { RoofPanelsData, PanelGenerationData } from '../types/result_dashboard'
 
 interface AggregatedPanelData {
   totalPanels: number

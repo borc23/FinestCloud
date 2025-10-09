@@ -36,7 +36,7 @@ export function useMapListener(
   const addListener = useCallback(
     <E extends string>(
       eventName: E,
-      handler: (event: any) => void
+      handler: (event: unknown) => void
     ) => {
       if (!mapInstance) {
         return { remove: () => {} }
@@ -100,7 +100,7 @@ export function useMapListener(
 export function useSingleMapListener<E extends string>(
   mapInstance: google.maps.Map | google.maps.Polygon | google.maps.Marker | null,
   eventName: E,
-  handler: (event: any) => void,
+  handler: (event: unknown) => void,
   deps: React.DependencyList = []
 ) {
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
@@ -143,7 +143,7 @@ export function useSingleMapListener<E extends string>(
  * })
  * ```
  */
-export function useMapListeners<T extends Record<string, (event: any) => void>>(
+export function useMapListeners<T extends Record<string, (event: unknown) => void>>(
   mapInstance: google.maps.Map | google.maps.Polygon | google.maps.Marker | null,
   handlers: T,
   deps: React.DependencyList = []

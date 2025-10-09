@@ -3,13 +3,15 @@
  * Type definitions for Panel generation analytics
  */
 
+import type { Panel, Coordinate, ModuleSpecs } from './panel'
+
 export interface RoofPanelsData {
   roof_id: number
-  panels: any[]
+  panels: Panel[]
   panel_count: number
   module_type: string
-  module_specs: any
-  coords: any[]
+  module_specs: ModuleSpecs
+  coords: Coordinate[]
   pitch: number
   azimuth: number
 }

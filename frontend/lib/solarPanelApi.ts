@@ -4,10 +4,11 @@
  */
 
 import { extractPolygonCoordinates, type PolygonCoordinates } from '../utils/polygonUtils'
+import type { SolarDataSegment } from '../types/panel'
 
 interface SolarApiResponse {
   success: boolean
-  data?: any
+  data?: SolarDataSegment[]
   error?: string
 }
 

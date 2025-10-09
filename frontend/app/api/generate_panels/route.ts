@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { proxyToPythonBackend, handleOptionsRequest } from '../../../lib/apiProxy'
+import type { PanelGenerationRequest, Coordinate } from '../../../types/panel'
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 
 export async function POST(request: NextRequest) {
-  return proxyToPythonBackend(request, {
+  return proxyToPythonBackend<PanelGenerationRequest, unknown>(request, {
     method: 'POST',
     backendUrl: `${PYTHON_BACKEND_URL}/api/generate_panels`,
     forwardCookies: true,
     logRequests: true,
-    transformRequest: (body) => ({
-      roofs: body.roofPolygons.map((roofPoly: any, index: number) => {
+    transformRequest: (body: PanelGenerationRequest) => ({
+      roofs: body.roofPolygons.map((roofPoly: { coords: Coordinate[] }, index: number) => {
         const pitch = body.angles?.[index] !== undefined ? body.angles[index] : 0
         const azimuth = body.solarData?.[index]?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees || 180
         return {
-          coords: roofPoly.coords.map((coord: any) => ({
+          coords: roofPoly.coords.map((coord: Coordinate) => ({
             lat: coord.lat,
             lng: coord.lng
           })),
@@ -22,8 +23,8 @@ export async function POST(request: NextRequest) {
           azimuth
         }
       }),
-      objects: (body.objectPolygons || []).map((objPoly: any) => ({
-        coords: objPoly.coords.map((coord: any) => ({
+      objects: (body.objectPolygons || []).map((objPoly: { coords: Coordinate[] }) => ({
+        coords: objPoly.coords.map((coord: Coordinate) => ({
           lat: coord.lat,
           lng: coord.lng
         }))

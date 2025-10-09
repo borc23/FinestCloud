@@ -2,19 +2,20 @@ import { useState, useCallback, useRef } from 'react'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import { generateAndAnimatePanels, calculateSystemResults } from '../lib/panelGenerator'
 import { setGridVectors, clearGridVectors } from '../utils/gridSnapping'
+import type { PanelGenerationResponse, SolarDataSegment, AngleConfirmData } from '../types/panel'
 
 interface UsePanelGenerationProps {
   map: google.maps.Map | null
   roofPolygons: google.maps.Polygon[]
   objectPolygons: google.maps.Polygon[]
-  onPanelsGenerated?: (data: any) => void
+  onPanelsGenerated?: (data: PanelGenerationResponse) => void
 }
 
 interface PanelGenerationState {
   isGenerating: boolean
   progress: { current: number; total: number } | null
-  solarData: any | null
-  panelData: any | null
+  solarData: SolarDataSegment[] | null
+  panelData: PanelGenerationResponse | null
   showAnglePanel: boolean
   showCompletionAnimation: boolean
   markers: google.maps.Polygon[]
@@ -89,12 +90,7 @@ export function usePanelGeneration({
    * Handle angle panel confirmation
    * Generates panels with provided configuration
    */
-  const handleAngleConfirm = useCallback(async (data: {
-    angles: number[]
-    edgePadding: number
-    panelData?: any
-    _requestBody?: any
-  }) => {
+  const handleAngleConfirm = useCallback(async (data: AngleConfirmData) => {
     if (!map) return
 
     // Hide angle panel and start generation

@@ -82,7 +82,10 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     // Store listeners so they can be removed later
     // Store click listener separately so it can be removed independently
     polygonListenersRef.current.set(polygon, listeners)
-    ;(polygon as any).__clickListener = clickListener
+    interface PolygonWithClickListener extends google.maps.Polygon {
+      __clickListener?: google.maps.MapsEventListener
+    }
+    ;(polygon as PolygonWithClickListener).__clickListener = clickListener
   }, [])
 
   const renderPolygons = useCallback((polygonData: RoofModel[], isRoof: boolean, enableHover: boolean = true) => {
@@ -183,20 +186,26 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   }, [])
 
   const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
+    interface PolygonWithClickListener extends google.maps.Polygon {
+      __clickListener?: google.maps.MapsEventListener
+    }
     const listeners = polygonListenersRef.current.get(polygon)
     if (listeners) {
       listeners.forEach(listener => google.maps.event.removeListener(listener))
       polygonListenersRef.current.delete(polygon)
-      delete (polygon as any).__clickListener
+      delete (polygon as PolygonWithClickListener).__clickListener
     }
   }, [])
 
   const removeClickListener = useCallback((polygon: google.maps.Polygon) => {
+    interface PolygonWithClickListener extends google.maps.Polygon {
+      __clickListener?: google.maps.MapsEventListener
+    }
     // Only remove the click listener (for edit mode), keep hover effects
-    const clickListener = (polygon as any).__clickListener
+    const clickListener = (polygon as PolygonWithClickListener).__clickListener
     if (clickListener) {
       google.maps.event.removeListener(clickListener)
-      delete (polygon as any).__clickListener
+      delete (polygon as PolygonWithClickListener).__clickListener
     }
   }, [])
 

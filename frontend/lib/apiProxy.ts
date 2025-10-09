@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-interface ProxyOptions {
+interface ProxyOptions<TBody = unknown, TData = unknown> {
   method?: 'GET' | 'POST'
   backendUrl: string
   forwardCookies?: boolean
-  transformRequest?: (body: any) => any
-  validateRequest?: (body: any) => { valid: boolean; error?: string }
-  onSuccess?: (data: any, response: Response) => NextResponse
+  transformRequest?: (body: TBody) => TBody
+  validateRequest?: (body: TBody) => { valid: boolean; error?: string }
+  onSuccess?: (data: TData, response: Response) => NextResponse
   logRequests?: boolean
 }
 
@@ -20,9 +20,9 @@ interface ErrorResponse {
  * Shared API proxy handler for forwarding requests to Python backend
  * Handles common error patterns, cookie forwarding, and response transformation
  */
-export async function proxyToPythonBackend(
+export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
   request: NextRequest,
-  options: ProxyOptions
+  options: ProxyOptions<TBody, TData>
 ): Promise<NextResponse> {
   const {
     method = 'POST',
@@ -36,7 +36,7 @@ export async function proxyToPythonBackend(
 
   try {
     // Parse request body for POST requests
-    let body: any = null
+    let body: TBody | null = null
     if (method === 'POST') {
       body = await request.json()
 
