@@ -50,7 +50,7 @@ export class SolarPanelOverlay extends google.maps.OverlayView {
     this.div.style.height = height + 'px';
 
     // Set canvas resolution for crisp rendering
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
     this.canvas.style.width = width + 'px';
@@ -67,9 +67,9 @@ export class SolarPanelOverlay extends google.maps.OverlayView {
 
     const width = this.canvas.width;
     const height = this.canvas.height;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Base panel colors with subtle gradients
     const baseColors: Record<string, string> = {
@@ -184,19 +184,25 @@ export class SolarPanelOverlay extends google.maps.OverlayView {
 
   setSelected(selected: boolean) {
     this.isSelected = selected;
-    this.renderSolarPanel();
+    if (this.canvas) {
+      this.renderSolarPanel();
+    }
   }
 
   setHovered(hovered: boolean) {
     this.isHovered = hovered;
-    this.renderSolarPanel();
+    if (this.canvas) {
+      this.renderSolarPanel();
+    }
   }
 
   onRemove() {
-    if (this.div && this.div.parentNode) {
-      this.div.parentNode.removeChild(this.div);
-      this.div = null;
+    if (this.div) {
+      if (this.div.parentNode) {
+        this.div.parentNode.removeChild(this.div);
+      }
       this.canvas = null;
+      this.div = null;
     }
   }
 }
