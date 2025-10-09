@@ -1,8 +1,8 @@
 .container {
   composes: glass-dark from global;
   position: fixed;
-  right: 20px;
-  bottom: 120px;
+  left: 20px;
+  bottom: 20px;
   border-radius: var(--radius-2xl);
   overflow: hidden;
   z-index: 1001;
@@ -34,7 +34,7 @@
 }
 
 .closeButton {
-  background: none;
+  background: transparent;
   border: none;
   font-size: 28px;
   cursor: pointer;
@@ -46,11 +46,10 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
-  transition: all var(--transition-base);
+  transition: color 0.15s ease-out;
 }
 
 .closeButton:hover {
-  background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.9);
 }
 

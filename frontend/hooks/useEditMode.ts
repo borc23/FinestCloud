@@ -23,7 +23,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   const selectedDuringDragRef = useRef<Set<google.maps.Polygon>>(new Set())
   const isCtrlPressedRef = useRef(false)
   const justCompletedDragRef = useRef(false)
-  const [isDraggingPolygon, setIsDraggingPolygon] = useState(false)
 
   useEffect(() => {
     allPolygonsRef.current = allPolygons

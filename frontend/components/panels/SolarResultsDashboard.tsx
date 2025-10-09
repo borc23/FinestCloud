@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styles from './SolarResultsDashboard.module.css'
 import MonthlyProductionChart from './MonthlyProductionChart'
 import { usePVWatts } from '@/hooks/usePVWatts'
@@ -14,6 +14,7 @@ import {
 
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
+  const [isMinimized, setIsMinimized] = useState(false)
   const panelData = isComplexData(props)
     ? usePanelData(props.panelGenerationData)
     : {
@@ -33,6 +34,20 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
 
   // Extract cost estimate
   const costEstimate = props.costEstimate
+
+  // Auto-minimize when edit mode is active
+  useEffect(() => {
+    if (props.isEditMode) {
+      setIsMinimized(true)
+    }
+  }, [props.isEditMode])
+
+  // Hide dashboard when monthly chart opens, restore when it closes
+  useEffect(() => {
+    if (showMonthlyChart) {
+      setIsMinimized(true)
+    }
+  }, [showMonthlyChart])
 
   const { data: pvwattsData, isLoading } = usePVWatts({
     latitude: location?.lat,
@@ -55,66 +70,65 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
 
   return (
     <>
-      {/* Results Dashboard - Hidden when monthly chart is open */}
-      {!showMonthlyChart && (
-        <div className={styles.dashboard}>
-          {/* Summary Bar */}
-          <DashboardSummary
-            panelCount={panelData.totalPanels}
-            systemSize={panelData.systemSize}
-            annualProduction={annualProduction}
-          />
-
-          {/* Detailed Metrics */}
-          <div className={styles.details}>
-            <MetricItem label="Panel Count" value={panelData.totalPanels} />
-
-            <MetricItem
-              label="System Size"
-              value={`${panelData.systemSize.toFixed(1)} kW`}
-            />
-
-            {annualProduction && (
-              <MetricItem
-                label="Annual Production"
-                value={`${annualProduction.toLocaleString()} kWh/year`}
-                isLoading={isLoading}
-              />
-            )}
-
-            {pvwattsData && (
-              <MetricItem
-                label="Capacity Factor"
-                value={`${pvwattsData.capacity_factor.toFixed(1)}%`}
-              />
-            )}
-
-            {costEstimate && (
-              <MetricItem
-                label="Estimated Cost"
-                value={`$${costEstimate.toLocaleString()}`}
-              />
-            )}
-          </div>
-
-          {pvwattsData && (
-            <div className={styles.monthlyButtonContainer}>
+      <div className={`${styles.dashboard} ${isMinimized ? styles.minimized : ''}`}>
+        {isMinimized ? (
+          <button
+            className={styles.minimizedButton}
+            onClick={() => setIsMinimized(false)}
+          >
+            📊
+          </button>
+        ) : (
+          <>
+            <div className={styles.header}>
+              <span className={styles.title}>Analytics</span>
               <button
-                className={styles.monthlyButton}
-                onClick={() => setShowMonthlyChart(!showMonthlyChart)}
+                className={styles.closeButton}
+                onClick={() => setIsMinimized(true)}
               >
-                {showMonthlyChart ? 'Hide' : 'View'} Monthly Breakdown
+                ×
               </button>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Monthly Chart Modal */}
+            <div className={styles.details}>
+              <MetricItem label="Panel Count" value={panelData.totalPanels} />
+              <MetricItem label="System Size" value={`${panelData.systemSize.toFixed(1)} kW`} />
+              {annualProduction && (
+                <MetricItem
+                  label="Annual Production"
+                  value={`${annualProduction.toLocaleString()} kWh/year`}
+                  isLoading={isLoading}
+                />
+              )}
+              {pvwattsData && (
+                <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
+              )}
+              {costEstimate && (
+                <MetricItem label="Estimated Cost" value={`$${costEstimate.toLocaleString()}`} />
+              )}
+            </div>
+
+            {pvwattsData && (
+              <div className={styles.monthlyButtonContainer}>
+                <button
+                  className={styles.monthlyButton}
+                  onClick={() => setShowMonthlyChart(true)}
+                >
+                  View Monthly Breakdown
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {showMonthlyChart && pvwattsData && (
         <MonthlyProductionChart
           data={pvwattsData}
-          onClose={() => setShowMonthlyChart(false)}
+          onClose={() => {
+            setShowMonthlyChart(false)
+            setIsMinimized(false)
+          }}
         />
       )}
     </>

@@ -37,12 +37,14 @@ export interface SimpleDataProps {
   panelWattage?: number
   tilt?: number
   azimuth?: number
+  isEditMode?: boolean
 }
 
 export interface ComplexDataProps {
   panelGenerationData: PanelGenerationData
   mapCenter?: Location
   costEstimate?: number
+  isEditMode?: boolean
 }
 
 export type SolarResultsDashboardProps = SimpleDataProps | ComplexDataProps
