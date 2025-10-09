@@ -379,6 +379,7 @@ export default function MapContainer({
             lat: map.getCenter()!.lat(),
             lng: map.getCenter()!.lng()
           } : undefined}
+          isEditMode={isEditMode || (activeTool !== '' && activeTool !== 'panels')}
         />
       )}
 

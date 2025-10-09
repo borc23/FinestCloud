@@ -15,6 +15,7 @@ import {
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
+
   const panelData = isComplexData(props)
     ? usePanelData(props.panelGenerationData)
     : {
@@ -35,14 +36,14 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
   // Extract cost estimate
   const costEstimate = props.costEstimate
 
-  // Auto-minimize when edit mode is active
+  // Auto-minimize when edit/draw/select modes are active
   useEffect(() => {
     if (props.isEditMode) {
       setIsMinimized(true)
     }
   }, [props.isEditMode])
 
-  // Hide dashboard when monthly chart opens, restore when it closes
+  // Hide dashboard when monthly chart opens
   useEffect(() => {
     if (showMonthlyChart) {
       setIsMinimized(true)
@@ -75,6 +76,7 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
           <button
             className={styles.minimizedButton}
             onClick={() => setIsMinimized(false)}
+            aria-label="Expand analytics"
           >
             📊
           </button>
@@ -85,6 +87,7 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps)
               <button
                 className={styles.closeButton}
                 onClick={() => setIsMinimized(true)}
+                aria-label="Minimize analytics"
               >
                 ×
               </button>
