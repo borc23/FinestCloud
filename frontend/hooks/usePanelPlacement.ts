@@ -38,6 +38,7 @@ export function usePanelPlacement({
   const lastGridPosRef = useRef<{ gridId: number; x: number; y: number } | null>(null)
   const rafRef = useRef<number | null>(null)
   const pendingUpdateRef = useRef<google.maps.LatLng | null>(null)
+  const spatialGridRef = useRef<Map<string, google.maps.Polygon[]>>(new Map())
 
   /**
    * Extract panel dimensions from generated panel data for each grid
@@ -113,6 +114,71 @@ export function usePanelPlacement({
   }, [])
 
   /**
+   * Build spatial grid for fast collision detection
+   * Divides space into grid cells and stores panels by their location
+   */
+  const buildSpatialGrid = useCallback(() => {
+    const grid = new Map<string, google.maps.Polygon[]>()
+    const cellSize = 0.0001 // ~11 meters at equator
+
+    for (const panel of existingPanels) {
+      const path = panel.getPath()
+      if (!path) continue
+
+      // Get panel bounds
+      const bounds = new google.maps.LatLngBounds()
+      path.forEach(latLng => bounds.extend(latLng))
+
+      // Add panel to all cells it overlaps
+      const minLat = Math.floor(bounds.getSouthWest().lat() / cellSize)
+      const maxLat = Math.ceil(bounds.getNorthEast().lat() / cellSize)
+      const minLng = Math.floor(bounds.getSouthWest().lng() / cellSize)
+      const maxLng = Math.ceil(bounds.getNorthEast().lng() / cellSize)
+
+      for (let lat = minLat; lat <= maxLat; lat++) {
+        for (let lng = minLng; lng <= maxLng; lng++) {
+          const key = `${lat},${lng}`
+          const existing = grid.get(key) || []
+          existing.push(panel)
+          grid.set(key, existing)
+        }
+      }
+    }
+
+    spatialGridRef.current = grid
+  }, [existingPanels])
+
+  /**
+   * Get nearby panels using spatial grid
+   */
+  const getNearbyPanels = useCallback((coords: Coordinate[]): google.maps.Polygon[] => {
+    if (spatialGridRef.current.size === 0) return existingPanels
+
+    const cellSize = 0.0001
+    const nearbyPanels = new Set<google.maps.Polygon>()
+
+    // Calculate center of test panel
+    const centerLat = (coords[0].lat + coords[2].lat) / 2
+    const centerLng = (coords[0].lng + coords[2].lng) / 2
+
+    // Check 9 cells around the panel (3x3 grid)
+    const centerCellLat = Math.floor(centerLat / cellSize)
+    const centerCellLng = Math.floor(centerLng / cellSize)
+
+    for (let latOffset = -1; latOffset <= 1; latOffset++) {
+      for (let lngOffset = -1; lngOffset <= 1; lngOffset++) {
+        const key = `${centerCellLat + latOffset},${centerCellLng + lngOffset}`
+        const panels = spatialGridRef.current.get(key)
+        if (panels) {
+          panels.forEach(p => nearbyPanels.add(p))
+        }
+      }
+    }
+
+    return Array.from(nearbyPanels)
+  }, [existingPanels])
+
+  /**
    * Check if panel position overlaps with existing panels
    * Only checks if new panel's center is inside an existing panel
    * This allows edge-to-edge placement (touching panels are OK)
@@ -125,16 +191,17 @@ export function usePanelPlacement({
     const testCenterLng = (coords[0].lng + coords[2].lng) / 2
     const testCenter = new google.maps.LatLng(testCenterLat, testCenterLng)
 
-    // Only check if the center of the new panel is inside an existing panel
-    // This allows edge-to-edge placement while preventing overlaps
-    for (const panel of existingPanels) {
+    // Only check nearby panels using spatial grid
+    const nearbyPanels = getNearbyPanels(coords)
+
+    for (const panel of nearbyPanels) {
       if (google.maps.geometry.poly.containsLocation(testCenter, panel)) {
         return true
       }
     }
 
     return false
-  }, [existingPanels])
+  }, [getNearbyPanels])
 
   /**
    * Find position on selected grid only
@@ -190,43 +257,43 @@ export function usePanelPlacement({
     if (!map) return
 
     const result = findBestGridPosition(latLng)
-    if (!result) return
+    if (!result) {
+      return
+    }
 
     const { coords, gridId, hasCollision } = result
 
-    // Store last valid position
     if (!hasCollision) {
       lastValidPositionRef.current = { coords, gridId }
     }
 
-    // Update ghost panel visualization
-    if (ghostPanelRef.current) {
-      ghostPanelRef.current.setMap(null)
+    const path = coords.map(c => new google.maps.LatLng(c.lat, c.lng))
+
+    if (!ghostPanelRef.current) {
+      const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
+      ghostPanelRef.current = new google.maps.Polygon({
+        paths: path,
+        map,
+        ...panelOptions,
+        clickable: false,
+        zIndex: 3000
+      })
+    } else {
+      ghostPanelRef.current.setPaths(path)
     }
 
-    const path = coords.map(c => new google.maps.LatLng(c.lat, c.lng))
-    const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
-
-    ghostPanelRef.current = new google.maps.Polygon({
-      paths: path,
-      map,
-      ...panelOptions,
+    ghostPanelRef.current.setOptions({
       fillOpacity: hasCollision ? 0.3 : 0.5,
       strokeOpacity: hasCollision ? 0.5 : 0.8,
       fillColor: hasCollision ? '#ff453a' : '#34c759',
-      strokeColor: hasCollision ? '#ff453a' : '#34c759',
-      clickable: false,
-      zIndex: 3000
+      strokeColor: hasCollision ? '#ff453a' : '#34c759'
     })
   }, [map, findBestGridPosition])
 
-  /**
-   * Throttled update with requestAnimationFrame
-   */
   const scheduleUpdate = useCallback((latLng: google.maps.LatLng) => {
     pendingUpdateRef.current = latLng
 
-    if (rafRef.current !== null) return // Already scheduled
+    if (rafRef.current !== null) return
 
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null
@@ -245,7 +312,6 @@ export function usePanelPlacement({
 
     const { coords, gridId } = lastValidPositionRef.current
 
-    // Check collision one more time
     if (checkCollision(coords)) {
       console.warn('Cannot place panel: collision detected')
       return
@@ -281,6 +347,9 @@ export function usePanelPlacement({
       setSelectedGridId(availableGrids[0])
     }
 
+    // Build spatial grid for fast collision detection
+    buildSpatialGrid()
+
     setIsPlacing(true)
     lastGridPosRef.current = null
 
@@ -291,7 +360,7 @@ export function usePanelPlacement({
       disableDoubleClickZoom: true,
       clickableIcons: false
     })
-  }, [map, isEditMode, selectedGridId, availableGrids])
+  }, [map, isEditMode, selectedGridId, availableGrids, buildSpatialGrid])
 
   /**
    * Stop panel placement mode
@@ -299,7 +368,6 @@ export function usePanelPlacement({
   const stopPlacement = useCallback(() => {
     setIsPlacing(false)
 
-    // Cancel pending RAF
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current)
       rafRef.current = null
@@ -318,6 +386,7 @@ export function usePanelPlacement({
     lastValidPositionRef.current = null
     lastGridPosRef.current = null
     pendingUpdateRef.current = null
+    spatialGridRef.current.clear()
 
     if (map) {
       map.setOptions({
