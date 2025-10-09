@@ -1,177 +1,346 @@
 /**
  * Grid snapping utility for panel movement
  * Supports multiple grids (one per roof) with different orientations
- * Each panel is tagged with its gridId for O(1) lookup
+ * Uses pure grid-space mathematics for precise multi-panel dragging
  */
 
-interface GridVectors {
-  origin: { lat: number; lng: number }
-  vecX: { lat: number; lng: number }
-  vecY: { lat: number; lng: number }
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface LatLng {
+  lat: number
+  lng: number
 }
 
-interface ExtendedPolygon extends google.maps.Polygon {
-  gridId?: number
+export interface Vec2 {
+  lat: number
+  lng: number
 }
 
-let cachedGrids: GridVectors[] = []
-const polygonToGridMap = new WeakMap<google.maps.Polygon, number>()
+export interface GridCoords {
+  x: number
+  y: number
+}
 
-/**
- * Calculate grid vectors for a single roof's panels
- */
-function calculateGridVectorsForRoof(panels: any[]): GridVectors | null {
-  if (!panels || panels.length === 0) return null
+export interface GridDelta {
+  dx: number
+  dy: number
+}
 
-  const panel = panels[0]
-  const coords = panel.coords || panel
-  if (coords.length === 4) {
-    const p0 = { lat: coords[0].lat, lng: coords[0].lng }
-    const p1 = { lat: coords[1].lat, lng: coords[1].lng }
-    const p3 = { lat: coords[3].lat, lng: coords[3].lng }
+interface PanelData {
+  roofs?: Array<{
+    panels?: Array<{
+      coords?: Array<{ lat: number; lng: number }>
+    }>
+  }>
+}
+
+// ============================================================================
+// Grid Class - Pure coordinate transformation
+// ============================================================================
+
+class Grid {
+  private readonly origin: LatLng
+  private readonly vecX: Vec2
+  private readonly vecY: Vec2
+  private readonly det: number // Determinant for inverse transform
+
+  constructor(origin: LatLng, vecX: Vec2, vecY: Vec2) {
+    this.origin = origin
+    this.vecX = vecX
+    this.vecY = vecY
+    // Calculate determinant for 2x2 matrix inverse
+    this.det = vecX.lat * vecY.lng - vecX.lng * vecY.lat
+  }
+
+  /**
+   * Convert world coordinates (lat/lng) to grid coordinates (x, y steps)
+   * Uses matrix inversion to solve: fromOrigin = x * vecX + y * vecY
+   */
+  worldToGrid(latLng: LatLng): GridCoords {
+    const fromOrigin: Vec2 = {
+      lat: latLng.lat - this.origin.lat,
+      lng: latLng.lng - this.origin.lng
+    }
+
+    // Solve the linear system using inverse of [vecX, vecY] matrix
+    // [fromOrigin.lat]   [vecX.lat  vecY.lat] [x]
+    // [fromOrigin.lng] = [vecX.lng  vecY.lng] [y]
+    //
+    // Inverse matrix formula:
+    // x = (vecY.lng * fromOrigin.lat - vecY.lat * fromOrigin.lng) / det
+    // y = (vecX.lat * fromOrigin.lng - vecX.lng * fromOrigin.lat) / det
 
     return {
-      origin: p0,
-      vecX: { lat: p1.lat - p0.lat, lng: p1.lng - p0.lng },
-      vecY: { lat: p3.lat - p0.lat, lng: p3.lng - p0.lng }
+      x: (this.vecY.lng * fromOrigin.lat - this.vecY.lat * fromOrigin.lng) / this.det,
+      y: (this.vecX.lat * fromOrigin.lng - this.vecX.lng * fromOrigin.lat) / this.det
     }
   }
 
-  return null
+  /**
+   * Convert grid coordinates (x, y steps) to world coordinates (lat/lng)
+   */
+  gridToWorld(gridCoords: GridCoords): LatLng {
+    return {
+      lat: this.origin.lat + gridCoords.x * this.vecX.lat + gridCoords.y * this.vecY.lat,
+      lng: this.origin.lng + gridCoords.x * this.vecX.lng + gridCoords.y * this.vecY.lng
+    }
+  }
+
+  /**
+   * Snap a world position to the nearest grid point
+   */
+  snapToGrid(latLng: LatLng): LatLng {
+    const gridCoords = this.worldToGrid(latLng)
+    const snapped: GridCoords = {
+      x: Math.round(gridCoords.x),
+      y: Math.round(gridCoords.y)
+    }
+    return this.gridToWorld(snapped)
+  }
+
+  /**
+   * Calculate grid delta between two world positions
+   * Returns how many grid steps (dx, dy) to move from 'from' to 'to'
+   */
+  calculateGridDelta(from: LatLng, to: LatLng): GridDelta {
+    const fromGrid = this.worldToGrid(from)
+    const toGrid = this.worldToGrid(to)
+    return {
+      dx: toGrid.x - fromGrid.x,
+      dy: toGrid.y - fromGrid.y
+    }
+  }
+
+  /**
+   * Apply a grid delta to a position
+   */
+  applyGridDelta(startPos: LatLng, delta: GridDelta, snap = true): LatLng {
+    const startGrid = this.worldToGrid(startPos)
+    const newGrid: GridCoords = {
+      x: startGrid.x + delta.dx,
+      y: startGrid.y + delta.dy
+    }
+
+    if (snap) {
+      newGrid.x = Math.round(newGrid.x)
+      newGrid.y = Math.round(newGrid.y)
+    }
+
+    return this.gridToWorld(newGrid)
+  }
 }
 
-/**
- * Set grid vectors (called when panels are generated)
- * Calculates separate grid for each roof
- */
-export function setGridVectors(panelData: any) {
-  cachedGrids = []
+// ============================================================================
+// GridManager - Manages multiple grids and polygon associations
+// ============================================================================
 
-  if (!panelData?.roofs) return
+class GridManager {
+  private grids: Grid[] = []
+  private polygonToGridId = new WeakMap<google.maps.Polygon, number>()
 
-  // Calculate grid for each roof
-  panelData.roofs.forEach((roof: any) => {
-    if (roof.panels && roof.panels.length > 0) {
-      const grid = calculateGridVectorsForRoof(roof.panels)
-      if (grid) {
-        cachedGrids.push(grid)
+  /**
+   * Initialize grids from panel data
+   */
+  setGridsFromPanelData(panelData: PanelData): void {
+    this.grids = []
+
+    if (!panelData?.roofs) return
+
+    panelData.roofs.forEach(roof => {
+      if (roof.panels && roof.panels.length > 0) {
+        const grid = this.createGridFromPanels(roof.panels)
+        if (grid) {
+          this.grids.push(grid)
+        }
       }
+    })
+  }
+
+  /**
+   * Create a Grid instance from panel coordinates
+   */
+  private createGridFromPanels(panels: Array<{ coords?: Array<LatLng> } | Array<LatLng>>): Grid | null {
+    if (!panels || panels.length === 0) return null
+
+    const panel = panels[0]
+    const coords = ('coords' in panel) ? panel.coords : panel
+
+    if (coords && coords.length >= 4) {
+      const p0: LatLng = { lat: coords[0].lat, lng: coords[0].lng }
+      const p1: LatLng = { lat: coords[1].lat, lng: coords[1].lng }
+      const p3: LatLng = { lat: coords[3].lat, lng: coords[3].lng }
+
+      const vecX: Vec2 = { lat: p1.lat - p0.lat, lng: p1.lng - p0.lng }
+      const vecY: Vec2 = { lat: p3.lat - p0.lat, lng: p3.lng - p0.lng }
+
+      return new Grid(p0, vecX, vecY)
     }
-  })
-}
 
-/**
- * Clear grid vectors (called when panels are cleared)
- */
-export function clearGridVectors() {
-  cachedGrids = []
-  // WeakMap clears automatically when polygons are garbage collected
-}
-
-/**
- * Tag a panel polygon with its grid ID and detect if it's on half-step
- * Called during panel generation to associate panel with its grid
- */
-export function tagPanelWithGrid(polygon: google.maps.Polygon, gridId: number) {
-  polygonToGridMap.set(polygon, gridId)
-  ;(polygon as ExtendedPolygon).gridId = gridId
-}
-
-/**
- * Snap to a specific grid by ID with optional half-step constraint
- * O(1) performance using direct grid lookup
- */
-function snapToGridById(latLng: { lat: number; lng: number }, gridId: number): { lat: number; lng: number } {
-  if (gridId < 0 || gridId >= cachedGrids.length) return latLng
-
-  const grid = cachedGrids[gridId]
-  const { origin, vecX, vecY } = grid
-
-  // Vector from origin to point
-  const fromOrigin = {
-    lat: latLng.lat - origin.lat,
-    lng: latLng.lng - origin.lng
+    return null
   }
 
-  // Project onto grid axes
-  const magXSq = vecX.lat * vecX.lat + vecX.lng * vecX.lng
-  const magYSq = vecY.lat * vecY.lat + vecY.lng * vecY.lng
+  /**
+   * Clear all grids
+   */
+  clear(): void {
+    this.grids = []
+  }
 
-  const dotX = fromOrigin.lat * vecX.lat + fromOrigin.lng * vecX.lng
-  const dotY = fromOrigin.lat * vecY.lat + fromOrigin.lng * vecY.lng
+  /**
+   * Tag a polygon with its grid ID
+   */
+  tagPolygon(polygon: google.maps.Polygon, gridId: number): void {
+    this.polygonToGridId.set(polygon, gridId)
+  }
 
-  // Grid coordinates in floating point
-  const gridX = dotX / magXSq
-  const gridY = dotY / magYSq
+  /**
+   * Get grid ID for a polygon
+   */
+  getPolygonGridId(polygon: google.maps.Polygon): number | undefined {
+    return this.polygonToGridId.get(polygon)
+  }
 
-  // Snap to nearest 0.5 grid (allows both integer and half-step positions)
-  const snappedGridX = Math.round(gridX * 2) / 2
-  const snappedGridY = Math.round(gridY)
+  /**
+   * Get a grid by ID
+   */
+  getGrid(gridId: number): Grid | null {
+    return this.grids[gridId] ?? null
+  }
 
-  // Convert back to lat/lng
-  return {
-    lat: origin.lat + snappedGridX * vecX.lat + snappedGridY * vecY.lat,
-    lng: origin.lng + snappedGridX * vecX.lng + snappedGridY * vecY.lng
+  /**
+   * Snap a polygon's path to its grid
+   */
+  snapPolygonToGrid(path: google.maps.LatLng[], polygon?: google.maps.Polygon): google.maps.LatLng[] {
+    if (this.grids.length === 0 || path.length === 0) return path
+
+    const firstCorner: LatLng = { lat: path[0].lat(), lng: path[0].lng() }
+    let snappedFirst: LatLng
+
+    if (polygon) {
+      const gridId = this.polygonToGridId.get(polygon)
+      if (gridId !== undefined) {
+        const grid = this.getGrid(gridId)
+        snappedFirst = grid ? grid.snapToGrid(firstCorner) : firstCorner
+      } else {
+        snappedFirst = this.snapToClosestGrid(firstCorner)
+      }
+    } else {
+      snappedFirst = this.snapToClosestGrid(firstCorner)
+    }
+
+    // Apply offset to entire polygon
+    const offsetLat = snappedFirst.lat - firstCorner.lat
+    const offsetLng = snappedFirst.lng - firstCorner.lng
+
+    return path.map(ll =>
+      new google.maps.LatLng(ll.lat() + offsetLat, ll.lng() + offsetLng)
+    )
+  }
+
+  /**
+   * Snap to the closest grid (fallback when gridId is unknown)
+   */
+  private snapToClosestGrid(latLng: LatLng): LatLng {
+    if (this.grids.length === 0) return latLng
+
+    let closestSnap = latLng
+    let minDistance = Infinity
+
+    this.grids.forEach(grid => {
+      const snapped = grid.snapToGrid(latLng)
+      const distance = Math.sqrt(
+        Math.pow(snapped.lat - latLng.lat, 2) +
+        Math.pow(snapped.lng - latLng.lng, 2)
+      )
+
+      if (distance < minDistance) {
+        minDistance = distance
+        closestSnap = snapped
+      }
+    })
+
+    return closestSnap
   }
 }
 
+// ============================================================================
+// Singleton Instance & Public API
+// ============================================================================
+
+const gridManager = new GridManager()
+
 /**
- * Snap an entire polygon path to grid
- * Uses the polygon's tagged gridId and half-step info for O(1) lookup
- * Falls back to closest grid if no tag found
+ * Set grid vectors from panel data (called when panels are generated)
+ */
+export function setGridVectors(panelData: PanelData): void {
+  gridManager.setGridsFromPanelData(panelData)
+}
+
+/**
+ * Clear all grid vectors (called when panels are cleared)
+ */
+export function clearGridVectors(): void {
+  gridManager.clear()
+}
+
+/**
+ * Tag a panel polygon with its grid ID
+ */
+export function tagPanelWithGrid(polygon: google.maps.Polygon, gridId: number): void {
+  gridManager.tagPolygon(polygon, gridId)
+}
+
+/**
+ * Get the grid ID for a polygon
+ */
+export function getPolygonGridId(polygon: google.maps.Polygon): number | undefined {
+  return gridManager.getPolygonGridId(polygon)
+}
+
+/**
+ * Snap a polygon path to its grid
  */
 export function snapPolygonToGrid(path: google.maps.LatLng[], polygon?: google.maps.Polygon): google.maps.LatLng[] {
-  if (cachedGrids.length === 0 || path.length === 0) return path
-
-  const firstCorner = { lat: path[0].lat(), lng: path[0].lng() }
-  let snappedFirst: { lat: number; lng: number }
-
-  // Try to get gridId from polygon
-  if (polygon) {
-    const gridId = polygonToGridMap.get(polygon) ?? (polygon as ExtendedPolygon).gridId
-    if (gridId !== undefined) {
-      // O(1) direct lookup
-      snappedFirst = snapToGridById(firstCorner, gridId)
-    } else {
-      // Fallback: find closest grid (for non-tagged polygons)
-      snappedFirst = snapToClosestGrid(firstCorner)
-    }
-  } else {
-    // No polygon reference, use closest grid
-    snappedFirst = snapToClosestGrid(firstCorner)
-  }
-
-  // Calculate offset
-  const offsetLat = snappedFirst.lat - firstCorner.lat
-  const offsetLng = snappedFirst.lng - firstCorner.lng
-
-  // Apply same offset to all corners
-  return path.map(ll =>
-    new google.maps.LatLng(ll.lat() + offsetLat, ll.lng() + offsetLng)
-  )
+  return gridManager.snapPolygonToGrid(path, polygon)
 }
 
 /**
- * Fallback: Find closest grid by distance (used when gridId not available)
+ * Get grid instance for advanced operations
  */
-function snapToClosestGrid(latLng: { lat: number; lng: number }): { lat: number; lng: number } {
-  if (cachedGrids.length === 0) return latLng
+export function getGrid(gridId: number): Grid | null {
+  return gridManager.getGrid(gridId)
+}
 
-  let closestSnap = latLng
-  let minDistance = Infinity
+/**
+ * Convert world coordinates to grid coordinates
+ */
+export function worldToGrid(latLng: LatLng, gridId: number): GridCoords | null {
+  const grid = gridManager.getGrid(gridId)
+  return grid ? grid.worldToGrid(latLng) : null
+}
 
-  cachedGrids.forEach((_, gridId) => {
-    const snapped = snapToGridById(latLng, gridId)
-    const distance = Math.sqrt(
-      Math.pow(snapped.lat - latLng.lat, 2) +
-      Math.pow(snapped.lng - latLng.lng, 2)
-    )
+/**
+ * Convert grid coordinates to world coordinates
+ */
+export function gridToWorld(gridCoords: GridCoords, gridId: number): LatLng | null {
+  const grid = gridManager.getGrid(gridId)
+  return grid ? grid.gridToWorld(gridCoords) : null
+}
 
-    if (distance < minDistance) {
-      minDistance = distance
-      closestSnap = snapped
-    }
-  })
+/**
+ * Calculate grid delta between two positions
+ */
+export function calculateGridDelta(from: LatLng, to: LatLng, gridId: number): GridDelta | null {
+  const grid = gridManager.getGrid(gridId)
+  return grid ? grid.calculateGridDelta(from, to) : null
+}
 
-  return closestSnap
+/**
+ * Apply grid delta to a position
+ */
+export function applyGridDelta(startPos: LatLng, delta: GridDelta, gridId: number, snap = true): LatLng | null {
+  const grid = gridManager.getGrid(gridId)
+  return grid ? grid.applyGridDelta(startPos, delta, snap) : null
 }
