@@ -15,6 +15,8 @@ export class PVWattsApiService {
   private baseUrl = '/api/pvwatts'
   private cachedData: PVWattsResponse | null = null
   private lastRequestParams: PVWattsCalculationParams | null = null
+  private cacheTimestamp: number | null = null
+  private cacheTTL: number = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
   private inFlightRequest: Promise<PVWattsResponse> | null = null
   private inFlightParams: PVWattsCalculationParams | null = null
 
@@ -23,14 +25,13 @@ export class PVWattsApiService {
    */
   async calculateProduction(params: PVWattsCalculationParams): Promise<PVWattsResponse> {
     // Check cache
-    if (this.isCachedDataValid(params)) {
+    if (this.isCachedDataValid(params) && this.cachedData) {
       console.log('Using cached PVWatts data')
-      return this.cachedData!
+      return this.cachedData
     }
 
     // Check if there's an in-flight request with the same parameters
     if (this.inFlightRequest && this.paramsMatch(this.inFlightParams, params)) {
-      console.log('Reusing in-flight PVWatts request')
       return this.inFlightRequest
     }
 
@@ -40,9 +41,10 @@ export class PVWattsApiService {
 
     try {
       const data = await this.inFlightRequest
-      // Cache the result
+      // Cache the result with timestamp
       this.cachedData = data
       this.lastRequestParams = params
+      this.cacheTimestamp = Date.now()
       return data
     } finally {
       this.inFlightRequest = null
@@ -181,7 +183,14 @@ export class PVWattsApiService {
    * Check if cached data is valid for given parameters
    */
   private isCachedDataValid(params: PVWattsCalculationParams): boolean {
-    if (!this.cachedData || !this.lastRequestParams) {
+    if (!this.cachedData || !this.lastRequestParams || !this.cacheTimestamp) {
+      return false
+    }
+
+    // Check if cache has expired
+    const cacheAge = Date.now() - this.cacheTimestamp
+    if (cacheAge > this.cacheTTL) {
+      console.log('Cache expired, age:', Math.round(cacheAge / 1000 / 60), 'minutes')
       return false
     }
 
@@ -194,6 +203,21 @@ export class PVWattsApiService {
   clearCache(): void {
     this.cachedData = null
     this.lastRequestParams = null
+    this.cacheTimestamp = null
+  }
+
+  /**
+   * Set cache TTL (time-to-live) in milliseconds
+   */
+  setCacheTTL(ttlMs: number): void {
+    this.cacheTTL = ttlMs
+  }
+
+  /**
+   * Get current cache TTL in milliseconds
+   */
+  getCacheTTL(): number {
+    return this.cacheTTL
   }
 
   /**
