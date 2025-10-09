@@ -15,6 +15,8 @@ import { useEditMode } from '../../hooks/useEditMode'
 import { usePolygonManager } from '../../hooks/usePolygonManager'
 import { useDrawingMode } from '../../hooks/useDrawingMode'
 import { usePanelGeneration } from '../../hooks/usePanelGeneration'
+import { usePanelPlacement } from '../../hooks/usePanelPlacement'
+import { tagPanelWithGrid } from '../../utils/gridSnapping'
 import EditModeIndicator from './EditModeIndicator'
 
 declare global {
@@ -44,7 +46,7 @@ export default function MapContainer({
   const [isImageView, setIsImageView] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
-  const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object'>('roof')
+  const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object' | 'panel'>('roof')
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
@@ -132,6 +134,25 @@ export default function MapContainer({
     onPanelsGenerated: (data) => togglePolygonVisibility(false)
   })
 
+  // Panel placement state
+  const [placedPanels, setPlacedPanels] = useState<google.maps.Polygon[]>([])
+
+  // Panel placement
+  const {
+    isPlacing,
+    startPlacement,
+    stopPlacement
+  } = usePanelPlacement({
+    map,
+    isEditMode,
+    existingPanels: [...panelMarkers, ...placedPanels],
+    panelData,
+    onPanelPlaced: (panel, gridId) => {
+      tagPanelWithGrid(panel, gridId)
+      setPlacedPanels(prev => [...prev, panel])
+    }
+  })
+
   // ========================================
   // Event Handlers
   // ========================================
@@ -140,13 +161,19 @@ export default function MapContainer({
     onToolChange?.(tab)
   }, [onToolChange])
 
-  const handleDrawingTypeChange = useCallback((type: 'roof' | 'object') => {
+  const handleDrawingTypeChange = useCallback((type: 'roof' | 'object' | 'panel') => {
     setDrawingTypeSelection(type)
-    if (isDrawing) {
-      stopDrawing()
+    if (type === 'panel') {
+      if (isDrawing) stopDrawing()
+      startPlacement()
+    } else {
+      if (isPlacing) stopPlacement()
+      if (isDrawing) {
+        stopDrawing()
+      }
       startDrawing(type)
     }
-  }, [isDrawing, stopDrawing, startDrawing])
+  }, [isDrawing, isPlacing, stopDrawing, startDrawing, startPlacement, stopPlacement])
 
   const handleAngleConfirm = useCallback(async (data: any) => {
     await handleAngleConfirmHook(data)
@@ -165,6 +192,10 @@ export default function MapContainer({
     // Clear panel markers
     clearPanels()
 
+    // Clear placed panels
+    placedPanels.forEach(panel => panel.setMap(null))
+    setPlacedPanels([])
+
     // Clear capture overlay
     setShowCaptureOverlay(false)
 
@@ -174,7 +205,8 @@ export default function MapContainer({
     // Exit edit/draw mode if active
     if (isEditMode) toggleEditMode()
     if (isDrawing) stopDrawing()
-  }, [clearAllPolygons, clearPanels, onToolChange, isEditMode, isDrawing, toggleEditMode, stopDrawing])
+    if (isPlacing) stopPlacement()
+  }, [clearAllPolygons, clearPanels, placedPanels, onToolChange, isEditMode, isDrawing, isPlacing, toggleEditMode, stopDrawing, stopPlacement])
 
   const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
     if (!map || !bounds) return
@@ -247,37 +279,48 @@ export default function MapContainer({
     if (activeTool === 'edit') {
       if (!isEditMode) toggleEditMode()
       if (isDrawing) stopDrawing()
+      if (isPlacing) stopPlacement()
     } else if (activeTool === 'draw') {
       if (!isEditMode) toggleEditMode()
-      if (!isDrawing) startDrawing(drawingTypeSelection)
+      if (drawingTypeSelection === 'panel') {
+        if (!isPlacing) startPlacement()
+        if (isDrawing) stopDrawing()
+      } else {
+        if (!isDrawing) startDrawing(drawingTypeSelection as 'roof' | 'object')
+        if (isPlacing) stopPlacement()
+      }
     } else if (activeTool === 'panels') {
       startPanelGeneration()
       if (isEditMode) toggleEditMode()
       if (isDrawing) stopDrawing()
+      if (isPlacing) stopPlacement()
     } else {
       if (isEditMode) toggleEditMode()
       if (isDrawing) stopDrawing()
+      if (isPlacing) stopPlacement()
     }
-  }, [activeTool, isEditMode, isDrawing, drawingTypeSelection, toggleEditMode, stopDrawing, startDrawing, startPanelGeneration])
+  }, [activeTool, isEditMode, isDrawing, isPlacing, drawingTypeSelection, toggleEditMode, stopDrawing, stopPlacement, startDrawing, startPanelGeneration])
 
   // Sync polygon refs and update polygon states
   const roofPolygonsRef = useRef<google.maps.Polygon[]>([])
   const objectPolygonsRef = useRef<google.maps.Polygon[]>([])
   const panelMarkersRef = useRef<google.maps.Polygon[]>([])
+  const placedPanelsRef = useRef<google.maps.Polygon[]>([])
 
   useEffect(() => {
     roofPolygonsRef.current = roofPolygons
     objectPolygonsRef.current = objectPolygons
     panelMarkersRef.current = panelMarkers
-  }, [roofPolygons, objectPolygons, panelMarkers])
+    placedPanelsRef.current = placedPanels
+  }, [roofPolygons, objectPolygons, panelMarkers, placedPanels])
 
   // Update all polygons including panels
   useEffect(() => {
-    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current, ...panelMarkersRef.current]
+    const allPolygons = [...roofPolygonsRef.current, ...objectPolygonsRef.current, ...panelMarkersRef.current, ...placedPanelsRef.current]
 
     allPolygons.forEach(polygon => {
       if (polygon) {
-        polygon.setOptions({ clickable: !isDrawing })
+        polygon.setOptions({ clickable: !isDrawing && !isPlacing })
       }
     })
 
@@ -291,12 +334,16 @@ export default function MapContainer({
       // Treat panels as "non-roof" but they'll be identified by isPanelElement
       updateAllPolygons(panelMarkersRef.current, false)
     }
-  }, [isEditMode, selectedPolygons, isDrawing, updateAllPolygons, panelMarkers])
+    if (placedPanelsRef.current.length > 0) {
+      // Treat placed panels as "non-roof" but they'll be identified by isPanelElement
+      updateAllPolygons(placedPanelsRef.current, false)
+    }
+  }, [isEditMode, selectedPolygons, isDrawing, isPlacing, updateAllPolygons, panelMarkers, placedPanels])
 
   // Update allPolygonsForEdit when any polygon set changes
   useEffect(() => {
-    setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...panelMarkers])
-  }, [roofPolygons, objectPolygons, panelMarkers])
+    setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...panelMarkers, ...placedPanels])
+  }, [roofPolygons, objectPolygons, panelMarkers, placedPanels])
 
   // ========================================
   // Render
@@ -350,6 +397,7 @@ export default function MapContainer({
           drawingType={drawingTypeSelection}
           onTabChange={handleTabChange}
           onDrawingTypeChange={handleDrawingTypeChange}
+          hasPanels={panelMarkers.length > 0}
         />
       )}
 

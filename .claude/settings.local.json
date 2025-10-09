@@ -9,7 +9,8 @@
       "Bash(mkdir:*)",
       "Bash(python test_gps_standalone.py:*)",
       "Bash(npm install:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

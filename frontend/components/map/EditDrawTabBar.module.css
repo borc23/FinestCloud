@@ -72,101 +72,57 @@
 
 /* Drawing Type Toggle */
 .drawingTypeToggle {
-  position: relative;
+  composes: glass-dark from global;
   display: flex;
-  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 22px;
   animation: fadeIn var(--transition-base) ease-out;
 }
 
-.toggleSwitch {
-  composes: glass-dark from global;
-  --toggle-button-width: 116px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 240px;
-  height: var(--input-height);
-  padding: 4px;
-  border-radius: 22px;
-  cursor: pointer;
-}
-
-.typeButton {
-  position: absolute;
-  width: var(--toggle-button-width);
-  height: 36px;
-  top: 4px;
-  left: 4px;
+.typeOption {
+  padding: 9px 20px;
   border: none;
-  border-radius: 20px;
-  background: rgba(31, 31, 31, 1);
+  border-radius: 18px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all var(--transition-slow);
-  padding: 9px 4px;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: var(--font-semibold);
-  line-height: 18px;
-  text-align: center;
-  color: rgba(191, 191, 191, 1);
-  z-index: 2;
+  transition: all var(--transition-base);
+  white-space: nowrap;
 }
 
-.typeButton.roofActive {
-  transform: translateX(0);
+.typeOption:hover {
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.typeOption:active {
+  transform: scale(0.96);
+}
+
+.typeOption.active {
+  background: rgba(120, 120, 128, 0.32);
+  color: white;
+}
+
+.typeOption:nth-child(1).active {
   background: rgba(48, 209, 88, 0.2);
-}
-
-.typeButton.objectActive {
-  transform: translateX(var(--toggle-button-width));
-  background: rgba(255, 69, 58, 0.2);
-}
-
-.toggleSwitch:active .typeButton {
-  transform: translateX(0) scale(0.98);
-}
-
-.toggleSwitch:active .typeButton.objectActive {
-  transform: translateX(var(--toggle-button-width)) scale(0.98);
-}
-
-.toggleSwitch:focus-visible {
-  outline: 2px solid rgba(0, 145, 255, 1);
-  outline-offset: 2px;
-}
-
-.toggleLabels {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.toggleText {
-  flex: 1;
-  font-size: 14px;
-  font-weight: var(--font-semibold);
-  line-height: 18px;
-  text-align: center;
-  transition: opacity var(--transition-base);
-  padding: 9px 4px;
-}
-
-.toggleText.roofLabel {
   color: rgba(48, 209, 88, 1);
 }
 
-.toggleText.objectLabel {
+.typeOption:nth-child(2).active {
+  background: rgba(255, 69, 58, 0.2);
   color: rgba(255, 69, 58, 1);
 }
 
-.toggleText.hidden {
-  opacity: 0;
+.typeOption.panelOption.active {
+  background: rgba(103, 126, 234, 0.2);
+  color: rgba(103, 126, 234, 1);
+}
+
+.typeOption:focus-visible {
+  outline: 2px solid rgba(0, 145, 255, 1);
+  outline-offset: 2px;
 }

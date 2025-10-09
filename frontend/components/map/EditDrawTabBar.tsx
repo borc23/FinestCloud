@@ -4,47 +4,48 @@ import styles from './EditDrawTabBar.module.css'
 import type { DrawingMode } from '../../types/drawing'
 
 export type EditTab = 'edit' | 'draw'
+export type DrawingSubMode = DrawingMode | 'panel'
 
 interface EditDrawTabBarProps {
   activeTab: EditTab
-  drawingType: DrawingMode
+  drawingType: DrawingSubMode
   onTabChange: (tab: EditTab) => void
-  onDrawingTypeChange: (type: DrawingMode) => void
+  onDrawingTypeChange: (type: DrawingSubMode) => void
+  hasPanels?: boolean
 }
 
 export default function EditDrawTabBar({
   activeTab,
   drawingType,
   onTabChange,
-  onDrawingTypeChange
+  onDrawingTypeChange,
+  hasPanels = false
 }: EditDrawTabBarProps) {
   return (
     <div className={styles.container}>
       {/* Drawing Type Toggle - only shown when Draw tab is active */}
       {activeTab === 'draw' && (
         <div className={styles.drawingTypeToggle}>
-          <div
-            className={`${styles.toggleSwitch} ${drawingType === 'roof' ? styles.roofActive : styles.objectActive}`}
-            onClick={() => onDrawingTypeChange(drawingType === 'roof' ? 'object' : 'roof')}
-            role="switch"
-            aria-checked={drawingType === 'roof'}
-            aria-label={`Switch to ${drawingType === 'roof' ? 'object' : 'roof'} drawing mode`}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onDrawingTypeChange(drawingType === 'roof' ? 'object' : 'roof')
-              }
-            }}
+          <button
+            className={`${styles.typeOption} ${drawingType === 'roof' ? styles.active : ''}`}
+            onClick={() => onDrawingTypeChange('roof')}
           >
-            <div className={`${styles.typeButton} ${drawingType === 'roof' ? styles.roofActive : styles.objectActive}`}>
-              {drawingType === 'roof' ? 'Roof' : 'Object'}
-            </div>
-            <div className={styles.toggleLabels}>
-              <span className={`${styles.toggleText} ${styles.roofLabel} ${drawingType === 'roof' ? styles.hidden : ''}`}>Roof</span>
-              <span className={`${styles.toggleText} ${styles.objectLabel} ${drawingType === 'object' ? styles.hidden : ''}`}>Object</span>
-            </div>
-          </div>
+            Roof
+          </button>
+          <button
+            className={`${styles.typeOption} ${drawingType === 'object' ? styles.active : ''}`}
+            onClick={() => onDrawingTypeChange('object')}
+          >
+            Object
+          </button>
+          {hasPanels && (
+            <button
+              className={`${styles.typeOption} ${styles.panelOption} ${drawingType === 'panel' ? styles.active : ''}`}
+              onClick={() => onDrawingTypeChange('panel')}
+            >
+              Panel
+            </button>
+          )}
         </div>
       )}
 
