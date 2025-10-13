@@ -127,6 +127,62 @@
   letter-spacing: -0.2px;
 }
 
+/* Energy Offset Section */
+.energyOffset {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.offsetCircle {
+  flex-shrink: 0;
+}
+
+.offsetSvg {
+  width: 160px;
+  height: 160px;
+  filter: drop-shadow(0 4px 12px rgba(76, 175, 80, 0.3));
+}
+
+.offsetDetails {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.offsetItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  transition: background 0.15s ease-out;
+}
+
+.offsetItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.offsetLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: var(--font-normal);
+}
+
+.offsetValue {
+  font-size: 14px;
+  font-weight: var(--font-semibold);
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: -0.2px;
+}
+
 /* Bill Comparison */
 .billComparison {
   display: flex;
@@ -189,8 +245,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
   transition: background 0.15s ease-out;
 }
 
@@ -239,7 +296,7 @@
 .impactItem {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: 14px 10px;
   text-align: center;
   transition: all 0.2s ease-out;
@@ -274,13 +331,13 @@
 
 .toggleButton {
   width: 100%;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  color: rgba(255, 255, 255, 0.8);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  color: rgba(255, 255, 255, 0.85);
   font-size: 14px;
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
   cursor: pointer;
   text-align: left;
   transition: all 0.15s ease-out;
@@ -290,8 +347,9 @@
 }
 
 .toggleButton:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 .inputs {
@@ -319,8 +377,8 @@
 .input {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
   color: rgba(255, 255, 255, 0.95);
   font-size: 14px;
   font-weight: var(--font-medium);
@@ -350,13 +408,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
   transition: background 0.15s ease-out;
 }
 
 .feedInRow:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
 }
 
 .feedInLabel {
