@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import styles from './SolarResultsDashboard.module.css'
 import MonthlyProductionChart from './MonthlyProductionChart'
 import FinancialCalculator from './FinancialCalculator'
+import ElectricalDesignPanel from './ElectricalDesignPanel'
 import { usePVWatts } from '@/hooks/usePVWatts'
 import { usePanelData } from '@/hooks/usePanelData'
 import {
@@ -16,13 +17,14 @@ import {
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps & { onMinimizeChange?: (minimized: boolean) => void }) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
   const [showFinancials, setShowFinancials] = useState(false)
+  const [showElectrical, setShowElectrical] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
 
-  // Notify parent when minimize state or monthly chart/financials visibility changes
+  // Notify parent when minimize state or monthly chart/financials/electrical visibility changes
   useEffect(() => {
-    // Dashboard is considered "not minimized" if monthly chart or financials are open
-    props.onMinimizeChange?.(isMinimized && !showMonthlyChart && !showFinancials)
-  }, [isMinimized, showMonthlyChart, showFinancials, props.onMinimizeChange])
+    // Dashboard is considered "not minimized" if monthly chart, financials, or electrical are open
+    props.onMinimizeChange?.(isMinimized && !showMonthlyChart && !showFinancials && !showElectrical)
+  }, [isMinimized, showMonthlyChart, showFinancials, showElectrical, props.onMinimizeChange])
 
   const generatedPanelData = isComplexData(props) ? usePanelData(props.panelGenerationData) : null
 
@@ -142,6 +144,12 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
                 >
                   💰 Financial Analysis
                 </button>
+                <button
+                  className={styles.electricalButton}
+                  onClick={() => setShowElectrical(true)}
+                >
+                  ⚡ Electrical Design
+                </button>
               </div>
             )}
           </>
@@ -166,6 +174,18 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
           panelWattage={panelData.panelWattage}
           onClose={() => {
             setShowFinancials(false)
+            setIsMinimized(false)
+          }}
+        />
+      )}
+
+      {showElectrical && (
+        <ElectricalDesignPanel
+          panelWattage={panelData.panelWattage}
+          totalPanels={panelData.totalPanels}
+          systemSizeKw={panelData.systemSize}
+          onClose={() => {
+            setShowElectrical(false)
             setIsMinimized(false)
           }}
         />
