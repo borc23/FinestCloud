@@ -162,6 +162,8 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
         <FinancialCalculator
           annualProduction={annualProduction}
           systemSize={panelData.systemSize}
+          panelCount={panelData.totalPanels}
+          panelWattage={panelData.panelWattage}
           onClose={() => {
             setShowFinancials(false)
             setIsMinimized(false)

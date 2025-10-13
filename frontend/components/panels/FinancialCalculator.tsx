@@ -3,17 +3,23 @@
 import { useState, useMemo } from 'react'
 import styles from './FinancialCalculator.module.css'
 import type { FinancialInputs } from '@/types/financial'
+import type { ReportData } from '@/types/report'
 import { calculateFinancials, estimateSystemCost } from '@/utils/financialCalculations'
+import { generateSolarReport, downloadPDF } from '@/utils/pdfGenerator'
 
 interface FinancialCalculatorProps {
   annualProduction: number // kWh/year
   systemSize: number // kW
+  panelCount?: number
+  panelWattage?: number
   onClose?: () => void
 }
 
 export default function FinancialCalculator({
   annualProduction,
   systemSize,
+  panelCount,
+  panelWattage = 400,
   onClose
 }: FinancialCalculatorProps) {
   // User inputs with German market defaults
@@ -53,6 +59,32 @@ export default function FinancialCalculator({
 
   // VAT savings for display
   const vatSavings = systemSize <= 30 ? systemCostInput * 0.19 : 0
+
+  // Generate PDF report
+  const handleGeneratePDF = () => {
+    const reportData: ReportData = {
+      systemSpecs: {
+        panelCount: panelCount || Math.round(systemSize * 2.5), // Estimate if not provided
+        systemSize,
+        panelWattage,
+        annualProduction,
+      },
+      financials: results,
+      electricityRate: costPerKwh,
+      monthlyBill: avgMonthlyBill,
+      feedInTariff,
+      selfConsumptionRate,
+      systemCost: systemCostInput,
+    }
+
+    const doc = generateSolarReport(reportData, {
+      includeFinancials: true,
+      includeSystemSpecs: true,
+      includeEnvironmental: true,
+    })
+
+    downloadPDF(doc, `solar-proposal-${systemSize}kW-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
 
   return (
     <div className={styles.container}>
@@ -315,6 +347,16 @@ export default function FinancialCalculator({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Export Button */}
+      <div className={styles.exportSection}>
+        <button
+          className={styles.exportButton}
+          onClick={handleGeneratePDF}
+        >
+          📄 Download PDF Report
+        </button>
       </div>
 
       {/* Disclaimer */}
