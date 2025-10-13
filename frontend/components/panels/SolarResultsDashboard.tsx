@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import styles from './SolarResultsDashboard.module.css'
 import MonthlyProductionChart from './MonthlyProductionChart'
+import FinancialCalculator from './FinancialCalculator'
 import { usePVWatts } from '@/hooks/usePVWatts'
 import { usePanelData } from '@/hooks/usePanelData'
 import {
@@ -14,13 +15,14 @@ import {
 
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps & { onMinimizeChange?: (minimized: boolean) => void }) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
+  const [showFinancials, setShowFinancials] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
 
-  // Notify parent when minimize state or monthly chart visibility changes
+  // Notify parent when minimize state or monthly chart/financials visibility changes
   useEffect(() => {
-    // Dashboard is considered "not minimized" if monthly chart is open
-    props.onMinimizeChange?.(isMinimized && !showMonthlyChart)
-  }, [isMinimized, showMonthlyChart, props.onMinimizeChange])
+    // Dashboard is considered "not minimized" if monthly chart or financials are open
+    props.onMinimizeChange?.(isMinimized && !showMonthlyChart && !showFinancials)
+  }, [isMinimized, showMonthlyChart, showFinancials, props.onMinimizeChange])
 
   const generatedPanelData = isComplexData(props) ? usePanelData(props.panelGenerationData) : null
 
@@ -58,12 +60,12 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     }
   }, [props.isEditMode])
 
-  // Hide dashboard when monthly chart opens
+  // Hide dashboard when monthly chart or financials open
   useEffect(() => {
-    if (showMonthlyChart) {
+    if (showMonthlyChart || showFinancials) {
       setIsMinimized(true)
     }
-  }, [showMonthlyChart])
+  }, [showMonthlyChart, showFinancials])
 
   const { data: pvwattsData, isLoading } = usePVWatts({
     latitude: location?.lat,
@@ -126,13 +128,19 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
               )}
             </div>
 
-            {pvwattsData && (
+            {pvwattsData && annualProduction && (
               <div className={styles.monthlyButtonContainer}>
                 <button
                   className={styles.monthlyButton}
                   onClick={() => setShowMonthlyChart(true)}
                 >
                   View Monthly Breakdown
+                </button>
+                <button
+                  className={styles.financialButton}
+                  onClick={() => setShowFinancials(true)}
+                >
+                  💰 Financial Analysis
                 </button>
               </div>
             )}
@@ -145,6 +153,17 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
           data={pvwattsData}
           onClose={() => {
             setShowMonthlyChart(false)
+            setIsMinimized(false)
+          }}
+        />
+      )}
+
+      {showFinancials && annualProduction && (
+        <FinancialCalculator
+          annualProduction={annualProduction}
+          systemSize={panelData.systemSize}
+          onClose={() => {
+            setShowFinancials(false)
             setIsMinimized(false)
           }}
         />
