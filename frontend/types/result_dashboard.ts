@@ -45,6 +45,7 @@ export interface ComplexDataProps {
   mapCenter?: Location
   costEstimate?: number
   isEditMode?: boolean
+  currentPanelCount?: number
 }
 
 export type SolarResultsDashboardProps = SimpleDataProps | ComplexDataProps

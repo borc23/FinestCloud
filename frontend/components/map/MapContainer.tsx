@@ -483,6 +483,7 @@ export default function MapContainer({
           } : undefined}
           isEditMode={isEditMode || (activeTool !== '' && activeTool !== 'panels')}
           onMinimizeChange={setIsDashboardMinimized}
+          currentPanelCount={allPanels.length}
         />
       )}
 

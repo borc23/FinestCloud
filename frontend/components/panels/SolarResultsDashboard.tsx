@@ -22,8 +22,17 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     props.onMinimizeChange?.(isMinimized && !showMonthlyChart)
   }, [isMinimized, showMonthlyChart, props.onMinimizeChange])
 
-  const panelData = isComplexData(props)
-    ? usePanelData(props.panelGenerationData)
+  const generatedPanelData = isComplexData(props) ? usePanelData(props.panelGenerationData) : null
+
+  // Use current panel count if provided, otherwise use generated data
+  const panelData = isComplexData(props) && generatedPanelData
+    ? {
+        ...generatedPanelData,
+        totalPanels: props.currentPanelCount ?? generatedPanelData.totalPanels,
+        systemSize: props.currentPanelCount
+          ? (props.currentPanelCount * generatedPanelData.panelWattage) / 1000
+          : generatedPanelData.systemSize
+      }
     : {
         totalPanels: props.panelCount,
         systemSize: props.systemSize,
