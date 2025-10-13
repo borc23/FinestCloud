@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import cv2
 import numpy as np
 
-from app.dataclasses.config import PanelConfig, PanelModule, RoofData
+from app.dataclasses.config import PanelConfig, RoofData
 from app.utils.gps_utils import GPSCoordinateSystem
 
 from .genetic_algorithm import PanelGeneticOptimizer
@@ -15,18 +15,33 @@ class PanelService:
     def __init__(
         self,
         bounds: Dict[str, float],
-        custom_module=None,
         edge_padding_cm: int = 20,
         spacing_cm: float = 0.5,
         panel_orientation: str = "best",
+        panel_specs: Dict = None,
     ):
+        if not panel_specs:
+            raise ValueError("panel_specs are required. No default panels in backend.")
+
         self.bounds = bounds
-        self.custom_module = custom_module
         self.edge_padding_cm = edge_padding_cm
         self.spacing_cm = spacing_cm
         self.panel_orientation = panel_orientation
         self.config = PanelConfig()
-        self.module_dict = PanelModule.STANDARD.value
+
+        # Always use panel_specs from frontend
+        self.module_dict = {
+            "id": panel_specs.get("id", "custom"),
+            "name": panel_specs.get("name", "Custom Panel"),
+            "width_cm": panel_specs.get("width", 1.046) * 100,  # Convert meters to cm
+            "height_cm": panel_specs.get("height", 1.690) * 100,  # Convert meters to cm
+            "power_w": panel_specs.get("power", 400),
+            "efficiency": panel_specs.get("efficiency", 22.6),
+            "color": "#7f8c8d",
+            "path": "https://res.cloudinary.com/dajy5yo5a/image/upload/v1746527441/solar-panel_acv6hz.png",
+            "description": panel_specs.get("name", "Custom panel from frontend"),
+        }
+
         self.all_panels = []
         self.max_panels = 0
         self.genetic_optimizer = PanelGeneticOptimizer()
@@ -40,15 +55,6 @@ class PanelService:
         cv2.setNumThreads(cv2.getNumberOfCPUs())
 
         self._mask_cache = {}
-
-    def set_module(self, module_name: str):
-        """Set panel module type."""
-        if module_name.upper() in PanelModule.__members__:
-            self.module_dict = PanelModule[module_name.upper()].value
-        elif module_name.upper() == "CUSTOM" and self.custom_module is not None:
-            self.module_dict = self.custom_module
-        else:
-            raise ValueError(f"Invalid module type: {module_name}")
 
     def generate_panels(
         self,
@@ -64,20 +70,13 @@ class PanelService:
         total_max_panels = sum(roof["panel_count"] for roof in all_roof_panels)
 
         electrical_system = None
-        # if total_max_panels > 0:
-        #     electrical_system = self.string_calculator.calculate_system_design(
-        #         total_max_panels, self.module_dict["id"]
-        #     )
 
         self.all_panels, self.max_panels = all_roof_panels, total_max_panels
         return {
             "roofs": all_roof_panels,
             "max_panels": total_max_panels,
             "module": self.module_dict["id"],
-            "electrical_system": electrical_system
-            # "electrical_system": electrical_system.__dict__
-            # if electrical_system
-            # else None,
+            "electrical_system": electrical_system,
         }
 
     def _generate_roof_panels(
@@ -273,13 +272,7 @@ class PanelService:
         """
         pitch_angle_radians = math.radians(pitch_angle_degrees)
         cos_pitch = math.cos(pitch_angle_radians)
-
-        # Vertical orientation: panel is tall (narrow × tall)
-        # Height is affected by pitch
         vertical_dims = (width, height * cos_pitch)
-
-        # Horizontal orientation: panel is rotated 90° (wide × short)
-        # After rotation, the new height (original width) is affected by pitch
         horizontal_dims = (height, width * cos_pitch)
 
         return vertical_dims, horizontal_dims

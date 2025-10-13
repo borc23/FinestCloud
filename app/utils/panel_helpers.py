@@ -27,15 +27,13 @@ def create_panel_generator(
     Returns:
         Configured PanelService instance
     """
-    custom_module = cache_manager.get(CacheKeys.CUSTOM_MODULE)
     generator = PanelService(
         bounds=data["mapBounds"],
-        custom_module=custom_module,
         edge_padding_cm=data.get("padding", 20),
         spacing_cm=data.get("spacing", 0.5),
         panel_orientation=data.get("panelOrientation", "best"),
+        panel_specs=data.get("panel_specs"),
     )
-    generator.set_module(data["module"])
     return generator
 
 
@@ -73,10 +71,9 @@ def cache_generation_results(
     """
     cache_manager.set(CacheKeys.ALL_PANELS, results["roofs"])
     cache_manager.set(CacheKeys.MAX_PANELS, results["max_panels"])
-    cache_manager.set(CacheKeys.MODULE, data["module"])
 
 
-def validate_cached_panels(cache_manager: CacheManager) -> Tuple[Any, Any, Any]:
+def validate_cached_panels(cache_manager: CacheManager) -> Tuple[Any, Any]:
     """
     Validate and retrieve cached panel data.
 
@@ -84,7 +81,7 @@ def validate_cached_panels(cache_manager: CacheManager) -> Tuple[Any, Any, Any]:
         cache_manager: Cache manager instance
 
     Returns:
-        Tuple of (all_panels, max_panels, module_data)
+        Tuple of (all_panels, max_panels)
 
     Raises:
         SessionDataError: If required cache data is missing
@@ -93,16 +90,13 @@ def validate_cached_panels(cache_manager: CacheManager) -> Tuple[Any, Any, Any]:
 
     from app.utils.exceptions import SessionDataError
 
-    cached_data = cache_manager.get_multiple(
-        CacheKeys.ALL_PANELS, CacheKeys.MAX_PANELS, CacheKeys.MODULE
-    )
+    cached_data = cache_manager.get_multiple(CacheKeys.ALL_PANELS, CacheKeys.MAX_PANELS)
 
     all_panels = cached_data[CacheKeys.ALL_PANELS]
     max_panels = cached_data[CacheKeys.MAX_PANELS]
-    module_data = cached_data[CacheKeys.MODULE]
 
     if not all_panels or not max_panels:
         session["has_panels"] = False
         raise SessionDataError("No panels generated. Please generate panels first")
 
-    return all_panels, max_panels, module_data
+    return all_panels, max_panels

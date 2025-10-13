@@ -190,24 +190,26 @@
   width: 52px;
   height: 52px;
   border-radius: 26px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: var(--glass-bg-dark);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: var(--glass-border-light);
+  box-shadow: var(--shadow-glass-dark);
   font-size: 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease-out;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   padding: 0;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .minimizedButton:hover {
   transform: scale(1.05);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: rgba(120, 120, 128, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 1);
 }
 
 .minimizedButton:active {

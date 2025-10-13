@@ -11,10 +11,10 @@ httpx==0.25.2
 cachelib==0.13.0
 
 # Machine Learning & Computer Vision
-torch==2.0.0+cpu
-torchvision==0.15.1+cpu
+torch==2.8.0+cpu
+torchvision==0.23.0+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
-ultralytics==8.3.127
+ultralytics==8.3.208
 ultralytics-thop==2.0.14
 numpy<2.0
 opencv-python==4.11.0.86
@@ -70,3 +70,4 @@ fonttools==4.57.0
 kiwisolver==1.4.8
 jmespath==1.0.1
 huggingface_hub
+shapely

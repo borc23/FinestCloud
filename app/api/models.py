@@ -77,6 +77,15 @@ class MapDimensionsModel(BaseModel):
     height: int = Field(..., gt=0, description="Map height in pixels")
 
 
+class PanelSpecsModel(BaseModel):
+    """Panel specifications model."""
+
+    width: float = Field(..., description="Panel width in meters")
+    height: float = Field(..., description="Panel height in meters")
+    power: float = Field(..., description="Panel power in watts")
+    efficiency: float = Field(..., description="Panel efficiency in percentage")
+
+
 class GeneratePanelsRequest(BaseModel):
     """Request model for panel generation."""
 
@@ -94,6 +103,9 @@ class GeneratePanelsRequest(BaseModel):
     panelOrientation: Optional[str] = Field(
         default="best",
         description="Panel orientation: 'vertical', 'horizontal', or 'best'",
+    )
+    panel_specs: Optional[PanelSpecsModel] = Field(
+        None, description="Custom panel specifications"
     )
 
 

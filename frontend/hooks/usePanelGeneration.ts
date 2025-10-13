@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { SolarPanelApiService } from '../lib/solarPanelApi'
 import { generateAndAnimatePanels, calculateSystemResults } from '../lib/panelGenerator'
 import { setGridVectors, clearGridVectors } from '../utils/gridSnapping'
+import { usePanelContext } from '../contexts/PanelContext'
 import type { PanelGenerationResponse, SolarDataSegment, AngleConfirmData } from '../types/panel'
 
 interface UsePanelGenerationProps {
@@ -41,6 +42,7 @@ export function usePanelGeneration({
   objectPolygons,
   onPanelsGenerated
 }: UsePanelGenerationProps) {
+  const { selectedPanel } = usePanelContext()
   const solarPanelApiRef = useRef(new SolarPanelApiService())
 
   const [state, setState] = useState<PanelGenerationState>({
@@ -108,10 +110,21 @@ export function usePanelGeneration({
 
       // Make API call if request body is provided
       if (data._requestBody) {
+        // Include selected panel specs in the request
+        const requestBody = {
+          ...data._requestBody,
+          panel_specs: selectedPanel ? {
+            width: selectedPanel.width,
+            height: selectedPanel.height,
+            power: selectedPanel.power,
+            efficiency: selectedPanel.efficiency
+          } : undefined
+        }
+
         const response = await fetch('/api/generate_panels', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data._requestBody)
+          body: JSON.stringify(requestBody)
         })
         const responseData = await response.json()
         panelData = responseData.results || responseData

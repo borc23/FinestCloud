@@ -76,15 +76,12 @@ class PVWattsService:
             )
             response = requests.get(self.BASE_URL, params=params, timeout=10)
 
-            # Log the raw response for debugging
-            logger.info(f"PVWatts API response status: {response.status_code}")
+            logger.debug(f"PVWatts API response status: {response.status_code}")
 
             response.raise_for_status()
-
             data = response.json()
 
-            # Log the full response for debugging
-            logger.info(
+            logger.debug(
                 f"PVWatts API response data keys: {data.keys() if isinstance(data, dict) else 'not a dict'}"
             )
 
@@ -92,14 +89,13 @@ class PVWattsService:
                 logger.error(f"PVWatts API errors: {data['errors']}")
                 return None
 
-            # Check if we have the expected outputs
             if "outputs" not in data:
                 logger.error(
                     f"PVWatts API response missing 'outputs' key. Full response: {data}"
                 )
                 return None
 
-            logger.info("PVWatts data retrieved successfully")
+            logger.debug("PVWatts data retrieved successfully")
             return data
 
         except requests.exceptions.RequestException as e:

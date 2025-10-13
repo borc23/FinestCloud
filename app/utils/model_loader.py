@@ -26,7 +26,7 @@ def is_valid_pytorch_model(file_path):
             logger.warning(f"Model file too small (likely LFS pointer): {file_path}")
             return False
 
-        torch.load(file_path, map_location="cpu")
+        torch.load(file_path, map_location="cpu", weights_only=False)
         logger.info(f"Successfully verified PyTorch model at: {file_path}")
         return True
     except Exception as e:

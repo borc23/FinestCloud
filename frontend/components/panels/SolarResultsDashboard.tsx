@@ -12,9 +12,15 @@ import {
   isComplexData
 } from '@/types/result_dashboard'
 
-export default function SolarResultsDashboard(props: SolarResultsDashboardProps) {
+export default function SolarResultsDashboard(props: SolarResultsDashboardProps & { onMinimizeChange?: (minimized: boolean) => void }) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
+
+  // Notify parent when minimize state or monthly chart visibility changes
+  useEffect(() => {
+    // Dashboard is considered "not minimized" if monthly chart is open
+    props.onMinimizeChange?.(isMinimized && !showMonthlyChart)
+  }, [isMinimized, showMonthlyChart, props.onMinimizeChange])
 
   const panelData = isComplexData(props)
     ? usePanelData(props.panelGenerationData)

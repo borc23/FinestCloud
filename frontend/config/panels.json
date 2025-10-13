@@ -1,0 +1,49 @@
+{
+  "panels": [
+    {
+      "id": "sunpower_maxeon_3",
+      "name": "SunPower Maxeon 3",
+      "manufacturer": "SunPower",
+      "width": 1.046,
+      "height": 1.690,
+      "power": 400,
+      "efficiency": 22.6
+    },
+    {
+      "id": "lg_neon_2",
+      "name": "LG NeON 2",
+      "manufacturer": "LG",
+      "width": 1.016,
+      "height": 1.686,
+      "power": 365,
+      "efficiency": 21.4
+    },
+    {
+      "id": "canadian_solar_hiku",
+      "name": "Canadian Solar HiKu",
+      "manufacturer": "Canadian Solar",
+      "width": 1.048,
+      "height": 2.094,
+      "power": 450,
+      "efficiency": 20.5
+    },
+    {
+      "id": "jinko_tiger_pro",
+      "name": "JinkoSolar Tiger Pro",
+      "manufacturer": "JinkoSolar",
+      "width": 1.134,
+      "height": 1.722,
+      "power": 420,
+      "efficiency": 21.5
+    },
+    {
+      "id": "rec_alpha_pure",
+      "name": "REC Alpha Pure",
+      "manufacturer": "REC",
+      "width": 1.016,
+      "height": 1.821,
+      "power": 405,
+      "efficiency": 21.9
+    }
+  ]
+}

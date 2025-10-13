@@ -1,0 +1,38 @@
+.floatingBtn {
+  position: fixed;
+  bottom: 84px;
+  left: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  background: var(--glass-bg-dark);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: var(--glass-border-light);
+  box-shadow: var(--shadow-glass-dark);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease-out;
+  z-index: 950;
+  padding: 0;
+}
+
+.floatingBtn:hover {
+  transform: scale(1.05);
+  background: rgba(120, 120, 128, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 1);
+}
+
+.floatingBtn:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 796px) {
+  .floatingBtn {
+    bottom: 80px;
+  }
+}

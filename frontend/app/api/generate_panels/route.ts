@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       spacing: body.spacing || 0.5,
       max_panels: body.max_panels || null,
       padding: body.edgePadding !== undefined ? body.edgePadding : 20,
-      panelOrientation: body.panelOrientation
+      panelOrientation: body.panelOrientation,
+      panel_specs: (body as any).panel_specs || null
     })
   })
 }

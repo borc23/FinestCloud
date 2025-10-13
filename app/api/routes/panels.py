@@ -46,11 +46,11 @@ async def generate_panels(
             "roofs": [roof.dict() for roof in request.roofs],
             "objects": [obj.dict() for obj in request.objects],
             "mapBounds": request.mapBounds.dict(),
-            "module": request.module or "standard",
             "spacing": request.spacing,
             "max_panels": request.max_panels,
             "padding": request.padding,
             "panelOrientation": request.panelOrientation,
+            "panel_specs": request.panel_specs.dict() if request.panel_specs else None,
         }
 
         logger.info(f"Received roofs data: {data['roofs']}")
@@ -91,10 +91,10 @@ async def generate_panels_selective(
             "roofs": [roof.dict() for roof in request.roofs],
             "objects": [obj.dict() for obj in request.objects],
             "mapBounds": request.mapBounds.dict(),
-            "module": request.module or "standard",
             "spacing": request.spacing,
             "max_panels": request.max_panels,
             "padding": request.padding,
+            "panel_specs": request.panel_specs.dict() if request.panel_specs else None,
         }
 
         generator = create_panel_generator(data, cache_manager)
@@ -129,14 +129,11 @@ async def update_panel_count(
         session_id = session_service.get_session_id()
         logger.debug(f"Updating panel count for session {session_id}")
 
-        all_panels, max_panels, module_data = validate_cached_panels(cache_manager)
+        all_panels, max_panels = validate_cached_panels(cache_manager)
 
-        custom_module = cache_manager.get(CacheKeys.CUSTOM_MODULE)
         generator = PanelService(
             bounds=request.mapBounds.dict(),
-            custom_module=custom_module,
         )
-        generator.set_module(module_data)
         generator.all_panels = all_panels
         generator.max_panels = max_panels
 

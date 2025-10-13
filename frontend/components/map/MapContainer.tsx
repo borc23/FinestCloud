@@ -19,6 +19,7 @@ import { usePanelGeneration } from '../../hooks/usePanelGeneration'
 import { usePanelPlacement } from '../../hooks/usePanelPlacement'
 import { tagPanelWithGrid } from '../../utils/gridSnapping'
 import EditModeIndicator from './EditModeIndicator'
+import { usePanelContext } from '../../contexts/PanelContext'
 
 declare global {
   interface Window {
@@ -32,13 +33,15 @@ interface MapContainerProps {
   onMapReady?: (map: any) => void
   onToolChange?: (tool: string) => void
   onPanelsAvailable?: (available: boolean) => void
+  onDashboardMinimizeChange?: (minimized: boolean) => void
 }
 
 export default function MapContainer({
   activeTool,
   onMapReady,
   onToolChange,
-  onPanelsAvailable
+  onPanelsAvailable,
+  onDashboardMinimizeChange
 }: MapContainerProps) {
   // ========================================
   // Refs and State
@@ -48,8 +51,17 @@ export default function MapContainer({
   const [isDragging, setIsDragging] = useState(false)
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object' | 'panel'>('roof')
+  const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
+
+  // Panel context
+  const { registerPanelChangeCallback } = usePanelContext()
+
+  // Notify parent when dashboard minimize state changes
+  useEffect(() => {
+    onDashboardMinimizeChange?.(isDashboardMinimized)
+  }, [isDashboardMinimized, onDashboardMinimizeChange])
 
   // ========================================
   // Custom Hooks
@@ -206,6 +218,24 @@ export default function MapContainer({
     handleAngleCancelHook()
     onToolChange?.('')
   }, [handleAngleCancelHook, onToolChange])
+
+  const handlePanelConfigChange = useCallback(() => {
+    // Only regenerate if panels are already generated
+    if (panelData && solarData && roofPolygons.length > 0) {
+      // Clear existing panels
+      clearPanels()
+      allPanels.forEach(panel => panel.setMap(null))
+      setAllPanels([])
+
+      // Show angle panel to regenerate
+      startPanelGeneration()
+    }
+  }, [panelData, solarData, roofPolygons, clearPanels, allPanels, startPanelGeneration])
+
+  // Register callback for panel config changes
+  useEffect(() => {
+    registerPanelChangeCallback(handlePanelConfigChange)
+  }, [registerPanelChangeCallback, handlePanelConfigChange])
 
   const handleReset = useCallback(() => {
     // Clear all polygons
@@ -452,6 +482,7 @@ export default function MapContainer({
             lng: map.getCenter()!.lng()
           } : undefined}
           isEditMode={isEditMode || (activeTool !== '' && activeTool !== 'panels')}
+          onMinimizeChange={setIsDashboardMinimized}
         />
       )}
 

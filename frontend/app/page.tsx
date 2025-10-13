@@ -5,6 +5,8 @@ import ToolStrip from '@/components/layout/ToolStrip'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ImageUploadModal from '@/components/ui/ImageUploadModal'
 import ZoomableImage from '@/components/ui/ZoomableImage'
+import PanelSelectorButton from '@/components/panels/PanelSelectorButton'
+import PanelSelector from '@/components/panels/PanelSelector'
 import { useState } from 'react'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
@@ -20,6 +22,8 @@ export default function HomePage() {
   const [isImageMode, setIsImageMode] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showPanelSelector, setShowPanelSelector] = useState(false)
+  const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
 
   const handleToolSelect = (tool: string) => {
     setActiveTool(activeTool === tool ? '' : tool)
@@ -57,6 +61,7 @@ export default function HomePage() {
               onMapReady={setMap}
               onToolChange={setActiveTool}
               onPanelsAvailable={setShowPanelsTool}
+              onDashboardMinimizeChange={setIsDashboardMinimized}
             />
           )}
 
@@ -76,6 +81,15 @@ export default function HomePage() {
             isOpen={showUploadModal}
             onClose={() => setShowUploadModal(false)}
             onImageUpload={handleImageUpload}
+          />
+
+          {isDashboardMinimized && (
+            <PanelSelectorButton onClick={() => setShowPanelSelector(true)} />
+          )}
+
+          <PanelSelector
+            isOpen={showPanelSelector}
+            onClose={() => setShowPanelSelector(false)}
           />
         </div>
       </div>
