@@ -176,8 +176,7 @@ function MetricItem({ label, value, isLoading = false }: MetricItemProps) {
     <div className={styles.detailItem}>
       <span className={styles.label}>{label}</span>
       <span className={styles.value}>
-        {value}
-        {isLoading && <span className={styles.loadingIndicator}>...</span>}
+        {isLoading ? <span className={styles.loadingIndicator}>...</span> : value}
       </span>
     </div>
   )
