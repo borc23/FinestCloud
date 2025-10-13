@@ -6,6 +6,7 @@ import type { FinancialInputs } from '@/types/financial'
 import type { ReportData } from '@/types/report'
 import { calculateFinancials, estimateSystemCost } from '@/utils/financialCalculations'
 import { generateSolarReport, downloadPDF } from '@/utils/pdfGenerator'
+import { validateGermanProduction } from '@/utils/germanSolarCalculations'
 
 interface FinancialCalculatorProps {
   annualProduction: number // kWh/year
@@ -60,6 +61,12 @@ export default function FinancialCalculator({
   // VAT savings for display
   const vatSavings = systemSize <= 30 ? systemCostInput * 0.19 : 0
 
+  // Validate production for German conditions
+  const productionValidation = useMemo(
+    () => validateGermanProduction(systemSize, annualProduction),
+    [systemSize, annualProduction]
+  )
+
   // Generate PDF report
   const handleGeneratePDF = () => {
     const reportData: ReportData = {
@@ -95,8 +102,9 @@ export default function FinancialCalculator({
         </button>
       </div>
 
-      {/* Key Metrics */}
-      <div className={styles.keyMetrics}>
+      <div className={styles.scrollableContent}>
+        {/* Key Metrics */}
+        <div className={styles.keyMetrics}>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Payback Period</div>
           <div className={styles.metricValue}>{results.paybackPeriod} years</div>
@@ -349,15 +357,25 @@ export default function FinancialCalculator({
         )}
       </div>
 
-      {/* Export Button */}
-      <div className={styles.exportSection}>
-        <button
-          className={styles.exportButton}
-          onClick={handleGeneratePDF}
-        >
-          📄 Download PDF Report
-        </button>
-      </div>
+      {/* Production Validation Warning */}
+      {!productionValidation.isRealistic && (
+        <div className={styles.warningBox}>
+          <div className={styles.warningIcon}>⚠️</div>
+          <div className={styles.warningContent}>
+            <div className={styles.warningTitle}>Production Estimate Notice</div>
+            <p className={styles.warningText}>
+              {productionValidation.message}
+            </p>
+            <p className={styles.warningText}>
+              <strong>Typical German range for {systemSize.toFixed(1)}kW system:</strong>{' '}
+              {productionValidation.expectedRange.min.toLocaleString()} -{' '}
+              {productionValidation.expectedRange.max.toLocaleString()} kWh/year
+              <br />
+              <small>(Based on 850-1,050 full load hours, ~10% capacity factor)</small>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Disclaimer */}
       <div className={styles.disclaimer}>
@@ -366,7 +384,19 @@ export default function FinancialCalculator({
           {annualProduction.toLocaleString()} kWh/year. Actual savings may vary based on usage,
           utility rates, and system performance. {systemSize <= 30 &&
           '0% VAT applies to systems ≤30kWp (since Jan 2023).'}
+          {' '}Typical German solar systems achieve 850-1,050 full load hours annually (~10% capacity factor).
         </p>
+      </div>
+      </div>
+
+      {/* Export Button - Fixed at bottom */}
+      <div className={styles.exportSection}>
+        <button
+          className={styles.exportButton}
+          onClick={handleGeneratePDF}
+        >
+          📄 Download PDF Report
+        </button>
       </div>
     </div>
   )

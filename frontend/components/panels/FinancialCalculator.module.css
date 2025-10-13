@@ -8,8 +8,9 @@
   z-index: 1002;
   width: 500px;
   max-height: 80vh;
-  overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -28,6 +29,13 @@
   z-index: 10;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  flex-shrink: 0;
+}
+
+.scrollableContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .title {
@@ -375,11 +383,17 @@
   margin-top: 4px;
 }
 
-/* Export Section */
+/* Export Section - Fixed at bottom */
 .exportSection {
   padding: 16px 20px;
   background: rgba(255, 255, 255, 0.02);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .exportButton {
@@ -411,6 +425,66 @@
   transform: translateY(0) scale(0.98);
 }
 
+/* Warning Box */
+.warningBox {
+  margin: 16px 20px;
+  padding: 16px;
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: var(--radius-lg);
+  display: flex;
+  gap: 12px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.warningIcon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.warningContent {
+  flex: 1;
+}
+
+.warningTitle {
+  font-size: 14px;
+  font-weight: var(--font-semibold);
+  color: rgba(255, 152, 0, 1);
+  margin-bottom: 8px;
+}
+
+.warningText {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.warningText:last-child {
+  margin-bottom: 0;
+}
+
+.warningText strong {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.warningText small {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
 /* Disclaimer */
 .disclaimer {
   padding: 16px 20px;
@@ -425,20 +499,20 @@
 }
 
 /* Scrollbar styling */
-.container::-webkit-scrollbar {
+.scrollableContent::-webkit-scrollbar {
   width: 6px;
 }
 
-.container::-webkit-scrollbar-track {
+.scrollableContent::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.container::-webkit-scrollbar-thumb {
+.scrollableContent::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
 }
 
-.container::-webkit-scrollbar-thumb:hover {
+.scrollableContent::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
