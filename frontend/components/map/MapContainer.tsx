@@ -9,6 +9,8 @@ import PanelGenerationOverlay from '../panels/PanelGenerationOverlay'
 import RoofAnglePanel from '../panels/RoofAnglePanel'
 import SolarResultsDashboard from '../panels/SolarResultsDashboard'
 import GridSelector from '../panels/GridSelector'
+import ShadeVisualizationOverlay from './ShadeVisualizationOverlay'
+import ShadeLegend from './ShadeLegend'
 import { useMapInitialization } from '../../hooks/useMapInitialization'
 import { useDetection } from '../../hooks/useDetection'
 import { usePolygons } from '../../hooks/usePolygons'
@@ -52,6 +54,7 @@ export default function MapContainer({
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object' | 'panel'>('roof')
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
+  const [showShadeVisualization, setShowShadeVisualization] = useState(false)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
@@ -487,6 +490,22 @@ export default function MapContainer({
         />
       )}
 
+      {/* Shade Visualization Overlay */}
+      {allPanels.length > 0 && map && (
+        <ShadeVisualizationOverlay
+          map={map}
+          panels={allPanels}
+          enabled={showShadeVisualization}
+          location={map.getCenter() ? {
+            lat: map.getCenter()!.lat(),
+            lng: map.getCenter()!.lng()
+          } : undefined}
+        />
+      )}
+
+      {/* Shade Legend */}
+      <ShadeLegend visible={showShadeVisualization && allPanels.length > 0} />
+
       {/* Panel Generation Overlay */}
       <PanelGenerationOverlay
         isVisible={isGenerating}
@@ -551,7 +570,10 @@ export default function MapContainer({
       <MapControls
         map={map}
         hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0 || panelData !== null}
+        hasPanels={allPanels.length > 0}
+        shadeVisualizationEnabled={showShadeVisualization}
         onClearAll={handleReset}
+        onToggleShadeVisualization={() => setShowShadeVisualization(!showShadeVisualization)}
       />
     </div>
   )

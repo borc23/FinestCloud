@@ -7,6 +7,7 @@ import FinancialCalculator from './FinancialCalculator'
 import ElectricalDesignPanel from './ElectricalDesignPanel'
 import { usePVWatts } from '@/hooks/usePVWatts'
 import { usePanelData } from '@/hooks/usePanelData'
+import { useSolarShade } from '@/hooks/useSolarShade'
 import {
   SolarResultsDashboardProps,
   DashboardSummaryProps,
@@ -14,7 +15,9 @@ import {
   isComplexData
 } from '@/types/result_dashboard'
 
-export default function SolarResultsDashboard(props: SolarResultsDashboardProps & { onMinimizeChange?: (minimized: boolean) => void }) {
+export default function SolarResultsDashboard(props: SolarResultsDashboardProps & {
+  onMinimizeChange?: (minimized: boolean) => void
+}) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
   const [showFinancials, setShowFinancials] = useState(false)
   const [showElectrical, setShowElectrical] = useState(false)
@@ -81,8 +84,26 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     autoFetch: true
   })
 
-  const annualProduction = pvwattsData?.annual_production ||
+  // Fetch shade analysis
+  const { shadeData, getShadeImpact } = useSolarShade({
+    latitude: location?.lat,
+    longitude: location?.lng,
+    autoFetch: true
+  })
+
+  // Apply shade loss factor to production
+  const rawAnnualProduction = pvwattsData?.annual_production ||
     (!isComplexData(props) ? props.annualProduction : undefined)
+
+  const shadeLossFactor = shadeData?.shadeLossFactor ?? 1.0
+  const annualProduction = rawAnnualProduction
+    ? Math.round(rawAnnualProduction * shadeLossFactor)
+    : undefined
+
+  // Calculate shade impact if we have production data
+  const shadeImpact = annualProduction && shadeData
+    ? getShadeImpact(panelData.totalPanels, rawAnnualProduction!, 0.37)
+    : null
 
   if (!panelData) {
     return null
@@ -124,6 +145,12 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
               )}
               {pvwattsData && (
                 <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
+              )}
+              {shadeImpact && shadeImpact.averageShadePercentage > 0 && (
+                <MetricItem
+                  label="Shade Impact"
+                  value={`${shadeImpact.averageShadePercentage.toFixed(1)}% (-${shadeImpact.estimatedAnnualLoss.toLocaleString()} kWh)`}
+                />
               )}
               {costEstimate && (
                 <MetricItem label="Estimated Cost" value={`$${costEstimate.toLocaleString()}`} />
@@ -172,6 +199,7 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
           systemSize={panelData.systemSize}
           panelCount={panelData.totalPanels}
           panelWattage={panelData.panelWattage}
+          shadeImpact={shadeImpact}
           onClose={() => {
             setShowFinancials(false)
             setIsMinimized(false)

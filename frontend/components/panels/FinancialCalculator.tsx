@@ -4,15 +4,17 @@ import { useState, useMemo } from 'react'
 import styles from './FinancialCalculator.module.css'
 import type { FinancialInputs } from '@/types/financial'
 import type { ReportData } from '@/types/report'
+import type { ShadeImpactSummary } from '@/types/solar-api'
 import { calculateFinancials, estimateSystemCost } from '@/utils/financialCalculations'
 import { generateSolarReport, downloadPDF } from '@/utils/pdfGenerator'
 import { validateGermanProduction } from '@/utils/germanSolarCalculations'
 
 interface FinancialCalculatorProps {
-  annualProduction: number // kWh/year
+  annualProduction: number // kWh/year (already adjusted for shade)
   systemSize: number // kW
   panelCount?: number
   panelWattage?: number
+  shadeImpact?: ShadeImpactSummary | null
   onClose?: () => void
 }
 
@@ -21,6 +23,7 @@ export default function FinancialCalculator({
   systemSize,
   panelCount,
   panelWattage = 400,
+  shadeImpact,
   onClose
 }: FinancialCalculatorProps) {
   // User inputs with German market defaults
@@ -303,6 +306,30 @@ export default function FinancialCalculator({
           </div>
         </div>
       </div>
+
+      {/* Shade Analysis */}
+      {shadeImpact && shadeImpact.averageShadePercentage > 0 && (
+        <div className={styles.section}>
+          <h4 className={styles.sectionTitle}>☀️ Shade Analysis</h4>
+          <div className={styles.shadeInfo}>
+            <div className={styles.shadeItem}>
+              <span className={styles.shadeLabel}>Average Shade Impact</span>
+              <span className={styles.shadeValue}>{shadeImpact.averageShadePercentage.toFixed(1)}%</span>
+            </div>
+            <div className={styles.shadeItem}>
+              <span className={styles.shadeLabel}>Annual Energy Loss</span>
+              <span className={styles.shadeValue}>{shadeImpact.estimatedAnnualLoss.toLocaleString()} kWh</span>
+            </div>
+            <div className={styles.shadeItem}>
+              <span className={styles.shadeLabel}>Financial Loss</span>
+              <span className={styles.shadeValue}>€{shadeImpact.estimatedFinancialLoss.toFixed(0)}/year</span>
+            </div>
+            <div className={styles.shadeRecommendation}>
+              {shadeImpact.recommendation}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Input Controls */}
       <div className={styles.controls}>

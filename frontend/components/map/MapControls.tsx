@@ -5,14 +5,24 @@ import styles from './MapControls.module.css'
 interface MapControlsProps {
   map: google.maps.Map | null
   hasPolygons?: boolean
+  hasPanels?: boolean
+  shadeVisualizationEnabled?: boolean
   onClearAll?: () => void
+  onToggleShadeVisualization?: () => void
 }
 
 /**
  * Floating map zoom controls component
- * Provides + and - buttons for map zoom and clear all functionality
+ * Provides + and - buttons for map zoom, shade visualization toggle, and clear all functionality
  */
-export default function MapControls({ map, hasPolygons = false, onClearAll }: MapControlsProps) {
+export default function MapControls({
+  map,
+  hasPolygons = false,
+  hasPanels = false,
+  shadeVisualizationEnabled = false,
+  onClearAll,
+  onToggleShadeVisualization
+}: MapControlsProps) {
   if (!map) return null
 
   const handleZoomIn = () => {
@@ -51,6 +61,16 @@ export default function MapControls({ map, hasPolygons = false, onClearAll }: Ma
       >
         <i className="fas fa-minus"></i>
       </button>
+      {hasPanels && (
+        <button
+          className={`${styles.shadeControl} ${shadeVisualizationEnabled ? styles.active : ''}`}
+          onClick={onToggleShadeVisualization}
+          aria-label={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
+          title={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
+        >
+          <i className="fas fa-sun"></i>
+        </button>
+      )}
       {hasPolygons && (
         <button
           className={styles.clearControl}
