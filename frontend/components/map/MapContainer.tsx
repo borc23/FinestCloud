@@ -36,6 +36,7 @@ interface MapContainerProps {
   onToolChange?: (tool: string) => void
   onPanelsAvailable?: (available: boolean) => void
   onDashboardMinimizeChange?: (minimized: boolean) => void
+  onRoofAnglePanelChange?: (isOpen: boolean) => void
 }
 
 export default function MapContainer({
@@ -43,7 +44,8 @@ export default function MapContainer({
   onMapReady,
   onToolChange,
   onPanelsAvailable,
-  onDashboardMinimizeChange
+  onDashboardMinimizeChange,
+  onRoofAnglePanelChange
 }: MapContainerProps) {
   // ========================================
   // Refs and State
@@ -55,6 +57,15 @@ export default function MapContainer({
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object' | 'panel'>('roof')
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
   const [showShadeVisualization, setShowShadeVisualization] = useState(false)
+  const [shadeStats, setShadeStats] = useState<{
+    excellent: number
+    good: number
+    moderate: number
+    significant: number
+    high: number
+    total: number
+    averageShade: number
+  } | null>(null)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
@@ -170,6 +181,11 @@ export default function MapContainer({
       return [...manualPanels, ...markedGeneratedPanels]
     })
   }, [panelMarkers])
+
+  // Notify parent when roof angle panel state changes
+  useEffect(() => {
+    onRoofAnglePanelChange?.(showAnglePanel)
+  }, [showAnglePanel, onRoofAnglePanelChange])
 
   // Panel placement
   const {
@@ -500,11 +516,15 @@ export default function MapContainer({
             lat: map.getCenter()!.lat(),
             lng: map.getCenter()!.lng()
           } : undefined}
+          onStatsUpdate={setShadeStats}
         />
       )}
 
       {/* Shade Legend */}
-      <ShadeLegend visible={showShadeVisualization && allPanels.length > 0} />
+      <ShadeLegend
+        visible={showShadeVisualization && allPanels.length > 0}
+        panelStats={shadeStats ?? undefined}
+      />
 
       {/* Panel Generation Overlay */}
       <PanelGenerationOverlay

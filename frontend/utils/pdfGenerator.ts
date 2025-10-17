@@ -24,10 +24,15 @@ export function generateSolarReport(
   options: ReportOptions = {}
 ): jsPDF {
   const {
+    includeCustomerInfo = true,
+    includeSiteInfo = true,
+    includeEnergyProduction = true,
     includeFinancials = true,
     includeMonthlyBreakdown = false,
     includeSystemSpecs = true,
     includeEnvironmental = true,
+    includeElectrical = true,
+    includeMonitoring = true,
     language = 'en',
   } = options
 
@@ -43,31 +48,70 @@ export function generateSolarReport(
   yPos = addHeader(doc, data, yPos, primaryColor)
   yPos += 10
 
+  // Customer & Site Information
+  if (includeCustomerInfo && data.customer) {
+    yPos = checkPageBreak(doc, yPos, 60)
+    yPos = addCustomerInfo(doc, data, yPos, primaryColor, textColor, lightGray)
+    yPos += 10
+  }
+
+  if (includeSiteInfo && data.site) {
+    yPos = checkPageBreak(doc, yPos, 50)
+    yPos = addSiteInfo(doc, data, yPos, primaryColor, textColor, lightGray)
+    yPos += 10
+  }
+
   // Executive Summary
+  yPos = checkPageBreak(doc, yPos, 30)
   yPos = addExecutiveSummary(doc, data, yPos, primaryColor, textColor)
   yPos += 10
 
   // System Specifications
   if (includeSystemSpecs) {
+    yPos = checkPageBreak(doc, yPos, 60)
     yPos = addSystemSpecifications(doc, data, yPos, primaryColor, textColor, lightGray)
+    yPos += 10
+  }
+
+  // Energy Production Estimate
+  if (includeEnergyProduction && data.energyProduction) {
+    yPos = checkPageBreak(doc, yPos, 80)
+    yPos = addEnergyProduction(doc, data, yPos, primaryColor, textColor, lightGray)
     yPos += 10
   }
 
   // Financial Analysis
   if (includeFinancials) {
+    yPos = checkPageBreak(doc, yPos, 60)
     yPos = addFinancialAnalysis(doc, data, yPos, primaryColor, textColor, lightGray)
     yPos += 10
   }
 
   // Cost Breakdown
   if (includeFinancials) {
+    yPos = checkPageBreak(doc, yPos, 60)
     yPos = addCostBreakdown(doc, data, yPos, primaryColor, textColor, lightGray)
     yPos += 10
   }
 
   // Environmental Impact
   if (includeEnvironmental) {
+    yPos = checkPageBreak(doc, yPos, 50)
     yPos = addEnvironmentalImpact(doc, data, yPos, primaryColor, textColor, lightGray)
+    yPos += 10
+  }
+
+  // Electrical Design Summary
+  if (includeElectrical && data.electricalDesign) {
+    yPos = checkPageBreak(doc, yPos, 60)
+    yPos = addElectricalDesign(doc, data, yPos, primaryColor, textColor, lightGray)
+    yPos += 10
+  }
+
+  // Monitoring & Maintenance
+  if (includeMonitoring && data.monitoring) {
+    yPos = checkPageBreak(doc, yPos, 60)
+    yPos = addMonitoringMaintenance(doc, data, yPos, primaryColor, textColor, lightGray)
     yPos += 10
   }
 
@@ -75,6 +119,17 @@ export function generateSolarReport(
   addFooter(doc, data)
 
   return doc
+}
+
+/**
+ * Check if page break is needed and add new page if necessary
+ */
+function checkPageBreak(doc: jsPDF, yPos: number, requiredSpace: number): number {
+  if (yPos + requiredSpace > 270) {
+    doc.addPage()
+    return 20
+  }
+  return yPos
 }
 
 /**
@@ -476,6 +531,451 @@ function addEnvironmentalImpact(
   })
 
   return doc.lastAutoTable.finalY + 5
+}
+
+/**
+ * Add customer information section
+ */
+function addCustomerInfo(
+  doc: jsPDF,
+  data: ReportData,
+  yPos: number,
+  primaryColor: [number, number, number],
+  textColor: [number, number, number],
+  lightGray: [number, number, number]
+): number {
+  doc.setFontSize(14)
+  doc.setTextColor(...primaryColor)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Customer Information', 20, yPos)
+
+  yPos += 5
+
+  const customer = data.customer!
+  const customerInfo = [
+    ['Customer Name', customer.name],
+    ['Address', customer.address],
+  ]
+
+  if (customer.email) {
+    customerInfo.push(['Email', customer.email])
+  }
+  if (customer.phone) {
+    customerInfo.push(['Phone', customer.phone])
+  }
+  if (customer.propertyType) {
+    customerInfo.push(['Property Type', customer.propertyType.charAt(0).toUpperCase() + customer.propertyType.slice(1)])
+  }
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [],
+    body: customerInfo,
+    theme: 'plain',
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 60 },
+      1: { cellWidth: 'auto' },
+    },
+    margin: { left: 20, right: 20 },
+  })
+
+  return doc.lastAutoTable.finalY + 5
+}
+
+/**
+ * Add site information section
+ */
+function addSiteInfo(
+  doc: jsPDF,
+  data: ReportData,
+  yPos: number,
+  primaryColor: [number, number, number],
+  textColor: [number, number, number],
+  lightGray: [number, number, number]
+): number {
+  doc.setFontSize(14)
+  doc.setTextColor(...primaryColor)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Site Information', 20, yPos)
+
+  yPos += 5
+
+  const site = data.site!
+  const siteInfo = [
+    ['Site Address', site.address],
+  ]
+
+  if (site.location) {
+    siteInfo.push(['GPS Coordinates', `${site.location.lat.toFixed(6)}, ${site.location.lng.toFixed(6)}`])
+  }
+  if (site.roofType) {
+    siteInfo.push(['Roof Type', site.roofType])
+  }
+  if (site.roofMaterial) {
+    siteInfo.push(['Roof Material', site.roofMaterial])
+  }
+  if (site.roofAge) {
+    siteInfo.push(['Roof Age', `${site.roofAge} years`])
+  }
+  if (site.roofCondition) {
+    siteInfo.push(['Roof Condition', site.roofCondition.charAt(0).toUpperCase() + site.roofCondition.slice(1)])
+  }
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [],
+    body: siteInfo,
+    theme: 'plain',
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 60 },
+      1: { cellWidth: 'auto' },
+    },
+    margin: { left: 20, right: 20 },
+  })
+
+  yPos = doc.lastAutoTable.finalY + 5
+
+  // Shade analysis if available
+  if (site.shadeAnalysis && site.shadeAnalysis.averageShadePercentage > 0) {
+    yPos += 3
+    doc.setFontSize(12)
+    doc.setTextColor(...primaryColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Shade Analysis', 20, yPos)
+
+    yPos += 5
+
+    const shadeInfo = [
+      ['Average Shade Impact', `${site.shadeAnalysis.averageShadePercentage.toFixed(1)}%`],
+      ['Estimated Annual Loss', `${site.shadeAnalysis.estimatedAnnualLoss.toLocaleString()} kWh`],
+      ['Financial Impact', `€${site.shadeAnalysis.estimatedFinancialLoss.toFixed(0)}/year`],
+      ['Recommendation', site.shadeAnalysis.recommendation],
+    ]
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [],
+      body: shadeInfo,
+      theme: 'striped',
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+        textColor: textColor,
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 60 },
+        1: { cellWidth: 'auto' },
+      },
+      alternateRowStyles: {
+        fillColor: lightGray,
+      },
+      margin: { left: 20, right: 20 },
+    })
+
+    yPos = doc.lastAutoTable.finalY
+  }
+
+  return yPos + 5
+}
+
+/**
+ * Add energy production estimate section
+ */
+function addEnergyProduction(
+  doc: jsPDF,
+  data: ReportData,
+  yPos: number,
+  primaryColor: [number, number, number],
+  textColor: [number, number, number],
+  lightGray: [number, number, number]
+): number {
+  doc.setFontSize(14)
+  doc.setTextColor(...primaryColor)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Energy Production Estimate', 20, yPos)
+
+  yPos += 5
+
+  const energy = data.energyProduction!
+  const energyInfo = [
+    ['Annual Energy Yield', `${energy.annualYield.toLocaleString()} kWh`],
+    ['Performance Ratio', `${energy.performanceRatio}%`],
+    ['Solar Irradiance', `${energy.solarIrradiance} kWh/m²/year`],
+    ['Degradation Rate', `${energy.degradationRate}% per year`],
+  ]
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [],
+    body: energyInfo,
+    theme: 'striped',
+    styles: {
+      fontSize: 10,
+      cellPadding: 4,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 80 },
+      1: { halign: 'right', cellWidth: 'auto' },
+    },
+    alternateRowStyles: {
+      fillColor: lightGray,
+    },
+    margin: { left: 20, right: 20 },
+  })
+
+  yPos = doc.lastAutoTable.finalY + 8
+
+  // Monthly production chart (simple table representation)
+  if (energy.monthlyYield && energy.monthlyYield.length === 12) {
+    doc.setFontSize(12)
+    doc.setTextColor(...primaryColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Monthly Production Estimate', 20, yPos)
+
+    yPos += 5
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const monthlyData = energy.monthlyYield.map((yield_val, idx) => [
+      months[idx],
+      `${yield_val.toLocaleString()} kWh`
+    ])
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Month', 'Production']],
+      body: monthlyData,
+      theme: 'striped',
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        textColor: textColor,
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      columnStyles: {
+        0: { cellWidth: 40, halign: 'center' },
+        1: { cellWidth: 'auto', halign: 'right' },
+      },
+      alternateRowStyles: {
+        fillColor: lightGray,
+      },
+      margin: { left: 20, right: 20 },
+    })
+
+    yPos = doc.lastAutoTable.finalY
+  }
+
+  return yPos + 5
+}
+
+/**
+ * Add electrical design summary section
+ */
+function addElectricalDesign(
+  doc: jsPDF,
+  data: ReportData,
+  yPos: number,
+  primaryColor: [number, number, number],
+  textColor: [number, number, number],
+  lightGray: [number, number, number]
+): number {
+  doc.setFontSize(14)
+  doc.setTextColor(...primaryColor)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Electrical Design Summary', 20, yPos)
+
+  yPos += 5
+
+  const electrical = data.electricalDesign!
+  const stringConfig = electrical.stringConfiguration
+  const wireSizing = electrical.wireSizing
+
+  const electricalInfo = [
+    ['String Configuration', ''],
+    ['  Panels per String', stringConfig.panelsPerString.toString()],
+    ['  Number of Strings', stringConfig.numberOfStrings.toString()],
+    ['  String Voltage (Voc)', `${stringConfig.stringVoltageVoc.toFixed(1)} V`],
+    ['  String Voltage (Vmp)', `${stringConfig.stringVoltageVmp.toFixed(1)} V`],
+    ['  String Current', `${stringConfig.stringCurrent.toFixed(1)} A`],
+    ['', ''],
+    ['Wire Sizing', ''],
+    ['  DC Cable Size', `${wireSizing.dcCableSize} mm²`],
+    ['  AC Cable Size', `${wireSizing.acCableSize} mm²`],
+    ['  DC Voltage Drop', `${wireSizing.dcVoltageDrop.toFixed(2)}%`],
+    ['  AC Voltage Drop', `${wireSizing.acVoltageDrop.toFixed(2)}%`],
+    ['', ''],
+    ['Protection', ''],
+    ['  DC Breaker', `${electrical.dcBreaker.rating}A`],
+    ['  AC Breaker', `${electrical.acBreaker.rating}A`],
+  ]
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [],
+    body: electricalInfo,
+    theme: 'plain',
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 80 },
+      1: { cellWidth: 'auto', halign: 'right' },
+    },
+    margin: { left: 20, right: 20 },
+  })
+
+  yPos = doc.lastAutoTable.finalY + 5
+
+  // Safety note
+  if (data.electricalSafety) {
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    doc.setFont('helvetica', 'italic')
+    doc.text(
+      `Grounding: ${data.electricalSafety.grounding} | Surge Protection: ${data.electricalSafety.surgeProtection ? 'Yes' : 'No'}`,
+      20,
+      yPos
+    )
+    yPos += 4
+    if (data.electricalSafety.localCompliance.length > 0) {
+      doc.text(
+        `Compliance: ${data.electricalSafety.localCompliance.join(', ')}`,
+        20,
+        yPos
+      )
+      yPos += 4
+    }
+  }
+
+  return yPos + 5
+}
+
+/**
+ * Add monitoring and maintenance section
+ */
+function addMonitoringMaintenance(
+  doc: jsPDF,
+  data: ReportData,
+  yPos: number,
+  primaryColor: [number, number, number],
+  textColor: [number, number, number],
+  lightGray: [number, number, number]
+): number {
+  doc.setFontSize(14)
+  doc.setTextColor(...primaryColor)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Monitoring & Maintenance', 20, yPos)
+
+  yPos += 5
+
+  const monitoring = data.monitoring!
+  const monitoringInfo = []
+
+  if (monitoring.monitoringSystem) {
+    monitoringInfo.push(['Monitoring System', monitoring.monitoringSystem])
+  }
+  monitoringInfo.push(['App Access', monitoring.appAccess ? 'Yes' : 'No'])
+  monitoringInfo.push(['Maintenance Frequency', monitoring.maintenanceSchedule.frequency])
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [],
+    body: monitoringInfo,
+    theme: 'plain',
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 70 },
+      1: { cellWidth: 'auto' },
+    },
+    margin: { left: 20, right: 20 },
+  })
+
+  yPos = doc.lastAutoTable.finalY + 8
+
+  // Warranty Information
+  doc.setFontSize(12)
+  doc.setTextColor(...primaryColor)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Warranty Coverage', 20, yPos)
+
+  yPos += 5
+
+  const warrantyInfo = [
+    ['Solar Panels', `${monitoring.warranty.panels} years`],
+    ['Inverter', `${monitoring.warranty.inverter} years`],
+    ['Installation Workmanship', `${monitoring.warranty.installation} years`],
+  ]
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [],
+    body: warrantyInfo,
+    theme: 'striped',
+    styles: {
+      fontSize: 10,
+      cellPadding: 4,
+      textColor: textColor,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 70 },
+      1: { cellWidth: 'auto', halign: 'right' },
+    },
+    alternateRowStyles: {
+      fillColor: lightGray,
+    },
+    margin: { left: 20, right: 20 },
+  })
+
+  yPos = doc.lastAutoTable.finalY + 8
+
+  // Maintenance Tasks
+  if (monitoring.maintenanceSchedule.tasks.length > 0) {
+    doc.setFontSize(12)
+    doc.setTextColor(...primaryColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Recommended Maintenance Tasks', 20, yPos)
+
+    yPos += 5
+
+    const taskList = monitoring.maintenanceSchedule.tasks.map(task => [task])
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [],
+      body: taskList,
+      theme: 'plain',
+      styles: {
+        fontSize: 9,
+        cellPadding: 2,
+        textColor: textColor,
+      },
+      margin: { left: 25, right: 20 },
+    })
+
+    yPos = doc.lastAutoTable.finalY
+  }
+
+  return yPos + 5
 }
 
 /**

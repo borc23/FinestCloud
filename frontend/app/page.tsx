@@ -24,6 +24,7 @@ export default function HomePage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showPanelSelector, setShowPanelSelector] = useState(false)
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
+  const [isRoofAnglePanelOpen, setIsRoofAnglePanelOpen] = useState(false)
 
   const handleToolSelect = (tool: string) => {
     setActiveTool(activeTool === tool ? '' : tool)
@@ -62,6 +63,7 @@ export default function HomePage() {
               onToolChange={setActiveTool}
               onPanelsAvailable={setShowPanelsTool}
               onDashboardMinimizeChange={setIsDashboardMinimized}
+              onRoofAnglePanelChange={setIsRoofAnglePanelOpen}
             />
           )}
 
@@ -83,7 +85,7 @@ export default function HomePage() {
             onImageUpload={handleImageUpload}
           />
 
-          {isDashboardMinimized && (
+          {isDashboardMinimized && !isRoofAnglePanelOpen && (
             <PanelSelectorButton onClick={() => setShowPanelSelector(true)} />
           )}
 

@@ -73,27 +73,122 @@ export default function FinancialCalculator({
   // Generate PDF report
   const handleGeneratePDF = () => {
     const reportData: ReportData = {
-      systemSpecs: {
-        panelCount: panelCount || Math.round(systemSize * 2.5), // Estimate if not provided
-        systemSize,
-        panelWattage,
-        annualProduction,
+      // Customer Information (placeholder - can be customized)
+      customer: {
+        name: 'Customer Name',
+        address: 'Customer Address',
+        propertyType: 'residential'
       },
+
+      // Site Information (placeholder - can be customized)
+      site: {
+        address: 'Installation Address',
+        roofType: 'Pitched',
+        roofCondition: 'good',
+        shadeAnalysis: shadeImpact || undefined
+      },
+
+      // System Specifications
+      systemSpecs: {
+        panelCount: panelCount || Math.round(systemSize * 2.5),
+        systemSize,
+        panelWattage: panelWattage || 400,
+        panelManufacturer: 'Premium Solar',
+        panelModel: 'High Efficiency',
+        panelEfficiency: 21.5,
+        annualProduction,
+        performanceRatio: 85,
+        degradationRate: 0.5,
+      },
+
+      // Energy Production Estimate
+      energyProduction: {
+        monthlyYield: generateMonthlyEstimate(annualProduction),
+        annualYield: annualProduction,
+        performanceRatio: 85,
+        solarIrradiance: 1100,
+        degradationRate: 0.5,
+        estimatedOutput25Years: generate25YearProjection(annualProduction, 0.5)
+      },
+
+      // Inverter Specifications
+      inverter: {
+        type: 'string',
+        manufacturer: 'Premium Inverter Co.',
+        model: 'String Inverter 10kW',
+        quantity: 1,
+        efficiency: 97.5,
+        warranty: 10
+      },
+
+      // Monitoring & Maintenance
+      monitoring: {
+        monitoringSystem: 'Web Portal & Mobile App',
+        appAccess: true,
+        maintenanceSchedule: {
+          frequency: 'Annual',
+          tasks: [
+            'Visual inspection of panels for damage or debris',
+            'Clean panels if necessary',
+            'Check inverter status and error logs',
+            'Inspect mounting structure for corrosion',
+            'Verify electrical connections are secure',
+            'Test surge protection devices',
+            'Review monitoring system data for anomalies'
+          ]
+        },
+        warranty: {
+          panels: 25,
+          inverter: 10,
+          installation: 5
+        }
+      },
+
+      // Financial Data
       financials: results,
       electricityRate: costPerKwh,
       monthlyBill: avgMonthlyBill,
       feedInTariff,
       selfConsumptionRate,
       systemCost: systemCostInput,
+
+      // Report Metadata
+      companyName: 'Solar Installation Company',
+      projectDate: new Date(),
+      proposalValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     }
 
     const doc = generateSolarReport(reportData, {
-      includeFinancials: true,
+      includeCustomerInfo: true,
+      includeSiteInfo: true,
       includeSystemSpecs: true,
+      includeEnergyProduction: true,
+      includeFinancials: true,
       includeEnvironmental: true,
+      includeMonitoring: true,
     })
 
     downloadPDF(doc, `solar-proposal-${systemSize}kW-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
+  // Helper function to generate monthly production estimate
+  function generateMonthlyEstimate(annualProduction: number): number[] {
+    // Typical monthly distribution for Germany (percentage of annual)
+    const monthlyDistribution = [
+      0.04, 0.06, 0.08, 0.10, 0.11, 0.12,  // Jan-Jun
+      0.13, 0.12, 0.10, 0.07, 0.04, 0.03   // Jul-Dec
+    ]
+    return monthlyDistribution.map(ratio => Math.round(annualProduction * ratio))
+  }
+
+  // Helper function to generate 25-year projection
+  function generate25YearProjection(annualProduction: number, degradationRate: number): number[] {
+    const projection = []
+    for (let year = 0; year < 25; year++) {
+      const degradationFactor = Math.pow(1 - degradationRate / 100, year)
+      projection.push(Math.round(annualProduction * degradationFactor))
+    }
+    return projection
   }
 
   return (
@@ -489,16 +584,6 @@ export default function FinancialCalculator({
           {' '}Typical German solar systems achieve 850-1,050 full load hours annually (~10% capacity factor).
         </p>
       </div>
-      </div>
-
-      {/* Export Button - Fixed at bottom */}
-      <div className={styles.exportSection}>
-        <button
-          className={styles.exportButton}
-          onClick={handleGeneratePDF}
-        >
-          📄 Download PDF Report
-        </button>
       </div>
     </div>
   )
