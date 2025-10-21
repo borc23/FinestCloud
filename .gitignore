@@ -15,6 +15,9 @@ app/models/*.pt
 *.jpg
 *.jpeg
 
+# Saved capture images
+saved_images/
+
 *.ipynb
 
 # Environment and IDE

@@ -7,7 +7,7 @@ import styles from './CaptureOverlay.module.css'
 
 interface CaptureOverlayProps {
   isVisible: boolean
-  onCapture: (bounds: google.maps.LatLngBounds | null) => void
+  onCapture: (bounds: google.maps.LatLngBounds | null, size?: { width: number; height: number }) => void
   onToggle: () => void
   map: google.maps.Map | null
 }
@@ -22,11 +22,20 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
     const mapContainer = map.getDiv()
     const containerRect = mapContainer.getBoundingClientRect()
 
-    // Center the 640x640 capture square
-    const squareSize = 640
-    const maxSize = Math.min(containerRect.width, containerRect.height, squareSize)
+    // Calculate capture size based on available space
+    // Reserve space for toolstrip at top (44px + padding) and buttons at bottom (120px)
+    const reservedTopSpace = 60 // Toolstrip height + some padding
+    const reservedBottomSpace = 120 // Space for Cancel/Capture buttons
+    const availableHeight = containerRect.height - reservedTopSpace - reservedBottomSpace
+    const availableWidth = containerRect.width
+
+    // Use the smaller dimension to ensure it fits, with a max of 640px
+    const maxSize = Math.min(availableWidth, availableHeight, 640)
+
+    // Center the capture square horizontally
     const left = (containerRect.width - maxSize) / 2
-    const top = (containerRect.height - maxSize) / 2
+    // Position vertically between toolstrip and buttons
+    const top = reservedTopSpace + (availableHeight - maxSize) / 2
 
     overlayRef.current.style.left = `${left}px`
     overlayRef.current.style.top = `${top}px`
@@ -110,15 +119,20 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         const cleanup = () => {
           if (animationFrameId !== null) {
             cancelAnimationFrame(animationFrameId)
+            animationFrameId = null
           }
           if (timeoutId) {
             clearTimeout(timeoutId)
+            timeoutId = null
           }
           if (overlay) {
             try {
-              overlay.setMap(null)
+              // Check if overlay has setMap method before calling
+              if (typeof overlay.setMap === 'function') {
+                overlay.setMap(null)
+              }
             } catch (cleanupError) {
-              console.warn('Overlay cleanup warning:', cleanupError)
+              // Silently ignore cleanup errors as they don't affect functionality
             }
           }
         }
@@ -171,16 +185,19 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
     } catch (error) {
       if (overlay) {
         try {
-          overlay.setMap(null);
+          if (typeof overlay.setMap === 'function') {
+            overlay.setMap(null);
+          }
         } catch {
+          // Silently ignore cleanup errors
         }
       }
 
       isCalculatingRef.current = false;
       return null;
+    } finally {
+      isCalculatingRef.current = false;
     }
-    isCalculatingRef.current = false;
-    return null;
   }, [map])
 
   const handleDetect = async () => {
@@ -190,7 +207,14 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
 
     try {
       const bounds = await getBounds()
-      await onCapture(bounds)
+
+      // Get the actual capture size
+      const size = overlayRef.current ? {
+        width: parseInt(overlayRef.current.style.width, 10),
+        height: parseInt(overlayRef.current.style.height, 10)
+      } : undefined
+
+      await onCapture(bounds, size)
     } finally {
       setIsProcessing(false)
     }

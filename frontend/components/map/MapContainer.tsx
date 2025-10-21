@@ -124,6 +124,17 @@ export default function MapContainer({
   const handlePolygonComplete = useCallback((path: google.maps.LatLng[], isRoof: boolean) => {
     if (!map) return
     const coords = path.map(p => ({ lat: p.lat(), lng: p.lng() }))
+
+    // DEBUG: Log manually drawn polygon
+    console.log(`✏️ MANUALLY DRAWN ${isRoof ? 'ROOF' : 'OBJECT'} POLYGON:`, {
+      coords,
+      firstPoint: coords[0],
+      center: coords.length > 0 ? {
+        lat: coords.reduce((sum, c) => sum + c.lat, 0) / coords.length,
+        lng: coords.reduce((sum, c) => sum + c.lng, 0) / coords.length
+      } : null
+    })
+
     const enableHover = activeTool !== 'draw'
     renderPolygons([{ coords }], isRoof, enableHover)
   }, [map, renderPolygons, activeTool])
@@ -279,11 +290,11 @@ export default function MapContainer({
     if (isPlacing) stopPlacement()
   }, [clearAllPolygons, clearPanels, allPanels, onToolChange, isEditMode, isDrawing, isPlacing, toggleEditMode, stopDrawing, stopPlacement])
 
-  const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null) => {
+  const handleDetection = useCallback(async (bounds: google.maps.LatLngBounds | null, size?: { width: number; height: number }) => {
     if (!map || !bounds) return
 
     try {
-      const result = await detectRoofs(map, bounds)
+      const result = await detectRoofs(map, bounds, size)
 
       if (result?.success) {
         clearAllPolygons()

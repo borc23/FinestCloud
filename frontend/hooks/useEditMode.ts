@@ -23,6 +23,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   const selectedDuringDragRef = useRef<Set<google.maps.Polygon>>(new Set())
   const isCtrlPressedRef = useRef(false)
   const justCompletedDragRef = useRef(false)
+  const dragHighlightedPolygonsRef = useRef<Map<google.maps.Polygon, { originalStroke: string, originalFill: string }>>(new Map())
 
   useEffect(() => {
     allPolygonsRef.current = allPolygons
@@ -131,13 +132,24 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         if (selectedDuringDragRef.current.has(polygon)) return
 
         if (google.maps.geometry.poly.containsLocation(point, polygon)) {
-          console.log('[checkPolygonIntersection] Polygon selected!')
+          console.log('[checkPolygonIntersection] Polygon selected during drag!')
           selectedDuringDragRef.current.add(polygon)
 
-          setSelectedPolygons(prev => {
-            const newSet = new Set(prev)
-            newSet.add(polygon)
-            return newSet
+          // Store original colors before applying blue highlight
+          if (!dragHighlightedPolygonsRef.current.has(polygon)) {
+            const originalStroke = polygon.get('strokeColor') || '#000000'
+            const originalFill = polygon.get('fillColor') || '#000000'
+            dragHighlightedPolygonsRef.current.set(polygon, { originalStroke, originalFill })
+          }
+
+          // Apply temporary blue highlight during drag (no editable vertices)
+          polygon.setOptions({
+            strokeColor: '#3498db',
+            fillColor: '#3498db',
+            strokeWeight: 2,
+            fillOpacity: 0.3,
+            editable: false,
+            draggable: false
           })
         }
       })
@@ -204,6 +216,24 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       })
       polygonListeners.length = 0
 
+      // Restore original colors and add to selection
+      dragHighlightedPolygonsRef.current.forEach((colors, polygon) => {
+        // Restore original colors
+        polygon.setOptions({
+          strokeColor: colors.originalStroke,
+          fillColor: colors.originalFill
+        })
+      })
+
+      // Now add them to the actual selection state
+      if (selectedDuringDragRef.current.size > 0) {
+        setSelectedPolygons(prev => {
+          const newSet = new Set(prev)
+          selectedDuringDragRef.current.forEach(p => newSet.add(p))
+          return newSet
+        })
+      }
+
       justCompletedDragRef.current = true
       setTimeout(() => {
         justCompletedDragRef.current = false
@@ -214,6 +244,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       trailRef.current = []
       isDraggingRef.current = false
       selectedDuringDragRef.current = new Set()
+      dragHighlightedPolygonsRef.current.clear()
     }
 
     const downListener = map.addListener('mousedown', onMouseDown)

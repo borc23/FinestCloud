@@ -46,7 +46,9 @@ class DetectionService:
             logger.warning("GPU requested but not available, falling back to CPU")
             return "cpu"
 
-    def detect_roofs(self, image, bounds=None, conf=0.5, epsilon=0.0075):
+    def detect_roofs(
+        self, image, bounds=None, conf=0.5, epsilon=0.0075, transform=None
+    ):
         cache_key = self._generate_cache_key(image, bounds, conf, epsilon)
 
         if cache_key in self.cache:
@@ -59,7 +61,7 @@ class DetectionService:
             verbose=False,
             device=self.device,
         )
-        processed_results = self._process_results(results, bounds, epsilon)
+        processed_results = self._process_results(results, bounds, epsilon, transform)
 
         self._cache_put(cache_key, processed_results)
         return processed_results
@@ -95,7 +97,7 @@ class DetectionService:
             if len(self.cache) > self.cache_size:
                 self.cache.popitem(last=False)
 
-    def _process_results(self, results, bounds, epsilon):
+    def _process_results(self, results, bounds, epsilon, transform=None):
         all_roof_polygons = []
         all_object_polygons = []
 
@@ -109,7 +111,7 @@ class DetectionService:
 
             if bounds:
                 coords_list = [
-                    self._convert_to_geo_coordinates(simplified, bounds)
+                    self._convert_to_geo_coordinates(simplified, bounds, transform)
                     for simplified in simplified_masks
                 ]
             else:
@@ -124,15 +126,72 @@ class DetectionService:
 
     @staticmethod
     def _convert_to_geo_coordinates(
-        points: np.ndarray, bounds: Dict[str, float]
+        points: np.ndarray, bounds: Dict[str, float], transform: Dict = None
     ) -> List[Dict[str, float]]:
-        """Vectorized conversion to geographic coordinates."""
+        """
+        Vectorized conversion to geographic coordinates.
+
+        YOLO returns normalized coordinates (0-1) relative to the 640x640 input canvas.
+        If the image was padded, we need to:
+        1. Convert normalized coords to 640x640 pixel coordinates
+        2. Remove the padding offset
+        3. Normalize back to the original image dimensions
+        4. Map to geographic bounds
+        """
+        if transform:
+            logger.info(f"Transform info: {transform}")
+
+            # Step 1: Convert normalized (0-1) to 640x640 pixel coordinates
+            pixel_x = points[:, 0] * 640
+            pixel_y = points[:, 1] * 640
+
+            logger.info(
+                f"Step 1 - Pixel coords on 640x640 canvas: x={pixel_x[0]:.2f}, y={pixel_y[0]:.2f}"
+            )
+
+            # Step 2: Remove padding offset to get coords on scaled image
+            pixel_x = pixel_x - transform["pad_left"]
+            pixel_y = pixel_y - transform["pad_top"]
+
+            logger.info(
+                f"Step 2 - After removing padding: x={pixel_x[0]:.2f}, y={pixel_y[0]:.2f}"
+            )
+
+            # Step 3: Scale back to original image pixel coordinates
+            # The scaled image was resized by 'scale' factor
+            # So we divide by scale to get back to original pixel space
+            original_pixel_x = pixel_x / transform["scale"]
+            original_pixel_y = pixel_y / transform["scale"]
+
+            logger.info(
+                f"Step 3 - Scaled back to original: x={original_pixel_x[0]:.2f}, y={original_pixel_y[0]:.2f}"
+            )
+
+            # Step 4: Normalize to 0-1 range using original image dimensions
+            normalized_x = original_pixel_x / transform["original_width"]
+            normalized_y = original_pixel_y / transform["original_height"]
+
+            logger.info(
+                f"Step 4 - Normalized: x={normalized_x[0]:.4f}, y={normalized_y[0]:.4f}"
+            )
+
+            # Update points with corrected normalized coordinates
+            points = np.column_stack((normalized_x, normalized_y))
+
+        # Step 5: Map to geographic bounds
         lat_scale = bounds["south"] - bounds["north"]
         lng_scale = bounds["east"] - bounds["west"]
+
+        logger.info(
+            f"Bounds: north={bounds['north']:.8f}, south={bounds['south']:.8f}, east={bounds['east']:.8f}, west={bounds['west']:.8f}"
+        )
+        logger.info(f"Scales: lat_scale={lat_scale:.8f}, lng_scale={lng_scale:.8f}")
 
         # Vectorized computation
         lats = bounds["north"] + lat_scale * points[:, 1]
         lngs = bounds["west"] + lng_scale * points[:, 0]
+
+        logger.info(f"Final coords: lat={lats[0]:.8f}, lng={lngs[0]:.8f}")
 
         coords = np.column_stack((lats, lngs))
         return [{"lat": float(coord[0]), "lng": float(coord[1])} for coord in coords]

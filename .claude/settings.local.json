@@ -10,7 +10,8 @@
       "Bash(python test_gps_standalone.py:*)",
       "Bash(npm install:*)",
       "Bash(find:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(python -m py_compile:*)"
     ],
     "deny": [],
     "ask": []

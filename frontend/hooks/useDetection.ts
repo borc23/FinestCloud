@@ -3,7 +3,7 @@ import { DetectionBounds, DetectionResponse, DetectionRequest } from '../types/d
 
 interface UseDetectionReturn {
   error: string | null
-  detectRoofs: (map: google.maps.Map, bounds: google.maps.LatLngBounds) => Promise<DetectionResponse | null>
+  detectRoofs: (map: google.maps.Map, bounds: google.maps.LatLngBounds, size?: { width: number; height: number }) => Promise<DetectionResponse | null>
   clearError: () => void
 }
 
@@ -25,7 +25,8 @@ export function useDetection(): UseDetectionReturn {
 
   const detectRoofs = useCallback(async (
     map: google.maps.Map,
-    bounds: google.maps.LatLngBounds
+    bounds: google.maps.LatLngBounds,
+    size?: { width: number; height: number }
   ): Promise<DetectionResponse | null> => {
     if (isDetectingRef.current) return null
 
@@ -33,20 +34,32 @@ export function useDetection(): UseDetectionReturn {
     setError(null)
 
     try {
-      const center = map.getCenter()
       const zoom = map.getZoom()
 
-      if (!center) {
-        throw new Error('Unable to get map center')
+      if (!zoom) {
+        throw new Error('Unable to get map zoom')
       }
 
       const detectionBounds = convertBoundsToDetectionBounds(bounds)
 
+      // Calculate the center of the capture overlay bounds, not the entire map
+      const captureCenter = bounds.getCenter()
+
+      // Use actual capture size - the bounds match this size
+      const imageSize = size ? `${size.width}x${size.height}` : '640x640'
+
+      console.log(`🌐 REQUESTING GOOGLE MAPS IMAGE:`, {
+        size: imageSize,
+        center: `${captureCenter.lat()},${captureCenter.lng()}`,
+        zoom: zoom,
+        bounds: detectionBounds
+      })
+
       const requestData: DetectionRequest = {
         image: {
-          center: `${center.lat()},${center.lng()}`,
+          center: `${captureCenter.lat()},${captureCenter.lng()}`,
           zoom: zoom,
-          size: '640x640',
+          size: imageSize,
           maptype: 'satellite',
           format: 'jpg',
           style: 'feature:all|color:0xffffff'
