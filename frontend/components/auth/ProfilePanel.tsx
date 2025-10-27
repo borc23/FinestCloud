@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { getProfile, updateProfile, setDefaultLocation } from '@/lib/supabase/profiles'
 import { getProjects, deleteProject } from '@/lib/supabase/projects'
@@ -8,6 +8,12 @@ import { createClient } from '@/lib/supabase/client'
 import type { Project } from '@/types/database'
 import ProjectCard from '@/components/projects/ProjectCard'
 import styles from './ProfilePanel.module.css'
+
+declare global {
+  interface Window {
+    google: any
+  }
+}
 
 interface ProfilePanelProps {
   isOpen: boolean
@@ -36,10 +42,16 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
   const [displayName, setDisplayName] = useState('')
   const [defaultLat, setDefaultLat] = useState('')
   const [defaultLng, setDefaultLng] = useState('')
+  const [locationSearch, setLocationSearch] = useState('')
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([])
+  const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0, width: 0 })
   const [profileLoading, setProfileLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Refs
+  const locationInputRef = useRef<HTMLInputElement>(null)
 
   // Projects state
   const [projects, setProjects] = useState<Project[]>([])
@@ -65,14 +77,37 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       const profile = await getProfile(user.id)
       if (profile) {
         setDisplayName(profile.display_name || '')
-        setDefaultLat(profile.default_latitude?.toString() || '')
-        setDefaultLng(profile.default_longitude?.toString() || '')
+        const lat = profile.default_latitude
+        const lng = profile.default_longitude
+        setDefaultLat(lat?.toString() || '')
+        setDefaultLng(lng?.toString() || '')
+
+        // If we have coordinates, reverse geocode to get location name
+        if (lat && lng && window.google?.maps) {
+          reverseGeocodeLocation(lat, lng)
+        }
       }
     } catch (err: any) {
       console.error('Error loading profile:', err)
       setError('Failed to load profile')
     } finally {
       setProfileLoading(false)
+    }
+  }
+
+  const reverseGeocodeLocation = async (lat: number, lng: number) => {
+    try {
+      const geocoder = new window.google.maps.Geocoder()
+      geocoder.geocode(
+        { location: { lat, lng } },
+        (results: any, status: any) => {
+          if (status === 'OK' && results && results[0]) {
+            setLocationSearch(results[0].formatted_address)
+          }
+        }
+      )
+    } catch (err) {
+      console.error('Error reverse geocoding:', err)
     }
   }
 
@@ -212,8 +247,15 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setDefaultLat(position.coords.latitude.toFixed(6))
-          setDefaultLng(position.coords.longitude.toFixed(6))
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+          setDefaultLat(lat.toFixed(6))
+          setDefaultLng(lng.toFixed(6))
+
+          // Reverse geocode to get location name
+          if (window.google?.maps) {
+            reverseGeocodeLocation(lat, lng)
+          }
         },
         (error) => {
           console.error('Error getting location:', error)
@@ -222,6 +264,112 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       )
     } else {
       setError('Geolocation is not supported by your browser')
+    }
+  }
+
+  // Update suggestion dropdown position when input changes or on scroll
+  useEffect(() => {
+    const updatePosition = () => {
+      if (locationInputRef.current && locationSuggestions.length > 0) {
+        const rect = locationInputRef.current.getBoundingClientRect()
+        const dropdownHeight = 240 // max-height from CSS
+        const viewportHeight = window.innerHeight
+        const spaceBelow = viewportHeight - rect.bottom
+        const spaceAbove = rect.top
+
+        // Check if dropdown would go below viewport, and if there's more space above
+        const shouldFlipUp = spaceBelow < dropdownHeight + 16 && spaceAbove > spaceBelow
+
+        const position = {
+          top: shouldFlipUp ? rect.top - dropdownHeight - 8 : rect.bottom + 8,
+          left: rect.left,
+          width: rect.width
+        }
+        console.log('Updating suggestion position:', position, 'shouldFlipUp:', shouldFlipUp)
+        setSuggestionPosition(position)
+      }
+    }
+
+    updatePosition()
+
+    // Update position on scroll and resize
+    const scrollContainer = document.querySelector(`.${styles.form}`)
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', updatePosition)
+      window.addEventListener('resize', updatePosition)
+      return () => {
+        scrollContainer.removeEventListener('scroll', updatePosition)
+        window.removeEventListener('resize', updatePosition)
+      }
+    }
+  }, [locationSuggestions])
+
+  // Fetch location suggestions based on search query
+  useEffect(() => {
+    if (locationSearch.length < 3) {
+      setLocationSuggestions([])
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        if (!window.google?.maps) return
+
+        const { AutocompleteSuggestion } = (await window.google.maps.importLibrary(
+          'places'
+        )) as any
+
+        const { suggestions: fetchedSuggestions } =
+          await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: locationSearch,
+            includedPrimaryTypes: ['geocode'],
+            locationBias: {
+              west: -180.0,
+              south: -90.0,
+              east: 180.0,
+              north: 90.0,
+            },
+          })
+
+        const predictions = fetchedSuggestions
+          .map((suggestion: any) => suggestion.placePrediction)
+          .slice(0, 5)
+
+        console.log('Location suggestions fetched:', predictions)
+        setLocationSuggestions(predictions)
+      } catch (error) {
+        console.log('Failed to fetch location suggestions:', error)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [locationSearch])
+
+  const handleLocationSelect = async (prediction: any) => {
+    const description = prediction.text?.toString() || ''
+    setLocationSearch(description)
+    setLocationSuggestions([])
+
+    // Geocode the selected location
+    if (window.google?.maps) {
+      try {
+        const geocoder = new window.google.maps.Geocoder()
+        geocoder.geocode(
+          { address: description },
+          (results: any, status: any) => {
+            if (status === 'OK' && results && results[0]) {
+              const location = results[0].geometry.location
+              setDefaultLat(location.lat().toFixed(6))
+              setDefaultLng(location.lng().toFixed(6))
+            } else {
+              setError('Failed to find coordinates for this location')
+            }
+          }
+        )
+      } catch (err) {
+        console.error('Error geocoding location:', err)
+        setError('Failed to geocode location')
+      }
     }
   }
 
@@ -461,30 +609,23 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                   Set your preferred starting location for the map
                 </p>
 
-                <div className={styles.coordsGroup}>
-                  <div className={styles.field}>
-                    <label htmlFor="latitude">Latitude</label>
+                <div className={styles.field}>
+                  <label htmlFor="location">Location</label>
+                  <div className={styles.locationInputWrapper}>
                     <input
-                      id="latitude"
+                      ref={locationInputRef}
+                      id="location"
                       type="text"
-                      value={defaultLat}
-                      onChange={(e) => setDefaultLat(e.target.value)}
-                      placeholder="e.g., 37.7749"
+                      value={locationSearch}
+                      onChange={(e) => setLocationSearch(e.target.value)}
+                      placeholder="Search for a location..."
                       disabled={saving}
+                      autoComplete="off"
                     />
                   </div>
-
-                  <div className={styles.field}>
-                    <label htmlFor="longitude">Longitude</label>
-                    <input
-                      id="longitude"
-                      type="text"
-                      value={defaultLng}
-                      onChange={(e) => setDefaultLng(e.target.value)}
-                      placeholder="e.g., -122.4194"
-                      disabled={saving}
-                    />
-                  </div>
+                  {defaultLat && defaultLng && (
+                    <small>Coordinates: {defaultLat}, {defaultLng}</small>
+                  )}
                 </div>
 
                 <button
@@ -561,6 +702,30 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           </div>
         )}
       </div>
+
+      {/* Location Suggestions Dropdown - Rendered at root level with fixed positioning */}
+      {locationSuggestions.length > 0 && (
+        <div
+          className={styles.locationSuggestions}
+          style={{
+            top: `${suggestionPosition.top}px`,
+            left: `${suggestionPosition.left}px`,
+            width: `${suggestionPosition.width}px`
+          }}
+        >
+          {locationSuggestions.map((prediction) => (
+            <button
+              key={prediction.placeId}
+              type="button"
+              className={styles.locationSuggestion}
+              onClick={() => handleLocationSelect(prediction)}
+            >
+              <i className="fas fa-map-marker-alt"></i>
+              <span>{prediction.text.toString()}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

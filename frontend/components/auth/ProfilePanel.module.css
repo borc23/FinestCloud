@@ -434,6 +434,96 @@
   gap: 12px;
 }
 
+.locationInputWrapper {
+  position: relative;
+}
+
+.locationSuggestions {
+  position: fixed;
+  background: rgba(28, 28, 30, 0.98);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 2100;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
+              0 0 0 0.5px rgba(255, 255, 255, 0.1) inset;
+  animation: suggestionSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes suggestionSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.locationSuggestions::-webkit-scrollbar {
+  width: 8px;
+}
+
+.locationSuggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.locationSuggestions::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+.locationSuggestions::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.locationSuggestion {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.locationSuggestion:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.locationSuggestion:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.locationSuggestion:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.locationSuggestion i {
+  color: rgba(255, 128, 0, 0.9);
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.locationSuggestion span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .locationButton {
   background: rgba(255, 255, 255, 0.08);
   border: 1.5px solid rgba(255, 255, 255, 0.15);
