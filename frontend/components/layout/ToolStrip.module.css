@@ -20,8 +20,8 @@
   padding: 4px;
 }
 
-/* Tab Button - Static */
-.tabButton {
+/* Profile Button - Static */
+.profileButton {
   position: relative;
   display: flex;
   align-items: center;
@@ -32,7 +32,7 @@
   flex-shrink: 0;
 }
 
-.tabButton::after {
+.profileButton::after {
   content: '';
   position: absolute;
   right: 0;
@@ -43,7 +43,7 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
-.tabButton:active .tool {
+.profileButton:active .tool {
   transform: scale(0.95);
 }
 

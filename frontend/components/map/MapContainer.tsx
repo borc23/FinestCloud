@@ -22,6 +22,10 @@ import { usePanelPlacement } from '../../hooks/usePanelPlacement'
 import { tagPanelWithGrid } from '../../utils/gridSnapping'
 import EditModeIndicator from './EditModeIndicator'
 import { usePanelContext } from '../../contexts/PanelContext'
+import { useAuth } from '../../hooks/useAuth'
+import { getDefaultLocation } from '../../lib/supabase/profiles'
+import { getProject } from '../../lib/supabase/projects'
+import type { Coordinate } from '../../types/panel'
 
 declare global {
   interface Window {
@@ -37,6 +41,8 @@ interface MapContainerProps {
   onPanelsAvailable?: (available: boolean) => void
   onDashboardMinimizeChange?: (minimized: boolean) => void
   onRoofAnglePanelChange?: (isOpen: boolean) => void
+  onRegisterProjectDataGetter?: (getter: () => any) => void
+  onRegisterProjectLoader?: (loader: (projectId: string) => Promise<void>) => void
 }
 
 export default function MapContainer({
@@ -45,11 +51,14 @@ export default function MapContainer({
   onToolChange,
   onPanelsAvailable,
   onDashboardMinimizeChange,
-  onRoofAnglePanelChange
+  onRoofAnglePanelChange,
+  onRegisterProjectDataGetter,
+  onRegisterProjectLoader
 }: MapContainerProps) {
   // ========================================
   // Refs and State
   // ========================================
+  const { user } = useAuth()
   const mapRef = useRef<HTMLDivElement>(null)
   const [isImageView, setIsImageView] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -66,11 +75,23 @@ export default function MapContainer({
     total: number
     averageShade: number
   } | null>(null)
+  const [defaultCenter, setDefaultCenter] = useState<{ lat: number; lng: number } | undefined>(undefined)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
 
   // Panel context
   const { registerPanelChangeCallback } = usePanelContext()
+
+  // Fetch user's default location
+  useEffect(() => {
+    if (user?.id) {
+      getDefaultLocation(user.id).then(location => {
+        if (location) {
+          setDefaultCenter(location)
+        }
+      })
+    }
+  }, [user?.id])
 
   // Notify parent when dashboard minimize state changes
   useEffect(() => {
@@ -81,8 +102,8 @@ export default function MapContainer({
   // Custom Hooks
   // ========================================
 
-  // Map initialization
-  const map = useMapInitialization(mapRef, { onMapReady })
+  // Map initialization with user's default location
+  const map = useMapInitialization(mapRef, { onMapReady, defaultCenter })
 
   // Detection
   const { error: detectionError, detectRoofs, clearError } = useDetection()
@@ -197,6 +218,118 @@ export default function MapContainer({
   useEffect(() => {
     onRoofAnglePanelChange?.(showAnglePanel)
   }, [showAnglePanel, onRoofAnglePanelChange])
+
+  // Register project data getter for save functionality
+  useEffect(() => {
+    if (!onRegisterProjectDataGetter || !map) return
+
+    const getProjectData = () => {
+      const mapCenter = map.getCenter()
+      const mapZoom = map.getZoom()
+
+      // Extract roof data
+      const roofs = roofPolygons.map((polygon, index) => {
+        const path = polygon.getPath()
+        const coords = []
+        for (let i = 0; i < path.getLength(); i++) {
+          const point = path.getAt(i)
+          coords.push({ lat: point.lat(), lng: point.lng() })
+        }
+
+        // Find matching panel data for this roof
+        const roofPanelData = panelData?.roofs?.find(r => r.roof_id === index)
+
+        return {
+          roofIndex: index,
+          polygon: coords,
+          azimuth: roofPanelData?.azimuth ?? 0,
+          pitch: roofPanelData?.pitch ?? 0,
+          panelCount: roofPanelData?.panel_count ?? 0,
+          panelWattage: roofPanelData?.module_specs?.power ?? 0,
+          estimatedOutput: solarData?.[index]?.solarData?.solarPotential?.solarPanels?.yearlyEnergyDcKwh,
+          panelPositions: roofPanelData?.panels?.map(p => p.coords ?? []),
+          moduleType: roofPanelData?.module_type,
+          moduleSpecs: roofPanelData?.module_specs
+        }
+      })
+
+      // Extract object polygons
+      const objects = objectPolygons.map(polygon => {
+        const path = polygon.getPath()
+        const coords = []
+        for (let i = 0; i < path.getLength(); i++) {
+          const point = path.getAt(i)
+          coords.push({ lat: point.lat(), lng: point.lng() })
+        }
+        return { coords }
+      })
+
+      return {
+        mapCenter: {
+          lat: mapCenter?.lat() ?? 0,
+          lng: mapCenter?.lng() ?? 0
+        },
+        mapZoom: mapZoom ?? 18,
+        roofs,
+        objects
+      }
+    }
+
+    onRegisterProjectDataGetter(getProjectData)
+  }, [map, roofPolygons, objectPolygons, panelData, solarData, onRegisterProjectDataGetter])
+
+  // Register project loader for load functionality
+  useEffect(() => {
+    if (!onRegisterProjectLoader || !map) return
+
+    const loadProject = async (projectId: string) => {
+      try {
+        // Fetch project data
+        const projectWithData = await getProject(projectId)
+        if (!projectWithData) {
+          throw new Error('Project not found')
+        }
+
+        // Clear existing data
+        clearAllPolygons()
+        clearPanels()
+
+        // Set map center and zoom
+        map.setCenter({
+          lat: projectWithData.project.mapCenterLat,
+          lng: projectWithData.project.mapCenterLng
+        })
+        map.setZoom(projectWithData.project.mapZoom)
+
+        // Recreate roof polygons
+        const roofCoords = projectWithData.roofAnalyses.map(roof => ({
+          coords: roof.roofPolygon
+        }))
+        if (roofCoords.length > 0) {
+          renderPolygons(roofCoords, true, true)
+        }
+
+        // Recreate object polygons
+        const objectCoords = projectWithData.objectPolygons.map(obj => ({
+          coords: obj.polygonCoords
+        }))
+        if (objectCoords.length > 0) {
+          renderPolygons(objectCoords, false, true)
+        }
+
+        // TODO: Recreate panel overlays from panel configurations
+        // This would require updating the panel generation state with the saved data
+        // For now, users will need to regenerate panels after loading
+
+        console.log('Project loaded successfully:', projectWithData.project.projectName)
+      } catch (error) {
+        console.error('Error loading project:', error)
+        throw error
+      }
+    }
+
+    onRegisterProjectLoader(loadProject)
+  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader])
 
   // Panel placement
   const {

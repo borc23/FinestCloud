@@ -7,7 +7,12 @@ import ImageUploadModal from '@/components/ui/ImageUploadModal'
 import ZoomableImage from '@/components/ui/ZoomableImage'
 import PanelSelectorButton from '@/components/panels/PanelSelectorButton'
 import PanelSelector from '@/components/panels/PanelSelector'
-import { useState } from 'react'
+import SaveProjectModal from '@/components/projects/SaveProjectModal'
+import ProjectListPanel from '@/components/projects/ProjectListPanel'
+import ProfilePanel from '@/components/auth/ProfilePanel'
+import { useState, useRef } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import type { CreateProjectData } from '@/types/database'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -15,6 +20,7 @@ const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
 })
 
 export default function HomePage() {
+  const { user } = useAuth()
   const [activeTool, setActiveTool] = useState('')
   const [showToolStrip, setShowToolStrip] = useState(true)
   const [map, setMap] = useState<google.maps.Map | null>(null)
@@ -25,6 +31,17 @@ export default function HomePage() {
   const [showPanelSelector, setShowPanelSelector] = useState(false)
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
   const [isRoofAnglePanelOpen, setIsRoofAnglePanelOpen] = useState(false)
+
+  // Profile panel
+  const [showProfilePanel, setShowProfilePanel] = useState(false)
+
+  // Project modals
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [showLoadPanel, setShowLoadPanel] = useState(false)
+
+  // Project data callback refs
+  const getProjectDataRef = useRef<(() => Omit<CreateProjectData, 'projectName' | 'status'>) | null>(null)
+  const loadProjectRef = useRef<((projectId: string) => Promise<void>) | null>(null)
 
   const handleToolSelect = (tool: string) => {
     setActiveTool(activeTool === tool ? '' : tool)
@@ -50,6 +67,22 @@ export default function HomePage() {
     }
   }
 
+  const handleSaveProject = () => {
+    if (!user) {
+      setShowProfilePanel(true)
+      return
+    }
+    setShowSaveModal(true)
+  }
+
+  const handleLoadProject = () => {
+    if (!user) {
+      setShowProfilePanel(true)
+      return
+    }
+    setShowLoadPanel(true)
+  }
+
   return (
     <div className="app-container">
       <div className="app-layout">
@@ -64,6 +97,12 @@ export default function HomePage() {
               onPanelsAvailable={setShowPanelsTool}
               onDashboardMinimizeChange={setIsDashboardMinimized}
               onRoofAnglePanelChange={setIsRoofAnglePanelOpen}
+              onRegisterProjectDataGetter={(getter) => {
+                getProjectDataRef.current = getter
+              }}
+              onRegisterProjectLoader={(loader) => {
+                loadProjectRef.current = loader
+              }}
             />
           )}
 
@@ -76,6 +115,10 @@ export default function HomePage() {
               map={map}
               isImageMode={isImageMode}
               onToggleMode={handleToggleMode}
+              onSaveProject={handleSaveProject}
+              onLoadProject={handleLoadProject}
+              isAuthenticated={!!user}
+              onOpenProfile={() => setShowProfilePanel(true)}
             />
           )}
 
@@ -95,6 +138,53 @@ export default function HomePage() {
           />
         </div>
       </div>
+
+      {/* Project Modals */}
+      {showSaveModal && getProjectDataRef.current && (
+        <SaveProjectModal
+          isOpen={showSaveModal}
+          onClose={() => setShowSaveModal(false)}
+          onSave={(projectId) => {
+            console.log('Project saved:', projectId)
+            setShowSaveModal(false)
+          }}
+          projectData={getProjectDataRef.current()}
+        />
+      )}
+
+      <ProjectListPanel
+        isOpen={showLoadPanel}
+        onClose={() => setShowLoadPanel(false)}
+        onLoadProject={async (projectId) => {
+          try {
+            if (loadProjectRef.current) {
+              await loadProjectRef.current(projectId)
+              console.log('Project loaded successfully')
+              setShowLoadPanel(false)
+            }
+          } catch (error) {
+            console.error('Failed to load project:', error)
+            alert('Failed to load project. Please try again.')
+          }
+        }}
+      />
+
+      {/* Profile Panel */}
+      <ProfilePanel
+        isOpen={showProfilePanel}
+        onClose={() => setShowProfilePanel(false)}
+        onLoadProject={async (projectId) => {
+          try {
+            if (loadProjectRef.current) {
+              await loadProjectRef.current(projectId)
+              console.log('Project loaded successfully from profile panel')
+            }
+          } catch (error) {
+            console.error('Failed to load project:', error)
+            alert('Failed to load project. Please try again.')
+          }
+        }}
+      />
     </div>
   )
 }

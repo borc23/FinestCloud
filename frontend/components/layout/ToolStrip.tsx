@@ -18,6 +18,8 @@ interface ToolStripProps {
   map?: google.maps.Map | null
   isImageMode?: boolean
   onToggleMode?: () => void
+  isAuthenticated?: boolean
+  onOpenProfile?: () => void
 }
 
 const mainToolsDefinition = [
@@ -27,23 +29,22 @@ const mainToolsDefinition = [
   { id: 'edit', icon: 'pen-to-square', label: 'Edit' }
 ] as const
 
-// Tab button component - static, no motion
-const TabButton = ({ isExpanded, onHover, onClick }: {
-  isExpanded: boolean
+// Profile button component - static, no motion
+const ProfileButton = ({ onHover, onClick, isAuthenticated }: {
   onHover: () => void
   onClick: () => void
+  isAuthenticated: boolean
 }) => (
   <div
-    className={styles.tabButton}
+    className={styles.profileButton}
     onMouseEnter={onHover}
     onClick={onClick}
   >
     <button
       className={styles.tool}
-      aria-label="Tab"
-      aria-pressed={isExpanded}
+      aria-label="User Profile"
     >
-      <i className="fas fa-list"></i>
+      <i className={`fas ${isAuthenticated ? 'fa-user-circle' : 'fa-user'}`}></i>
     </button>
   </div>
 )
@@ -75,7 +76,6 @@ const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
 const MiddleIconStrip = ({
   tools,
   activeTool,
-  isExpanded,
   hoveredTool,
   showPanelsTool,
   onHover,
@@ -84,7 +84,6 @@ const MiddleIconStrip = ({
 }: {
   tools: readonly typeof mainToolsDefinition[number][]
   activeTool: string
-  isExpanded: boolean
   hoveredTool: string | null
   showPanelsTool: boolean
   onHover: (toolId: string | null) => void
@@ -138,9 +137,6 @@ const MiddleIconStrip = ({
                   disabled={isDisabled}
                 >
                   <i className={`fas fa-${getToolIcon(tool)}`}></i>
-                  {isExpanded && (
-                    <span className={styles.toolLabel}>{getToolLabel(tool)}</span>
-                  )}
                 </button>
               </motion.div>
             )
@@ -160,9 +156,8 @@ const MiddleIconStrip = ({
   )
 }
 
-export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false, map, isImageMode = false, onToggleMode }: ToolStripProps) {
+export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, showPanelsTool = false, map, isImageMode = false, onToggleMode, isAuthenticated = false, onOpenProfile }: ToolStripProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
@@ -173,9 +168,11 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const tools = useMemo(() =>
-    mainToolsDefinition.filter(tool =>
-      tool.id !== 'panels' || showPanelsTool
-    ),
+    mainToolsDefinition.filter(tool => {
+      // Filter out panels tool if not available
+      if (tool.id === 'panels' && !showPanelsTool) return false
+      return true
+    }),
     [showPanelsTool]
   )
 
@@ -246,8 +243,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   }, [])
 
   const handleToolClick = (toolId: string) => {
-    if (toolId === 'tab') {
-      setIsExpanded(!isExpanded)
+    if (toolId === 'profile') {
+      onOpenProfile?.()
     } else if (toolId === 'search') {
       if (!geocoder.current && window.google?.maps) {
         geocoder.current = new window.google.maps.Geocoder()
@@ -333,7 +330,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   return (
     <div
       ref={containerRef}
-      className={`${styles.toolStrip} ${isExpanded ? styles.expanded : ''} ${isSearchMode ? styles.searchMode : ''}`}
+      className={`${styles.toolStrip} ${isSearchMode ? styles.searchMode : ''}`}
       data-has-generate={showPanelsTool}
       onMouseLeave={handleContainerMouseLeave}
     >
@@ -410,16 +407,15 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
       ) : (
         <>
           {/* Normal Mode Layout */}
-          <TabButton
-            isExpanded={isExpanded}
-            onHover={() => handleToolHover('tab')}
-            onClick={() => handleToolClick('tab')}
+          <ProfileButton
+            onHover={() => handleToolHover('profile')}
+            onClick={() => handleToolClick('profile')}
+            isAuthenticated={isAuthenticated}
           />
 
           <MiddleIconStrip
             tools={tools}
             activeTool={activeTool}
-            isExpanded={isExpanded}
             hoveredTool={hoveredTool}
             showPanelsTool={showPanelsTool}
             onHover={handleToolHover}

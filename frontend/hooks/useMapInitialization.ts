@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 interface UseMapInitializationOptions {
   onMapReady?: (map: google.maps.Map) => void
+  defaultCenter?: { lat: number; lng: number }
 }
 
 /**
@@ -17,7 +18,7 @@ export function useMapInitialization(
   mapRef: React.RefObject<HTMLDivElement>,
   options: UseMapInitializationOptions = {}
 ) {
-  const { onMapReady } = options
+  const { onMapReady, defaultCenter } = options
   const [map, setMap] = useState<google.maps.Map | null>(null)
 
   useEffect(() => {
@@ -26,8 +27,11 @@ export function useMapInitialization(
 
     const initializeMap = () => {
       if (mapRef.current && window.google?.maps?.Map) {
+        // Use user's default location or fall back to San Francisco
+        const center = defaultCenter || { lat: 37.7749, lng: -122.4194 }
+
         const mapOptions: google.maps.MapOptions = {
-          center: { lat: 37.7749, lng: -122.4194 },
+          center,
           zoom: 20,
           tilt: 0,
           mapTypeId: 'satellite',
@@ -82,7 +86,7 @@ export function useMapInitialization(
       if (checkInterval) clearInterval(checkInterval)
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [mapRef, onMapReady])
+  }, [mapRef, onMapReady, defaultCenter])
 
   return map
 }
