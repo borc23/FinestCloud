@@ -1,0 +1,25 @@
+'use client'
+
+import styles from './AuthRequiredOverlay.module.css'
+
+interface AuthRequiredOverlayProps {
+  onOpenProfile: () => void
+}
+
+export default function AuthRequiredOverlay({ onOpenProfile }: AuthRequiredOverlayProps) {
+  return (
+    <div className={styles.overlay}>
+      <div className={styles.content}>
+        <div className={styles.iconContainer}>
+          <i className="fas fa-lock"></i>
+        </div>
+        <h2>Log In Required</h2>
+        <p>Please sign in to use the solar panel design application</p>
+        <button className={styles.signInButton} onClick={onOpenProfile}>
+          <i className="fas fa-sign-in-alt"></i>
+          Sign In
+        </button>
+      </div>
+    </div>
+  )
+}

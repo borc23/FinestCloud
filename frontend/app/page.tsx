@@ -10,6 +10,7 @@ import PanelSelector from '@/components/panels/PanelSelector'
 import SaveProjectModal from '@/components/projects/SaveProjectModal'
 import ProjectListPanel from '@/components/projects/ProjectListPanel'
 import ProfilePanel from '@/components/auth/ProfilePanel'
+import AuthRequiredOverlay from '@/components/auth/AuthRequiredOverlay'
 import { useState, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import type { CreateProjectData } from '@/types/database'
@@ -44,6 +45,10 @@ export default function HomePage() {
   const loadProjectRef = useRef<((projectId: string) => Promise<void>) | null>(null)
 
   const handleToolSelect = (tool: string) => {
+    if (!user) {
+      setShowProfilePanel(true)
+      return
+    }
     setActiveTool(activeTool === tool ? '' : tool)
   }
 
@@ -53,6 +58,10 @@ export default function HomePage() {
   }
 
   const handleToggleMode = () => {
+    if (!user) {
+      setShowProfilePanel(true)
+      return
+    }
     if (isImageMode) {
       // Switch to map mode
       setIsImageMode(false)
@@ -103,6 +112,7 @@ export default function HomePage() {
               onRegisterProjectLoader={(loader) => {
                 loadProjectRef.current = loader
               }}
+              isAuthenticated={!!user}
             />
           )}
 
@@ -115,8 +125,6 @@ export default function HomePage() {
               map={map}
               isImageMode={isImageMode}
               onToggleMode={handleToggleMode}
-              onSaveProject={handleSaveProject}
-              onLoadProject={handleLoadProject}
               isAuthenticated={!!user}
               onOpenProfile={() => setShowProfilePanel(true)}
             />
@@ -128,14 +136,19 @@ export default function HomePage() {
             onImageUpload={handleImageUpload}
           />
 
-          {isDashboardMinimized && !isRoofAnglePanelOpen && (
+          {isDashboardMinimized && !isRoofAnglePanelOpen && user && (
             <PanelSelectorButton onClick={() => setShowPanelSelector(true)} />
           )}
 
-          <PanelSelector
-            isOpen={showPanelSelector}
-            onClose={() => setShowPanelSelector(false)}
-          />
+          {user && (
+            <PanelSelector
+              isOpen={showPanelSelector}
+              onClose={() => setShowPanelSelector(false)}
+            />
+          )}
+
+          {/* Auth Required Overlay */}
+          {!user && <AuthRequiredOverlay onOpenProfile={() => setShowProfilePanel(true)} />}
         </div>
       </div>
 

@@ -43,6 +43,7 @@ interface MapContainerProps {
   onRoofAnglePanelChange?: (isOpen: boolean) => void
   onRegisterProjectDataGetter?: (getter: () => any) => void
   onRegisterProjectLoader?: (loader: (projectId: string) => Promise<void>) => void
+  isAuthenticated?: boolean
 }
 
 export default function MapContainer({
@@ -53,7 +54,8 @@ export default function MapContainer({
   onDashboardMinimizeChange,
   onRoofAnglePanelChange,
   onRegisterProjectDataGetter,
-  onRegisterProjectLoader
+  onRegisterProjectLoader,
+  isAuthenticated = false
 }: MapContainerProps) {
   // ========================================
   // Refs and State
