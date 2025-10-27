@@ -52,6 +52,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
 
   // Refs
   const locationInputRef = useRef<HTMLInputElement>(null)
+  const skipSuggestionsRef = useRef(false)
 
   // Projects state
   const [projects, setProjects] = useState<Project[]>([])
@@ -102,6 +103,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         { location: { lat, lng } },
         (results: any, status: any) => {
           if (status === 'OK' && results && results[0]) {
+            skipSuggestionsRef.current = true
             setLocationSearch(results[0].formatted_address)
           }
         }
@@ -306,6 +308,12 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
 
   // Fetch location suggestions based on search query
   useEffect(() => {
+    // Skip fetching if we're programmatically setting the location
+    if (skipSuggestionsRef.current) {
+      skipSuggestionsRef.current = false
+      return
+    }
+
     if (locationSearch.length < 3) {
       setLocationSuggestions([])
       return
@@ -347,7 +355,6 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
 
   const handleLocationSelect = async (prediction: any) => {
     const description = prediction.text?.toString() || ''
-    setLocationSearch(description)
     setLocationSuggestions([])
 
     // Geocode the selected location
@@ -361,14 +368,21 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
               const location = results[0].geometry.location
               setDefaultLat(location.lat().toFixed(6))
               setDefaultLng(location.lng().toFixed(6))
+              // Set flag to skip suggestion fetch, then update location
+              skipSuggestionsRef.current = true
+              setLocationSearch(description)
             } else {
               setError('Failed to find coordinates for this location')
+              skipSuggestionsRef.current = true
+              setLocationSearch(description)
             }
           }
         )
       } catch (err) {
         console.error('Error geocoding location:', err)
         setError('Failed to geocode location')
+        skipSuggestionsRef.current = true
+        setLocationSearch(description)
       }
     }
   }
@@ -712,6 +726,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
             left: `${suggestionPosition.left}px`,
             width: `${suggestionPosition.width}px`
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           {locationSuggestions.map((prediction) => (
             <button
