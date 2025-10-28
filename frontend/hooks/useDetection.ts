@@ -1,17 +1,40 @@
 import { useState, useCallback, useRef } from 'react'
 import { DetectionBounds, DetectionResponse, DetectionRequest } from '../types/detection'
 
+interface DetectionError {
+  code: 'NETWORK' | 'VALIDATION' | 'SERVER' | 'UNKNOWN'
+  message: string
+  isRetryable: boolean
+  timestamp: number
+}
+
 interface UseDetectionReturn {
-  error: string | null
-  detectRoofs: (map: google.maps.Map, bounds: google.maps.LatLngBounds, size?: { width: number; height: number }) => Promise<DetectionResponse | null>
+  error: DetectionError | null
+  isDetecting: boolean
+  detectRoofs: (
+    map: google.maps.Map, 
+    bounds: google.maps.LatLngBounds, 
+    size?: { width: number; height: number }
+  ) => Promise<DetectionResponse | null>
   clearError: () => void
 }
 
 export function useDetection(): UseDetectionReturn {
-  const [error, setError] = useState<string | null>(null)
-  const isDetectingRef = useRef(false)
+  const [error, setError] = useState<DetectionError | null>(null)
+  const [isDetecting, setIsDetecting] = useState(false)
 
-  const convertBoundsToDetectionBounds = useCallback((bounds: google.maps.LatLngBounds): DetectionBounds => {
+  const createError = useCallback((
+    code: DetectionError['code'],
+    message: string,
+    isRetryable: boolean
+  ): DetectionError => ({
+    code,
+    message,
+    isRetryable,
+    timestamp: Date.now()
+  }), [])
+
+  const toDetectionBounds = useCallback((bounds: google.maps.LatLngBounds): DetectionBounds => {
     const ne = bounds.getNorthEast()
     const sw = bounds.getSouthWest()
 
@@ -28,33 +51,33 @@ export function useDetection(): UseDetectionReturn {
     bounds: google.maps.LatLngBounds,
     size?: { width: number; height: number }
   ): Promise<DetectionResponse | null> => {
-    if (isDetectingRef.current) return null
+    if (isDetecting) {
+      setError(createError(
+        'VALIDATION',
+        'Detection already in progress',
+        false
+      ))
+      return null
+    }
 
-    isDetectingRef.current = true
+    setIsDetecting(true)
     setError(null)
 
     try {
       const zoom = map.getZoom()
 
       if (!zoom) {
-        throw new Error('Unable to get map zoom')
+        throw createError(
+          'VALIDATION',
+          'Unable to get map zoom',
+          false
+        )
       }
 
-      const detectionBounds = convertBoundsToDetectionBounds(bounds)
-
-      // Calculate the center of the capture overlay bounds, not the entire map
+      const detectionBounds = toDetectionBounds(bounds)
       const captureCenter = bounds.getCenter()
-
-      // Use actual capture size - the bounds match this size
       const imageSize = size ? `${size.width}x${size.height}` : '640x640'
-
-      console.log(`🌐 REQUESTING GOOGLE MAPS IMAGE:`, {
-        size: imageSize,
-        center: `${captureCenter.lat()},${captureCenter.lng()}`,
-        zoom: zoom,
-        bounds: detectionBounds
-      })
-
+      
       const requestData: DetectionRequest = {
         image: {
           center: `${captureCenter.lat()},${captureCenter.lng()}`,
@@ -78,25 +101,57 @@ export function useDetection(): UseDetectionReturn {
       })
 
       if (!response.ok) {
-        throw new Error(`Detection request failed: ${response.statusText}`)
+        const isServerError = response.status >= 500
+        const isClientError = response.status >= 400 && response.status < 500
+        
+        throw createError(
+          isServerError ? 'SERVER' : isClientError ? 'VALIDATION' : 'UNKNOWN',
+          `Detection request failed: ${response.statusText}`,
+          isServerError
+        )
       }
 
       const result: DetectionResponse = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error || 'Detection failed')
+        throw createError(
+          'SERVER',
+          result.error || 'Detection failed',
+          true
+        )
       }
 
       return result
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Detection failed'
-      setError(errorMessage)
-      console.error('Detection error:', err)
+      if (isDetectionError(err)) {
+        setError(err)
+        console.error('Detection error:', err)
+        return null
+      }
+
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        const networkError = createError(
+          'NETWORK',
+          'Network request failed. Please check your connection.',
+          true
+        )
+        setError(networkError)
+        console.error('Network error:', err)
+        return null
+      }
+
+      const unknownError = createError(
+        'UNKNOWN',
+        err instanceof Error ? err.message : 'An unexpected error occurred',
+        false
+      )
+      setError(unknownError)
+      console.error('Unknown error:', err)
       return null
     } finally {
-      isDetectingRef.current = false
+      setIsDetecting(false)
     }
-  }, [convertBoundsToDetectionBounds])
+  }, [isDetecting, toDetectionBounds, createError])
 
   const clearError = useCallback(() => {
     setError(null)
@@ -104,7 +159,19 @@ export function useDetection(): UseDetectionReturn {
 
   return {
     error,
+    isDetecting,
     detectRoofs,
     clearError
   }
+}
+
+function isDetectionError(error: unknown): error is DetectionError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    'message' in error &&
+    'isRetryable' in error &&
+    'timestamp' in error
+  )
 }
