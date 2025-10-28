@@ -25,7 +25,6 @@ import { usePanelContext } from '../../contexts/PanelContext'
 import { useAuth } from '../../hooks/useAuth'
 import { getDefaultLocation } from '../../lib/supabase/profiles'
 import { getProject } from '../../lib/supabase/projects'
-import { StyleConfig } from '../../utils/styleConfig'
 import type { Coordinate } from '../../types/panel'
 
 declare global {
@@ -317,40 +316,23 @@ export default function MapContainer({
         setTimeout(() => {
           if (!window.google?.maps) return
 
-          const loadedPanels: any[] = []
-
-          projectWithData.panelConfigurations.forEach(config => {
-            config.panelPositions.forEach(panelCoords => {
-              const panel = new window.google.maps.Polygon({
-                paths: panelCoords.map(c => ({ lat: c.lat, lng: c.lng })),
-                ...StyleConfig.getPanelOptions('default', 'STANDARD'),
-                map: map,
-                clickable: true,
-                isPanelElement: true,
-                moduleType: 'STANDARD'
-              } as any)
-              loadedPanels.push(panel)
-            })
-          })
-
-          setAllPanels(loadedPanels)
-
           const mockPanelData: any = {
             success: true,
-            roofs: projectWithData.roofAnalyses.map(roof => ({
-              roof_id: roof.roofIndex,
-              panels: [],
-              panel_count: roof.panelCount,
-              module_type: projectWithData.panelConfigurations.find(c =>
+            roofs: projectWithData.roofAnalyses.map(roof => {
+              const config = projectWithData.panelConfigurations.find(c =>
                 projectWithData.roofAnalyses.find(r => r.id === c.roofAnalysisId)?.roofIndex === roof.roofIndex
-              )?.moduleType || 'custom',
-              module_specs: projectWithData.panelConfigurations.find(c =>
-                projectWithData.roofAnalyses.find(r => r.id === c.roofAnalysisId)?.roofIndex === roof.roofIndex
-              )?.moduleSpecs || { power_w: roof.panelWattage },
-              coords: roof.roofPolygon,
-              azimuth: roof.azimuth,
-              pitch: roof.pitch
-            })),
+              )
+              return {
+                roof_id: roof.roofIndex,
+                panels: config?.panelPositions || [],
+                panel_count: roof.panelCount,
+                module_type: config?.moduleType || 'custom',
+                module_specs: config?.moduleSpecs || { power_w: roof.panelWattage },
+                coords: roof.roofPolygon,
+                azimuth: roof.azimuth,
+                pitch: roof.pitch
+              }
+            }),
             max_panels: projectWithData.roofAnalyses.reduce((sum, r) => sum + r.panelCount, 0),
             module: 'custom',
             electrical_system: null
