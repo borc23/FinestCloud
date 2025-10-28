@@ -281,11 +281,11 @@ export function usePanelPlacement({
       ghostPanelRef.current.setPaths(path)
     }
 
+    // Keep panel appearance but adjust opacity based on collision
     ghostPanelRef.current.setOptions({
-      fillOpacity: hasCollision ? 0.3 : 0.5,
-      strokeOpacity: hasCollision ? 0.5 : 0.8,
-      fillColor: hasCollision ? '#ff453a' : '#34c759',
-      strokeColor: hasCollision ? '#ff453a' : '#34c759'
+      fillOpacity: hasCollision ? 0.4 : 0.8,
+      strokeOpacity: hasCollision ? 0.4 : 0.9,
+      strokeWeight: hasCollision ? 1.5 : 2.0
     })
   }, [map, findBestGridPosition])
 

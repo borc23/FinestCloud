@@ -25,6 +25,7 @@ import { usePanelContext } from '../../contexts/PanelContext'
 import { useAuth } from '../../hooks/useAuth'
 import { getDefaultLocation } from '../../lib/supabase/profiles'
 import { getProject } from '../../lib/supabase/projects'
+import { StyleConfig } from '../../utils/styleConfig'
 import type { Coordinate } from '../../types/panel'
 
 declare global {
@@ -303,6 +304,7 @@ export default function MapContainer({
         }))
         if (roofCoords.length > 0) {
           renderPolygons(roofCoords, true, false)
+          togglePolygonVisibility(false)
         }
 
         const objectCoords = projectWithData.objectPolygons.map(obj => ({
@@ -321,14 +323,12 @@ export default function MapContainer({
             config.panelPositions.forEach(panelCoords => {
               const panel = new window.google.maps.Polygon({
                 paths: panelCoords.map(c => ({ lat: c.lat, lng: c.lng })),
-                strokeColor: '#FFD700',
-                strokeOpacity: 0.8,
-                strokeWeight: 1,
-                fillColor: '#1e3a8a',
-                fillOpacity: 0.6,
+                ...StyleConfig.getPanelOptions('default', 'STANDARD'),
                 map: map,
-                clickable: true
-              })
+                clickable: true,
+                isPanelElement: true,
+                moduleType: 'STANDARD'
+              } as any)
               loadedPanels.push(panel)
             })
           })

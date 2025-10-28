@@ -56,23 +56,6 @@ export function useMapListener(
   return addListener
 }
 
-/**
- * Hook for managing a single map event listener with dependencies
- *
- * Automatically handles cleanup and re-registration when dependencies change
- *
- * @example
- * ```tsx
- * useSingleMapListener(
- *   map,
- *   'click',
- *   (e) => {
- *     console.log('Clicked:', e.latLng)
- *   },
- *   [someState] // Re-register when someState changes
- * )
- * ```
- */
 export function useSingleMapListener<E extends string>(
   mapInstance: google.maps.Map | google.maps.Polygon | google.maps.Marker | null,
   eventName: E,
