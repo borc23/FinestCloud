@@ -17,10 +17,15 @@ export interface Panel {
 }
 
 export interface ModuleSpecs {
-  power: number
-  width?: number
-  height?: number
+  power_w: number
+  width_cm?: number
+  height_cm?: number
   efficiency?: number
+  id?: string
+  name?: string
+  color?: string
+  path?: string
+  description?: string
 }
 
 export interface RoofPanelData {

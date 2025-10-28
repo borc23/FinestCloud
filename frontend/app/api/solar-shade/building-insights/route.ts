@@ -97,13 +97,6 @@ function processShadeAnalysis(buildingInsights: BuildingInsights): ShadeAnalysis
     // Calculate shade loss factor (0-1, where 1 = no shade)
     const shadeLossFactor = avgSunshineHours / maxSunshineHours
 
-    console.log(`Roof segment ${index}:`, {
-      maxSunshineHours,
-      avgSunshineHours: avgSunshineHours.toFixed(0),
-      shadePercentage: shadePercentage.toFixed(1) + '%',
-      shadeLossFactor: shadeLossFactor.toFixed(3)
-    })
-
     return {
       segmentIndex: index,
       pitchDegrees: segment.pitchDegrees,

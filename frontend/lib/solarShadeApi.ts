@@ -31,7 +31,6 @@ export class SolarShadeApiService {
     if (this.isCachedDataValid(cacheKey)) {
       const cached = this.cachedData.get(cacheKey)
       if (cached) {
-        console.log('Using cached shade analysis data')
         return cached
       }
     }
@@ -39,7 +38,6 @@ export class SolarShadeApiService {
     // Check if there's an in-flight request
     const inFlight = this.inFlightRequests.get(cacheKey)
     if (inFlight) {
-      console.log('Waiting for in-flight shade analysis request')
       return inFlight
     }
 
@@ -270,7 +268,6 @@ export class SolarShadeApiService {
     this.cachedData.clear()
     this.cacheTimestamp.clear()
     this.inFlightRequests.clear()
-    console.log('Shade analysis cache cleared')
   }
 
   /**

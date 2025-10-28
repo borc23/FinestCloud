@@ -44,6 +44,7 @@ interface MapContainerProps {
   onRegisterProjectDataGetter?: (getter: () => any) => void
   onRegisterProjectLoader?: (loader: (projectId: string) => Promise<void>) => void
   isAuthenticated?: boolean
+  onSaveProject?: () => void
 }
 
 export default function MapContainer({
@@ -55,7 +56,8 @@ export default function MapContainer({
   onRoofAnglePanelChange,
   onRegisterProjectDataGetter,
   onRegisterProjectLoader,
-  isAuthenticated = false
+  isAuthenticated = false,
+  onSaveProject
 }: MapContainerProps) {
   // ========================================
   // Refs and State
@@ -155,16 +157,6 @@ export default function MapContainer({
     if (!map) return
     const coords = path.map(p => ({ lat: p.lat(), lng: p.lng() }))
 
-    // DEBUG: Log manually drawn polygon
-    console.log(`✏️ MANUALLY DRAWN ${isRoof ? 'ROOF' : 'OBJECT'} POLYGON:`, {
-      coords,
-      firstPoint: coords[0],
-      center: coords.length > 0 ? {
-        lat: coords.reduce((sum, c) => sum + c.lat, 0) / coords.length,
-        lng: coords.reduce((sum, c) => sum + c.lng, 0) / coords.length
-      } : null
-    })
-
     const enableHover = activeTool !== 'draw'
     renderPolygons([{ coords }], isRoof, enableHover)
   }, [map, renderPolygons, activeTool])
@@ -245,7 +237,6 @@ export default function MapContainer({
           coords.push({ lat: point.lat(), lng: point.lng() })
         }
 
-        // Find matching panel data for this roof
         const roofPanelData = panelData?.roofs?.find(r => r.roof_id === index)
 
         return {
@@ -254,7 +245,7 @@ export default function MapContainer({
           azimuth: roofPanelData?.azimuth ?? 0,
           pitch: roofPanelData?.pitch ?? 0,
           panelCount: roofPanelData?.panel_count ?? 0,
-          panelWattage: roofPanelData?.module_specs?.power ?? 0,
+          panelWattage: roofPanelData?.module_specs?.power_w ?? 400,
           estimatedOutput: solarData?.[index]?.solarData?.solarPotential?.solarPanels?.yearlyEnergyDcKwh,
           panelPositions: roofPanelData?.panels?.map(p => p.coords ?? []),
           moduleType: roofPanelData?.module_type,
@@ -326,11 +317,6 @@ export default function MapContainer({
           renderPolygons(objectCoords, false, true)
         }
 
-        // TODO: Recreate panel overlays from panel configurations
-        // This would require updating the panel generation state with the saved data
-        // For now, users will need to regenerate panels after loading
-
-        console.log('Project loaded successfully:', projectWithData.project.projectName)
       } catch (error) {
         console.error('Error loading project:', error)
         throw error
@@ -656,6 +642,8 @@ export default function MapContainer({
           isEditMode={isEditMode || (activeTool !== '' && activeTool !== 'panels')}
           onMinimizeChange={setIsDashboardMinimized}
           currentPanelCount={allPanels.length}
+          onSaveProject={onSaveProject}
+          isAuthenticated={isAuthenticated}
         />
       )}
 

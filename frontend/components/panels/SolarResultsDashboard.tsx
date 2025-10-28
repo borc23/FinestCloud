@@ -20,6 +20,8 @@ import {
 
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps & {
   onMinimizeChange?: (minimized: boolean) => void
+  onSaveProject?: () => void
+  isAuthenticated?: boolean
 }) {
   const [showMonthlyChart, setShowMonthlyChart] = useState(false)
   const [showFinancials, setShowFinancials] = useState(false)
@@ -263,6 +265,14 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
 
             {pvwattsData && annualProduction && (
               <div className={styles.monthlyButtonContainer}>
+                {props.isAuthenticated && props.onSaveProject && (
+                  <button
+                    className={styles.saveButton}
+                    onClick={props.onSaveProject}
+                  >
+                    💾 Save Project
+                  </button>
+                )}
                 <button
                   className={styles.monthlyButton}
                   onClick={() => setShowMonthlyChart(true)}

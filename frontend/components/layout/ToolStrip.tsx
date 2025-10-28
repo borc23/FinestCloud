@@ -212,7 +212,6 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
 
         setSuggestions(predictions as google.maps.places.AutocompletePrediction[])
       } catch (error) {
-        console.log('Failed to fetch suggestions:', error)
       }
     }, 100)
     return () => clearTimeout(timer)

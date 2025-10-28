@@ -64,12 +64,6 @@ export default function ShadeVisualizationOverlay({
       return
     }
 
-    console.log('🌤️ Shade Analysis Data:', {
-      averageShade: shadeData.shadePercentage.toFixed(1) + '%',
-      shadeLossFactor: shadeData.shadeLossFactor.toFixed(2),
-      roofSegments: shadeData.roofSegmentShade.length
-    })
-
     // Save original colors on first enable
     if (originalColors.size === 0) {
       const colors = new Map<google.maps.Polygon, string>()

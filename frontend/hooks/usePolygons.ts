@@ -101,16 +101,6 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
         map: map
       })
 
-      // DEBUG: Log polygon coordinates when rendered
-      console.log(`🔵 RENDERED ${isRoof ? 'ROOF' : 'OBJECT'} POLYGON #${index}:`, {
-        coords: roof.coords.map(c => ({ lat: c.lat, lng: c.lng })),
-        firstPoint: roof.coords[0],
-        center: roof.coords.length > 0 ? {
-          lat: roof.coords.reduce((sum, c) => sum + (c.lat || 0), 0) / roof.coords.length,
-          lng: roof.coords.reduce((sum, c) => sum + (c.lng || 0), 0) / roof.coords.length
-        } : null
-      })
-
       if (enableHover) {
         addHoverEffects(polygon, isRoof, map)
       }
@@ -125,21 +115,11 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   }, [map, convertCoordinatesToLatLng, createPolygonOptions, addHoverEffects])
 
   const clearPolygonGroup = useCallback((polygons: google.maps.Polygon[], type: string) => {
-    // DEBUG: Log polygons being cleared
-    console.log(`🔴 CLEARING ${type} POLYGONS (${polygons.length} total):`)
     polygons.forEach((polygon, index) => {
       if (polygon) {
         const path = polygon.getPath()
         if (path) {
           const coords = path.getArray().map(p => ({ lat: p.lat(), lng: p.lng() }))
-          console.log(`   - ${type} Polygon #${index}:`, {
-            coords,
-            firstPoint: coords[0],
-            center: coords.length > 0 ? {
-              lat: coords.reduce((sum, c) => sum + c.lat, 0) / coords.length,
-              lng: coords.reduce((sum, c) => sum + c.lng, 0) / coords.length
-            } : null
-          })
         }
 
         const listeners = polygonListenersRef.current.get(polygon)
@@ -153,7 +133,6 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   }, [])
 
   const clearAllPolygons = useCallback(() => {
-    console.log('🗑️ CLEAR ALL POLYGONS CALLED')
     setRoofPolygons(prevRoof => {
       clearPolygonGroup(prevRoof, 'ROOF')
       return []
@@ -227,38 +206,20 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   const removePolygons = useCallback((polygonsToRemove: google.maps.Polygon[]) => {
     const polygonSet = new Set(polygonsToRemove)
 
-    console.log(`🗑️ REMOVE POLYGONS CALLED (${polygonsToRemove.length} polygons to remove)`)
-
     setRoofPolygons(prev => {
       const toRemove = prev.filter(p => polygonSet.has(p))
-      console.log(`   - Removing ${toRemove.length} ROOF polygons`)
       toRemove.forEach((polygon, index) => {
         const path = polygon.getPath()
         if (path) {
           const coords = path.getArray().map(p => ({ lat: p.lat(), lng: p.lng() }))
-          console.log(`     * ROOF Polygon #${index}:`, {
-            coords,
-            center: coords.length > 0 ? {
-              lat: coords.reduce((sum, c) => sum + c.lat, 0) / coords.length,
-              lng: coords.reduce((sum, c) => sum + c.lng, 0) / coords.length
-            } : null
-          })
         }
         clearPolygonGroup([polygon], 'ROOF-INDIVIDUAL')
       })
       const remaining = prev.filter(p => !polygonSet.has(p))
-      console.log(`   - Remaining ROOF polygons: ${remaining.length}`)
       remaining.forEach((polygon, index) => {
         const path = polygon.getPath()
         if (path) {
           const coords = path.getArray().map(p => ({ lat: p.lat(), lng: p.lng() }))
-          console.log(`     ✓ ROOF Polygon #${index} (remaining):`, {
-            firstPoint: coords[0],
-            center: coords.length > 0 ? {
-              lat: coords.reduce((sum, c) => sum + c.lat, 0) / coords.length,
-              lng: coords.reduce((sum, c) => sum + c.lng, 0) / coords.length
-            } : null
-          })
         }
       })
       return remaining
@@ -266,12 +227,10 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
     setObjectPolygons(prev => {
       const toRemove = prev.filter(p => polygonSet.has(p))
-      console.log(`   - Removing ${toRemove.length} OBJECT polygons`)
       toRemove.forEach(polygon => {
         clearPolygonGroup([polygon], 'OBJECT-INDIVIDUAL')
       })
       const remaining = prev.filter(p => !polygonSet.has(p))
-      console.log(`   - Remaining OBJECT polygons: ${remaining.length}`)
       return remaining
     })
   }, [clearPolygonGroup])

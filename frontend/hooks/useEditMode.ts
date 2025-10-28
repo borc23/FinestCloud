@@ -132,7 +132,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         if (selectedDuringDragRef.current.has(polygon)) return
 
         if (google.maps.geometry.poly.containsLocation(point, polygon)) {
-          console.log('[checkPolygonIntersection] Polygon selected during drag!')
           selectedDuringDragRef.current.add(polygon)
 
           // Store original colors before applying blue highlight

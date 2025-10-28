@@ -26,7 +26,6 @@ export class PVWattsApiService {
   async calculateProduction(params: PVWattsCalculationParams): Promise<PVWattsResponse> {
     // Check cache
     if (this.isCachedDataValid(params) && this.cachedData) {
-      console.log('Using cached PVWatts data')
       return this.cachedData
     }
 
@@ -190,7 +189,6 @@ export class PVWattsApiService {
     // Check if cache has expired
     const cacheAge = Date.now() - this.cacheTimestamp
     if (cacheAge > this.cacheTTL) {
-      console.log('Cache expired, age:', Math.round(cacheAge / 1000 / 60), 'minutes')
       return false
     }
 

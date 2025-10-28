@@ -113,6 +113,7 @@ export default function HomePage() {
                 loadProjectRef.current = loader
               }}
               isAuthenticated={!!user}
+              onSaveProject={handleSaveProject}
             />
           )}
 
@@ -158,7 +159,6 @@ export default function HomePage() {
           isOpen={showSaveModal}
           onClose={() => setShowSaveModal(false)}
           onSave={(projectId) => {
-            console.log('Project saved:', projectId)
             setShowSaveModal(false)
           }}
           projectData={getProjectDataRef.current()}
@@ -172,7 +172,6 @@ export default function HomePage() {
           try {
             if (loadProjectRef.current) {
               await loadProjectRef.current(projectId)
-              console.log('Project loaded successfully')
               setShowLoadPanel(false)
             }
           } catch (error) {
@@ -190,7 +189,6 @@ export default function HomePage() {
           try {
             if (loadProjectRef.current) {
               await loadProjectRef.current(projectId)
-              console.log('Project loaded successfully from profile panel')
             }
           } catch (error) {
             console.error('Failed to load project:', error)
