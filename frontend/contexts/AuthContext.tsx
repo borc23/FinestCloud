@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client' // Changed from { supabase }
 
 interface AuthContextType {
   user: User | null
@@ -18,6 +18,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<AuthError | null>(null)
+  
+  const supabase = createClient() // Create client instance
 
   useEffect(() => {
     let isMounted = true 
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase]) // Add supabase to dependencies
 
   const signOut = useCallback(async (): Promise<void> => {
     try {
@@ -79,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(authError)
       throw authError
     }
-  }, [])
+  }, [supabase]) // Add supabase to dependencies
 
   const value = useMemo(() => ({
     user: session?.user ?? null,
