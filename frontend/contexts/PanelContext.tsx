@@ -1,22 +1,21 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback, useRef, useMemo } from 'react'
 
 interface PanelData {
-  id: string
-  name: string
-  manufacturer: string
-  width: number
-  height: number
-  power: number
-  efficiency: number
+  readonly id: string
+  readonly name: string
+  readonly manufacturer: string
+  readonly width: number
+  readonly height: number
+  readonly power: number
+  readonly efficiency: number
 }
 
 interface PanelContextType {
   selectedPanel: PanelData | null
   setSelectedPanel: (panel: PanelData | null) => void
-  onPanelChangeWhileGenerated?: () => void
-  registerPanelChangeCallback: (callback: () => void) => void
+  registerPanelChangeCallback: (callback: () => void) => () => void
 }
 
 const PanelContext = createContext<PanelContextType | undefined>(undefined)
@@ -33,26 +32,30 @@ const DEFAULT_PANEL: PanelData = {
 
 export function PanelProvider({ children }: { children: ReactNode }) {
   const [selectedPanel, setSelectedPanel] = useState<PanelData | null>(DEFAULT_PANEL)
-  const [panelChangeCallback, setPanelChangeCallback] = useState<(() => void) | null>(null)
+  const callbacksRef = useRef<Set<() => void>>(new Set())
 
   const registerPanelChangeCallback = useCallback((callback: () => void) => {
-    setPanelChangeCallback(() => callback)
+    callbacksRef.current.add(callback)
+    return () => {
+      callbacksRef.current.delete(callback)
+    }
   }, [])
 
   const handleSetSelectedPanel = useCallback((panel: PanelData | null) => {
     setSelectedPanel(panel)
-    // Trigger callback if panel changed and callback is registered
-    if (panel && panelChangeCallback) {
-      panelChangeCallback()
+    if (panel) {
+      callbacksRef.current.forEach(cb => cb())
     }
-  }, [panelChangeCallback])
+  }, [])
+
+  const contextValue = useMemo(() => ({
+    selectedPanel,
+    setSelectedPanel: handleSetSelectedPanel,
+    registerPanelChangeCallback
+  }), [selectedPanel, handleSetSelectedPanel, registerPanelChangeCallback])
 
   return (
-    <PanelContext.Provider value={{
-      selectedPanel,
-      setSelectedPanel: handleSetSelectedPanel,
-      registerPanelChangeCallback
-    }}>
+    <PanelContext.Provider value={contextValue}>
       {children}
     </PanelContext.Provider>
   )
