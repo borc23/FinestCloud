@@ -212,6 +212,82 @@ export async function deleteProject(projectId: string): Promise<void> {
   if (error) throw error
 }
 
+/**
+ * Soft delete a project (sets deleted_at timestamp)
+ * Can be restored later using restoreProject()
+ */
+export async function softDeleteProject(projectId: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase.rpc('soft_delete_project', {
+    project_id: projectId,
+  })
+
+  if (error) throw error
+}
+
+/**
+ * Restore a soft-deleted project (clears deleted_at timestamp)
+ */
+export async function restoreProject(projectId: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase.rpc('restore_project', {
+    project_id: projectId,
+  })
+
+  if (error) throw error
+}
+
+/**
+ * Get soft-deleted projects for the current user
+ */
+export async function getDeletedProjects(userId: string): Promise<Project[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('user_id', userId)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+/**
+ * Permanently delete old soft-deleted projects
+ * @param daysOld - Projects deleted more than this many days ago will be permanently removed
+ * @returns Number of projects permanently deleted
+ */
+export async function cleanupDeletedProjects(daysOld: number = 30): Promise<number> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase.rpc('cleanup_deleted_projects', {
+    days_old: daysOld,
+  })
+
+  if (error) throw error
+  return data || 0
+}
+
+/**
+ * Get project statistics using the database view
+ */
+export async function getProjectStats(userId: string): Promise<any[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('project_stats')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
 export async function updateProjectStatus(
   projectId: string,
   status: 'draft' | 'completed'
