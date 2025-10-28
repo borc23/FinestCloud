@@ -11,7 +11,7 @@ import styles from './ProfilePanel.module.css'
 
 declare global {
   interface Window {
-    google: any
+    google: typeof google
   }
 }
 
@@ -43,7 +43,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
   const [defaultLat, setDefaultLat] = useState('')
   const [defaultLng, setDefaultLng] = useState('')
   const [locationSearch, setLocationSearch] = useState('')
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([])
+  const [locationSuggestions, setLocationSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0, width: 0 })
   const [profileLoading, setProfileLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -101,7 +101,10 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       const geocoder = new window.google.maps.Geocoder()
       geocoder.geocode(
         { location: { lat, lng } },
-        (results: any, status: any) => {
+        (
+          results: google.maps.GeocoderResult[] | null, 
+          status: google.maps.GeocoderStatus
+        ) => {
           if (status === 'OK' && results && results[0]) {
             skipSuggestionsRef.current = true
             setLocationSearch(results[0].formatted_address)
@@ -269,17 +272,15 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
     }
   }
 
-  // Update suggestion dropdown position when input changes or on scroll
   useEffect(() => {
     const updatePosition = () => {
       if (locationInputRef.current && locationSuggestions.length > 0) {
         const rect = locationInputRef.current.getBoundingClientRect()
-        const dropdownHeight = 240 // max-height from CSS
+        const dropdownHeight = 240
         const viewportHeight = window.innerHeight
         const spaceBelow = viewportHeight - rect.bottom
         const spaceAbove = rect.top
 
-        // Check if dropdown would go below viewport, and if there's more space above
         const shouldFlipUp = spaceBelow < dropdownHeight + 16 && spaceAbove > spaceBelow
 
         const position = {
@@ -306,9 +307,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
     }
   }, [locationSuggestions])
 
-  // Fetch location suggestions based on search query
   useEffect(() => {
-    // Skip fetching if we're programmatically setting the location
     if (skipSuggestionsRef.current) {
       skipSuggestionsRef.current = false
       return
@@ -325,7 +324,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
 
         const { AutocompleteSuggestion } = (await window.google.maps.importLibrary(
           'places'
-        )) as any
+        )) as google.maps.PlacesLibrary
 
         const { suggestions: fetchedSuggestions } =
           await AutocompleteSuggestion.fetchAutocompleteSuggestions({
@@ -340,7 +339,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           })
 
         const predictions = fetchedSuggestions
-          .map((suggestion: any) => suggestion.placePrediction)
+          .map(suggestion => suggestion.placePrediction)
           .slice(0, 5)
 
         console.log('Location suggestions fetched:', predictions)
@@ -353,7 +352,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
     return () => clearTimeout(timer)
   }, [locationSearch])
 
-  const handleLocationSelect = async (prediction: any) => {
+  const handleLocationSelect = async (prediction: google.maps.places.PlacePrediction) => {
     const description = prediction.text?.toString() || ''
     setLocationSuggestions([])
 
@@ -363,12 +362,14 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         const geocoder = new window.google.maps.Geocoder()
         geocoder.geocode(
           { address: description },
-          (results: any, status: any) => {
+          (
+            results: google.maps.GeocoderResult[] | null, 
+            status: google.maps.GeocoderStatus
+          ) => {
             if (status === 'OK' && results && results[0]) {
               const location = results[0].geometry.location
               setDefaultLat(location.lat().toFixed(6))
               setDefaultLng(location.lng().toFixed(6))
-              // Set flag to skip suggestion fetch, then update location
               skipSuggestionsRef.current = true
               setLocationSearch(description)
             } else {
