@@ -284,38 +284,84 @@ export default function MapContainer({
 
     const loadProject = async (projectId: string) => {
       try {
-        // Fetch project data
         const projectWithData = await getProject(projectId)
         if (!projectWithData) {
           throw new Error('Project not found')
         }
 
-        // Clear existing data
         clearAllPolygons()
         clearPanels()
 
-        // Set map center and zoom
         map.setCenter({
           lat: projectWithData.project.mapCenterLat,
           lng: projectWithData.project.mapCenterLng
         })
         map.setZoom(projectWithData.project.mapZoom)
 
-        // Recreate roof polygons
         const roofCoords = projectWithData.roofAnalyses.map(roof => ({
           coords: roof.roofPolygon
         }))
         if (roofCoords.length > 0) {
-          renderPolygons(roofCoords, true, true)
+          renderPolygons(roofCoords, true, false)
         }
 
-        // Recreate object polygons
         const objectCoords = projectWithData.objectPolygons.map(obj => ({
           coords: obj.polygonCoords
         }))
         if (objectCoords.length > 0) {
-          renderPolygons(objectCoords, false, true)
+          renderPolygons(objectCoords, false, false)
         }
+
+        setTimeout(() => {
+          if (!window.google?.maps) return
+
+          const loadedPanels: any[] = []
+
+          projectWithData.panelConfigurations.forEach(config => {
+            config.panelPositions.forEach(panelCoords => {
+              const panel = new window.google.maps.Polygon({
+                paths: panelCoords.map(c => ({ lat: c.lat, lng: c.lng })),
+                strokeColor: '#FFD700',
+                strokeOpacity: 0.8,
+                strokeWeight: 1,
+                fillColor: '#1e3a8a',
+                fillOpacity: 0.6,
+                map: map,
+                clickable: true
+              })
+              loadedPanels.push(panel)
+            })
+          })
+
+          setAllPanels(loadedPanels)
+
+          const mockPanelData: any = {
+            success: true,
+            roofs: projectWithData.roofAnalyses.map(roof => ({
+              roof_id: roof.roofIndex,
+              panels: [],
+              panel_count: roof.panelCount,
+              module_type: projectWithData.panelConfigurations.find(c =>
+                projectWithData.roofAnalyses.find(r => r.id === c.roofAnalysisId)?.roofIndex === roof.roofIndex
+              )?.moduleType || 'custom',
+              module_specs: projectWithData.panelConfigurations.find(c =>
+                projectWithData.roofAnalyses.find(r => r.id === c.roofAnalysisId)?.roofIndex === roof.roofIndex
+              )?.moduleSpecs || { power_w: roof.panelWattage },
+              coords: roof.roofPolygon,
+              azimuth: roof.azimuth,
+              pitch: roof.pitch
+            })),
+            max_panels: projectWithData.roofAnalyses.reduce((sum, r) => sum + r.panelCount, 0),
+            module: 'custom',
+            electrical_system: null
+          }
+
+          handleAngleConfirmHook({
+            angles: projectWithData.roofAnalyses.map(r => r.pitch),
+            edgePadding: 0.5,
+            panelData: mockPanelData
+          })
+        }, 300)
 
       } catch (error) {
         console.error('Error loading project:', error)
@@ -324,7 +370,7 @@ export default function MapContainer({
     }
 
     onRegisterProjectLoader(loadProject)
-  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader])
+  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader, startPanelGeneration])
 
   // Panel placement
   const {
