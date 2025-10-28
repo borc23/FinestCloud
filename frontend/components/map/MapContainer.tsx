@@ -107,6 +107,13 @@ export default function MapContainer({
   // Map initialization with user's default location
   const map = useMapInitialization(mapRef, { onMapReady, defaultCenter })
 
+  // Move map to default location when it becomes available
+  useEffect(() => {
+    if (map && defaultCenter) {
+      map.setCenter(defaultCenter)
+    }
+  }, [map, defaultCenter])
+
   // Detection
   const { error: detectionError, detectRoofs, clearError } = useDetection()
 

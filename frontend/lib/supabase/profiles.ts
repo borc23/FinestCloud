@@ -27,19 +27,55 @@ export async function updateProfile(
 ): Promise<Profile | null> {
   const supabase = createClient()
 
-  const { data, error } = await supabase
+  const { data: existingProfile } = await supabase
     .from('profiles')
-    .update(updates)
+    .select('email')
     .eq('id', userId)
-    .select()
-    .single()
+    .maybeSingle()
 
-  if (error) {
-    console.error('Error updating profile:', error)
-    throw error
+  if (existingProfile) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating profile:', error)
+      throw error
+    }
+
+    return data
+  } else {
+    const { data: userData } = await supabase.auth.getUser()
+    const email = userData.user?.email
+
+    if (!email) {
+      throw new Error('User email not found')
+    }
+
+    const insertData = {
+      id: userId,
+      email,
+      display_name: updates.display_name,
+      default_latitude: updates.default_latitude,
+      default_longitude: updates.default_longitude
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert(insertData as any)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating profile:', error)
+      throw error
+    }
+
+    return data
   }
-
-  return data
 }
 
 export async function setDefaultLocation(

@@ -233,7 +233,10 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       }
 
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      setTimeout(() => {
+        setSuccess(false)
+        onClose()
+      }, 1000)
     } catch (err: any) {
       console.error('Error saving profile:', err)
       setError(err.message || 'Failed to save profile')
@@ -257,7 +260,6 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           setDefaultLat(lat.toFixed(6))
           setDefaultLng(lng.toFixed(6))
 
-          // Reverse geocode to get location name
           if (window.google?.maps) {
             reverseGeocodeLocation(lat, lng)
           }
@@ -288,7 +290,6 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           left: rect.left,
           width: rect.width
         }
-        console.log('Updating suggestion position:', position, 'shouldFlipUp:', shouldFlipUp)
         setSuggestionPosition(position)
       }
     }
@@ -342,10 +343,9 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           .map(suggestion => suggestion.placePrediction)
           .slice(0, 5)
 
-        console.log('Location suggestions fetched:', predictions)
         setLocationSuggestions(predictions)
       } catch (error) {
-        console.log('Failed to fetch location suggestions:', error)
+        console.error('Failed to fetch location suggestions:', error)
       }
     }, 300)
 
