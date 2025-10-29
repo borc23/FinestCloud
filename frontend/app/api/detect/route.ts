@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { proxyToPythonBackend, handleOptionsRequest, checkBackendHealth } from '../../../lib/apiProxy'
+import { proxyToPythonBackend, handleOptionsRequest, checkBackendHealth } from '@/shared/lib/apiProxy'
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY

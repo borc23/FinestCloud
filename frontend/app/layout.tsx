@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import '@/styles/globals.css'
-import { PanelProvider } from '@/contexts/PanelContext'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { PanelProvider } from '@/features/solar-panels/context/PanelContext'
+import { AuthProvider } from '@/features/auth/context/AuthContext'
 
 export const metadata: Metadata = {
   title: 'FinestCloud Solar',

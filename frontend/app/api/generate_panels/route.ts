@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { proxyToPythonBackend, handleOptionsRequest } from '../../../lib/apiProxy'
-import type { PanelGenerationRequest, Coordinate } from '../../../types/panel'
+import { proxyToPythonBackend, handleOptionsRequest } from '@/shared/lib/apiProxy'
+import type { PanelGenerationRequest, Coordinate } from '@/features/solar-panels/types/panel'
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 

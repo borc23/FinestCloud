@@ -1,21 +1,21 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import ToolStrip from '@/components/layout/ToolStrip'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import ImageUploadModal from '@/components/ui/ImageUploadModal'
-import ZoomableImage from '@/components/ui/ZoomableImage'
-import PanelSelectorButton from '@/components/panels/PanelSelectorButton'
-import PanelSelector from '@/components/panels/PanelSelector'
-import SaveProjectModal from '@/components/projects/SaveProjectModal'
-import ProjectListPanel from '@/components/projects/ProjectListPanel'
-import ProfilePanel from '@/components/auth/ProfilePanel'
-import AuthRequiredOverlay from '@/components/auth/AuthRequiredOverlay'
+import ToolStrip from '@/shared/components/layout/ToolStrip'
+import LoadingSpinner from '@/shared/components/ui/LoadingSpinner'
+import ImageUploadModal from '@/shared/components/ui/ImageUploadModal'
+import ZoomableImage from '@/shared/components/ui/ZoomableImage'
+import PanelSelectorButton from '@/features/solar-panels/components/PanelSelectorButton'
+import PanelSelector from '@/features/solar-panels/components/PanelSelector'
+import SaveProjectModal from '@/features/projects/components/SaveProjectModal'
+import ProjectListPanel from '@/features/projects/components/ProjectListPanel'
+import ProfilePanel from '@/features/auth/components/ProfilePanel'
+import AuthRequiredOverlay from '@/features/auth/components/AuthRequiredOverlay'
 import { useState, useRef } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import type { CreateProjectData } from '@/types/database'
+import { useAuth } from '@/features/auth/hooks/useAuth'
+import type { CreateProjectData } from '@/features/auth/types/database'
 
-const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
+const MapContainer = dynamic(() => import('@/features/map-drawing/components/MapContainer'), {
   ssr: false,
   loading: () => <LoadingSpinner />
 })

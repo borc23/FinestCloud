@@ -9,7 +9,7 @@ import type {
   ShadeAnalysis,
   RoofSegmentShade,
   SolarShadeResponse
-} from '@/types/solar-api'
+} from '@/features/solar-analysis/types/solar-api'
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const GOOGLE_SOLAR_API_URL = 'https://solar.googleapis.com/v1/buildingInsights:findClosest'
