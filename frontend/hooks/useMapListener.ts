@@ -91,17 +91,6 @@ export function useSingleMapListener<E extends string>(
   }, [mapInstance, eventName, ...deps])
 }
 
-/**
- * Hook for managing multiple map event listeners with a common pattern
- *
- * @example
- * ```tsx
- * const listeners = useMapListeners(map, {
- *   click: (e) => console.log('Click', e),
- *   mousemove: (e) => console.log('Move', e)
- * })
- * ```
- */
 export function useMapListeners<T extends Record<string, (event: unknown) => void>>(
   mapInstance: google.maps.Map | google.maps.Polygon | google.maps.Marker | null,
   handlers: T,
