@@ -11,7 +11,9 @@ import SolarResultsDashboard from '@/features/solar-analysis/components/SolarRes
 import GridSelector from '@/features/solar-panels/components/GridSelector'
 import ShadeVisualizationOverlay from '@/features/solar-analysis/components/ShadeVisualizationOverlay'
 import ShadeLegend from '@/features/solar-analysis/components/ShadeLegend'
+import DataLayerOverlay from '@/features/solar-analysis/components/DataLayerOverlay'
 import { useMapInitialization } from '@/features/map-drawing/hooks/useMapInitialization'
+import { useDataLayers } from '@/features/solar-analysis/hooks/useDataLayers'
 import { useDetection } from '@/features/solar-analysis/hooks/useDetection'
 import { usePolygons } from '@/features/map-drawing/hooks/usePolygons'
 import { useEditMode } from '@/features/map-drawing/hooks/useEditMode'
@@ -70,6 +72,7 @@ export default function MapContainer({
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object' | 'panel'>('roof')
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
   const [showShadeVisualization, setShowShadeVisualization] = useState(false)
+  const [showSunshineLayer, setShowSunshineLayer] = useState(false)
   const [shadeStats, setShadeStats] = useState<{
     excellent: number
     good: number
@@ -108,6 +111,24 @@ export default function MapContainer({
 
   // Map initialization with user's default location
   const map = useMapInitialization(mapRef, { onMapReady, defaultCenter })
+
+  // Data layers for annual sunshine visualization
+  const mapCenter = map?.getCenter()
+  const { annualFluxUrl, isLoading: isLoadingDataLayers, refetch: refetchDataLayers } = useDataLayers({
+    latitude: mapCenter?.lat(),
+    longitude: mapCenter?.lng(),
+    radiusMeters: 100,
+    autoFetch: false, // Manual fetch when user toggles the layer
+    requiredQuality: 'HIGH'
+  })
+
+  // Fetch data layers when sunshine layer is enabled
+  useEffect(() => {
+    if (showSunshineLayer && !annualFluxUrl && mapCenter) {
+      console.log('Fetching annual sunshine data...')
+      refetchDataLayers()
+    }
+  }, [showSunshineLayer, annualFluxUrl, mapCenter, refetchDataLayers])
 
   // Move map to default location when it becomes available
   useEffect(() => {
@@ -695,6 +716,15 @@ export default function MapContainer({
         panelStats={shadeStats ?? undefined}
       />
 
+      {/* Annual Sunshine Data Layer */}
+      <DataLayerOverlay
+        map={map}
+        geotiffUrl={annualFluxUrl}
+        visible={showSunshineLayer}
+        colorScale="sunshine"
+        opacity={0.6}
+      />
+
       {/* Panel Generation Overlay */}
       <PanelGenerationOverlay
         isVisible={isGenerating}
@@ -761,8 +791,10 @@ export default function MapContainer({
         hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0 || panelData !== null}
         hasPanels={allPanels.length > 0}
         shadeVisualizationEnabled={showShadeVisualization}
+        sunshineLayerEnabled={showSunshineLayer}
         onClearAll={handleReset}
         onToggleShadeVisualization={() => setShowShadeVisualization(!showShadeVisualization)}
+        onToggleSunshineLayer={() => setShowSunshineLayer(!showSunshineLayer)}
       />
     </div>
   )

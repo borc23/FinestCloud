@@ -7,8 +7,10 @@ interface MapControlsProps {
   hasPolygons?: boolean
   hasPanels?: boolean
   shadeVisualizationEnabled?: boolean
+  sunshineLayerEnabled?: boolean
   onClearAll?: () => void
   onToggleShadeVisualization?: () => void
+  onToggleSunshineLayer?: () => void
 }
 
 /**
@@ -20,8 +22,10 @@ export default function MapControls({
   hasPolygons = false,
   hasPanels = false,
   shadeVisualizationEnabled = false,
+  sunshineLayerEnabled = false,
   onClearAll,
-  onToggleShadeVisualization
+  onToggleShadeVisualization,
+  onToggleSunshineLayer
 }: MapControlsProps) {
   if (!map) return null
 
@@ -64,11 +68,20 @@ export default function MapControls({
       {hasPanels && (
         <button
           className={`${styles.shadeControl} ${shadeVisualizationEnabled ? styles.active : ''}`}
-          onClick={onToggleShadeVisualization}
           aria-label={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
           title={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
         >
           <i className="fas fa-sun"></i>
+        </button>
+      )}
+      {hasPanels && (
+        <button
+          className={`${styles.shadeControl} ${sunshineLayerEnabled ? styles.active : ''}`}
+          onClick={onToggleSunshineLayer}
+          aria-label={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
+          title={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
+        >
+          <i className="fas fa-solar-panel"></i>
         </button>
       )}
       {hasPolygons && (

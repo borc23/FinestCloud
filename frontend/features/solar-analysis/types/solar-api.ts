@@ -13,6 +13,17 @@ export interface SolarApiRequest {
   exactQualityRequired?: boolean
 }
 
+export interface DataLayersRequest {
+  location: {
+    latitude: number
+    longitude: number
+  }
+  radiusMeters?: number
+  view?: 'FULL_LAYERS' | 'DSM_LAYER' | 'IMAGERY_LAYERS' | 'IMAGERY_AND_ANNUAL_FLUX_LAYERS' | 'IMAGERY_AND_ALL_FLUX_LAYERS'
+  requiredQuality?: 'LOW' | 'MEDIUM' | 'HIGH'
+  pixelSizeMeters?: number
+}
+
 // Building insights response
 export interface BuildingInsights {
   name: string
@@ -198,6 +209,12 @@ export interface PanelShadeData {
 export interface SolarShadeResponse {
   success: boolean
   data?: ShadeAnalysis
+  error?: string
+}
+
+export interface DataLayersApiResponse {
+  success: boolean
+  data?: DataLayersResponse
   error?: string
 }
 
