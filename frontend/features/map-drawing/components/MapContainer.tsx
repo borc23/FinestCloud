@@ -112,24 +112,6 @@ export default function MapContainer({
   // Map initialization with user's default location
   const map = useMapInitialization(mapRef, { onMapReady, defaultCenter })
 
-  // Data layers for annual sunshine visualization
-  const mapCenter = map?.getCenter()
-  const { annualFluxUrl, isLoading: isLoadingDataLayers, refetch: refetchDataLayers } = useDataLayers({
-    latitude: mapCenter?.lat(),
-    longitude: mapCenter?.lng(),
-    radiusMeters: 100,
-    autoFetch: false, // Manual fetch when user toggles the layer
-    requiredQuality: 'HIGH'
-  })
-
-  // Fetch data layers when sunshine layer is enabled
-  useEffect(() => {
-    if (showSunshineLayer && !annualFluxUrl && mapCenter) {
-      console.log('Fetching annual sunshine data...')
-      refetchDataLayers()
-    }
-  }, [showSunshineLayer, annualFluxUrl, mapCenter, refetchDataLayers])
-
   // Move map to default location when it becomes available
   useEffect(() => {
     if (map && defaultCenter) {
@@ -151,6 +133,51 @@ export default function MapContainer({
     removePolygons,
     hasRoofs
   } = usePolygons(map)
+
+  // Calculate center of roof polygons for data layer request
+  const getRoofCenter = useCallback(() => {
+    if (roofPolygons.length === 0) return null
+
+    let totalLat = 0
+    let totalLng = 0
+    let pointCount = 0
+
+    roofPolygons.forEach(polygon => {
+      const path = polygon.getPath()
+      for (let i = 0; i < path.getLength(); i++) {
+        const point = path.getAt(i)
+        totalLat += point.lat()
+        totalLng += point.lng()
+        pointCount++
+      }
+    })
+
+    if (pointCount === 0) return null
+
+    return {
+      lat: totalLat / pointCount,
+      lng: totalLng / pointCount
+    }
+  }, [roofPolygons])
+
+  const roofCenter = getRoofCenter()
+
+  // Data layers for annual sunshine visualization
+  const { annualFluxUrl, isLoading: isLoadingDataLayers, refetch: refetchDataLayers } = useDataLayers({
+    latitude: roofCenter?.lat,
+    longitude: roofCenter?.lng,
+    radiusMeters: 15, // Smaller radius - just cover the roof
+    autoFetch: false, // Manual fetch when user toggles the layer
+    requiredQuality: 'HIGH'
+  })
+
+  // Fetch data layers when sunshine layer is enabled
+  useEffect(() => {
+    if (showSunshineLayer && !annualFluxUrl && roofCenter) {
+      console.log('Fetching annual sunshine data for roof at:', roofCenter)
+      refetchDataLayers()
+    }
+  }, [showSunshineLayer, annualFluxUrl, roofCenter, refetchDataLayers])
 
   // Get panel markers first (temporary workaround - will be populated after panels are generated)
   const [allPolygonsForEdit, setAllPolygonsForEdit] = useState<google.maps.Polygon[]>([])
@@ -722,7 +749,8 @@ export default function MapContainer({
         geotiffUrl={annualFluxUrl}
         visible={showSunshineLayer}
         colorScale="sunshine"
-        opacity={0.6}
+        opacity={1.0}
+        clipToPolygons={roofPolygons}
       />
 
       {/* Panel Generation Overlay */}

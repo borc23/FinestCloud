@@ -14,6 +14,7 @@ interface DataLayerOverlayProps {
   visible: boolean
   colorScale?: 'viridis' | 'heat' | 'sunshine'
   opacity?: number
+  clipToPolygons?: google.maps.Polygon[] // Optional: clip overlay to these polygons
 }
 
 /**
@@ -31,7 +32,7 @@ class GeoTIFFOverlay extends google.maps.OverlayView {
     canvas: HTMLCanvasElement,
     map: google.maps.Map,
     visible: boolean = true,
-    opacity: number = 0.6
+    opacity: number = 1.0
   ) {
     super()
     this.bounds = bounds
@@ -109,7 +110,8 @@ export default function DataLayerOverlay({
   geotiffUrl,
   visible,
   colorScale = 'sunshine',
-  opacity = 0.6
+  opacity = 0.6,
+  clipToPolygons
 }: DataLayerOverlayProps) {
   const overlayRef = useRef<GeoTIFFOverlay | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -184,6 +186,52 @@ export default function DataLayerOverlay({
         // Create ImageData and put on canvas
         const imageData = new ImageData(rgbaData, geotiffData.width, geotiffData.height)
         ctx.putImageData(imageData, 0, 0)
+
+        // Apply polygon clipping if provided
+        if (clipToPolygons && clipToPolygons.length > 0) {
+          console.log('Applying polygon clipping mask to overlay...')
+
+          // Create a second canvas for clipping
+          const clippedCanvas = document.createElement('canvas')
+          clippedCanvas.width = geotiffData.width
+          clippedCanvas.height = geotiffData.height
+          const clippedCtx = clippedCanvas.getContext('2d')
+
+          if (clippedCtx) {
+            // Create clipping path from polygons
+            clippedCtx.beginPath()
+
+            clipToPolygons.forEach(polygon => {
+              const path = polygon.getPath()
+              for (let i = 0; i < path.getLength(); i++) {
+                const point = path.getAt(i)
+                const lat = point.lat()
+                const lng = point.lng()
+
+                // Convert lat/lng to canvas pixel coordinates
+                const x = ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
+                const y = ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+
+                if (i === 0) {
+                  clippedCtx.moveTo(x, y)
+                } else {
+                  clippedCtx.lineTo(x, y)
+                }
+              }
+              clippedCtx.closePath()
+            })
+
+            // Clip and draw the original canvas
+            clippedCtx.clip()
+            clippedCtx.drawImage(canvas, 0, 0)
+
+            // Use the clipped canvas instead
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctx.drawImage(clippedCanvas, 0, 0)
+
+            console.log('Polygon clipping applied successfully')
+          }
+        }
 
         // Create bounds for overlay
         const bounds = new google.maps.LatLngBounds(
