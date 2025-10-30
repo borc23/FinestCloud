@@ -167,6 +167,23 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
       }
     }
 
+    // Apply 2-meter northward offset to correct alignment
+    // Calculate the offset in degrees (2 meters ≈ 0.000018 degrees latitude at equator)
+    // Using the more accurate formula: degrees = meters / (111320 * cos(latitude))
+    
+    const centerLat = (bounds.north + bounds.south) / 2
+    const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
+    const latitudeOffset = 1 / metersPerDegree
+
+    console.log('Applying 2-meter northward offset:', latitudeOffset, 'degrees')
+
+    bounds = {
+      west: bounds.west,
+      south: bounds.south + latitudeOffset,
+      east: bounds.east,
+      north: bounds.north + latitudeOffset
+    }
+
     return {
       width,
       height,

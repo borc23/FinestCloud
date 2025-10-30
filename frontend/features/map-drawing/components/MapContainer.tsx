@@ -168,7 +168,7 @@ export default function MapContainer({
   const { annualFluxUrl, isLoading: isLoadingDataLayers, refetch: refetchDataLayers } = useDataLayers({
     latitude: roofCenter?.lat,
     longitude: roofCenter?.lng,
-    radiusMeters: 15, // Smaller radius - just cover the roof
+    radiusMeters: 100, 
     autoFetch: false, // Manual fetch when user toggles the layer
     requiredQuality: 'HIGH'
   })
