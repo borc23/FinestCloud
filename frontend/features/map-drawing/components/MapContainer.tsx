@@ -12,6 +12,7 @@ import GridSelector from '@/features/solar-panels/components/GridSelector'
 import ShadeVisualizationOverlay from '@/features/solar-analysis/components/ShadeVisualizationOverlay'
 import ShadeLegend from '@/features/solar-analysis/components/ShadeLegend'
 import DataLayerOverlay from '@/features/solar-analysis/components/DataLayerOverlay'
+import SunshineLayerControls from '@/features/solar-analysis/components/SunshineLayerControls'
 import { useMapInitialization } from '@/features/map-drawing/hooks/useMapInitialization'
 import { useDataLayers } from '@/features/solar-analysis/hooks/useDataLayers'
 import { useDetection } from '@/features/solar-analysis/hooks/useDetection'
@@ -73,6 +74,7 @@ export default function MapContainer({
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
   const [showShadeVisualization, setShowShadeVisualization] = useState(false)
   const [showSunshineLayer, setShowSunshineLayer] = useState(false)
+  const [hidePanelsInSunshineMode, setHidePanelsInSunshineMode] = useState(false)
   const [shadeStats, setShadeStats] = useState<{
     excellent: number
     good: number
@@ -430,18 +432,15 @@ export default function MapContainer({
   }, [onToolChange])
 
   const handleDrawingTypeChange = useCallback((type: 'roof' | 'object' | 'panel') => {
+    if (type === drawingTypeSelection) return
+
     setDrawingTypeSelection(type)
-    if (type === 'panel') {
-      if (isDrawing) stopDrawing()
-      startPlacement()
-    } else {
-      if (isPlacing) stopPlacement()
-      if (isDrawing) {
-        stopDrawing()
-      }
-      startDrawing(type)
-    }
-  }, [isDrawing, isPlacing, stopDrawing, startDrawing, startPlacement, stopPlacement])
+
+    if (isDrawing) stopDrawing()
+    if (isPlacing) stopPlacement()
+
+    type === 'panel' ? startPlacement() : startDrawing(type)
+  }, [drawingTypeSelection, isDrawing, isPlacing, stopDrawing, startDrawing, startPlacement, stopPlacement])
 
   const handleAngleConfirm = useCallback(async (data: any) => {
     await handleAngleConfirmHook(data)
@@ -454,17 +453,19 @@ export default function MapContainer({
   }, [handleAngleCancelHook, onToolChange])
 
   const handlePanelConfigChange = useCallback(() => {
-    // Only regenerate if panels are already generated
     if (panelData && solarData && roofPolygons.length > 0) {
-      // Clear existing panels
+      setAllPanels(prevPanels => {
+        prevPanels.forEach(panel => panel.setMap(null))
+        return []
+      })
+      
       clearPanels()
-      allPanels.forEach(panel => panel.setMap(null))
-      setAllPanels([])
-
-      // Show angle panel to regenerate
-      startPanelGeneration()
+      
+      requestAnimationFrame(() => {
+        startPanelGeneration()
+      })
     }
-  }, [panelData, solarData, roofPolygons, clearPanels, allPanels, startPanelGeneration])
+  }, [panelData, solarData, roofPolygons, clearPanels, startPanelGeneration])
 
   // Register callback for panel config changes
   useEffect(() => {
@@ -514,8 +515,8 @@ export default function MapContainer({
         setShowCaptureOverlay(false)
       }
     } catch (err) {
-      console.error('Detection failed:', err)
-    }
+        console.error('Detection failed:', err)
+      }
   }, [map, detectRoofs, clearAllPolygons, renderPolygons, activeTool])
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -624,6 +625,21 @@ export default function MapContainer({
   useEffect(() => {
     setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...allPanels])
   }, [roofPolygons, objectPolygons, allPanels])
+
+  // Hide/show panels when sunshine layer mode changes
+  useEffect(() => {
+    if (showSunshineLayer && hidePanelsInSunshineMode) {
+      // Hide panels
+      allPanels.forEach(panel => {
+        panel.setVisible(false)
+      })
+    } else {
+      // Show panels
+      allPanels.forEach(panel => {
+        panel.setVisible(true)
+      })
+    }
+  }, [showSunshineLayer, hidePanelsInSunshineMode, allPanels])
 
   // ========================================
   // Render
@@ -741,6 +757,13 @@ export default function MapContainer({
       <ShadeLegend
         visible={showShadeVisualization && allPanels.length > 0}
         panelStats={shadeStats ?? undefined}
+      />
+
+      {/* Sunshine Layer Controls */}
+      <SunshineLayerControls
+        visible={showSunshineLayer && allPanels.length > 0}
+        hidePanels={hidePanelsInSunshineMode}
+        onToggleHidePanels={setHidePanelsInSunshineMode}
       />
 
       {/* Annual Sunshine Data Layer */}
