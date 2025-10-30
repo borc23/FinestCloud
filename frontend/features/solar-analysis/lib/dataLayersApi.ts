@@ -31,7 +31,6 @@ export class DataLayersApiService {
     if (this.isCachedDataValid(cacheKey)) {
       const cached = this.cachedData.get(cacheKey)
       if (cached) {
-        console.log('Returning cached data layers')
         return cached
       }
     }
@@ -39,7 +38,6 @@ export class DataLayersApiService {
     // Check if there's an in-flight request
     const inFlight = this.inFlightRequests.get(cacheKey)
     if (inFlight) {
-      console.log('Waiting for in-flight data layers request')
       return inFlight
     }
 
@@ -57,7 +55,6 @@ export class DataLayersApiService {
       // Cache the result
       this.cachedData.set(cacheKey, data)
       this.cacheTimestamp.set(cacheKey, Date.now())
-      console.log('Data layers fetched and cached successfully')
       return data
     } finally {
       this.inFlightRequests.delete(cacheKey)
@@ -83,8 +80,6 @@ export class DataLayersApiService {
       view: 'IMAGERY_AND_ANNUAL_FLUX_LAYERS', // Focus on annual flux for now
       pixelSizeMeters: 0.5, // High resolution
     }
-
-    console.log('Fetching data layers:', requestBody)
 
     const response = await fetch(this.baseUrl, {
       method: 'POST',

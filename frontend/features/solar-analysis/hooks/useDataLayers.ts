@@ -54,7 +54,6 @@ export function useDataLayers({
     setError(null)
 
     try {
-      console.log('Fetching data layers for:', { latitude, longitude, radiusMeters })
       const data = await apiService.getDataLayers(
         latitude,
         longitude,
@@ -62,7 +61,6 @@ export function useDataLayers({
         requiredQuality
       )
       setDataLayers(data)
-      console.log('Data layers fetched successfully:', data)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch data layers')
       setError(error)

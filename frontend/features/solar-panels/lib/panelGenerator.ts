@@ -37,7 +37,6 @@ function enrichPanelsWithSunshine(
   panelData: PanelGenerationResponse,
   geotiffData: GeoTIFFData
 ): void {
-  console.log('Enriching panels with sunshine data...')
 
   panelData.roofs?.forEach((roof: RoofPanelData) => {
     if (!roof.panels || !Array.isArray(roof.panels)) return
@@ -56,14 +55,11 @@ function enrichPanelsWithSunshine(
       const sunshineValue = sunshineValues[index]
       if (sunshineValue !== null) {
         panel.annualSunshineKwh = sunshineValue
-        console.log(`Panel ${index} sunshine: ${sunshineValue.toFixed(2)} kWh/m²/year`)
       } else {
         console.warn(`Panel ${index} has no sunshine data (out of bounds or no-data)`)
       }
     })
   })
-
-  console.log('Panel sunshine enrichment complete')
 }
 
 /**
@@ -183,7 +179,6 @@ export function calculateSystemResults(
     })
 
     if (panelsWithData > 0) {
-      console.log(`Calculated energy from ${panelsWithData} panels with sunshine data: ${totalAnnualProduction.toFixed(2)} kWh/year`)
       return {
         systemSize,
         annualProduction: totalAnnualProduction

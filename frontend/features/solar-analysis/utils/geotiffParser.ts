@@ -37,7 +37,6 @@ export interface GeoTIFFMetadata {
  */
 export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
   try {
-    console.log('Fetching GeoTIFF from URL:', url)
 
     const tiff: GeoTIFF = await fromUrl(url)
     const image = await tiff.getImage()
@@ -45,8 +44,6 @@ export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
     // Get image dimensions
     const width = image.getWidth()
     const height = image.getHeight()
-
-    console.log('GeoTIFF dimensions:', { width, height })
 
     // Read raster data
     const rasters = await image.readRasters()
@@ -60,8 +57,6 @@ export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
       north: bbox[3]
     }
 
-    console.log('GeoTIFF bounds:', bounds)
-
     // Calculate min/max values for normalization
     const data = rasters[0] as Float32Array
     let min = Infinity
@@ -69,13 +64,11 @@ export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
 
     for (let i = 0; i < data.length; i++) {
       const value = data[i]
-      if (value !== null && value !== undefined && !isNaN(value)) {
-        if (value < min) min = value
-        if (value > max) max = value
+      if (!isNaN(value)) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
       }
     }
-
-    console.log('GeoTIFF value range:', { min, max })
 
     return {
       width,
@@ -98,19 +91,11 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
   try {
     const tiff: GeoTIFF = await fromArrayBuffer(buffer)
     const image = await tiff.getImage()
-
     const width = image.getWidth()
     const height = image.getHeight()
-
     const rasters = await image.readRasters()
-
-    // Get bounding box and projection information
     const bbox = image.getBoundingBox()
-    console.log('GeoTIFF raw bbox:', bbox)
-
-    // Get the projection information
     const geoKeys = image.getGeoKeys()
-    console.log('GeoTIFF GeoKeys:', geoKeys)
 
     let bounds = {
       west: bbox[0],
@@ -119,41 +104,60 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
       north: bbox[3]
     }
 
-    // Determine source coordinate system and reproject to WGS84 if needed
     let needsReprojection = false
     let sourceEpsg: number | null = null
 
-    // Check for projected coordinate system
     if (geoKeys.ProjectedCSTypeGeoKey) {
       sourceEpsg = geoKeys.ProjectedCSTypeGeoKey
       needsReprojection = true
     }
-    // Check for geographic coordinate system (might not be WGS84)
     else if (geoKeys.GeographicTypeGeoKey && geoKeys.GeographicTypeGeoKey !== 4326) {
       sourceEpsg = geoKeys.GeographicTypeGeoKey
       needsReprojection = true
     }
-    // If no explicit CRS but coordinates look projected (large values)
     else if (Math.abs(bbox[0]) > 180 || Math.abs(bbox[2]) > 180) {
       console.warn('GeoTIFF appears to be in projected coordinates but no EPSG code found')
       console.warn('This may cause alignment issues - check GeoTIFF metadata')
     }
 
-    // Perform reprojection if needed
     if (needsReprojection && sourceEpsg) {
       try {
         const fromProj = `EPSG:${sourceEpsg}`
         const toProj = 'EPSG:4326' // WGS84 lat/lng for Google Maps
 
-        // Transform all four corners for accuracy
-        const [westLng, southLat] = proj4(fromProj, toProj, [bbox[0], bbox[1]])
-        const [eastLng, northLat] = proj4(fromProj, toProj, [bbox[2], bbox[3]])
+        const centerX = (bbox[0] + bbox[2]) / 2
+        const centerY = (bbox[1] + bbox[3]) / 2
+        const [centerLng, centerLat] = proj4(fromProj, toProj, [centerX, centerY])
+
+        const extentX = bbox[2] - bbox[0] // meters
+        const extentY = bbox[3] - bbox[1] // meters
+        const sampleCount = 5
+        let minLng = Infinity, maxLng = -Infinity
+        let minLat = Infinity, maxLat = -Infinity
+
+        for (let i = 0; i < sampleCount; i++) {
+          const t = i / (sampleCount - 1)
+
+          // Bottom edge
+          const [lngB, latB] = proj4(fromProj, toProj, [bbox[0] + extentX * t, bbox[1]])
+          // Top edge
+          const [lngT, latT] = proj4(fromProj, toProj, [bbox[0] + extentX * t, bbox[3]])
+          // Left edge
+          const [lngL, latL] = proj4(fromProj, toProj, [bbox[0], bbox[1] + extentY * t])
+          // Right edge
+          const [lngR, latR] = proj4(fromProj, toProj, [bbox[2], bbox[1] + extentY * t])
+
+          minLng = Math.min(minLng, lngB, lngT, lngL, lngR)
+          maxLng = Math.max(maxLng, lngB, lngT, lngL, lngR)
+          minLat = Math.min(minLat, latB, latT, latL, latR)
+          maxLat = Math.max(maxLat, latB, latT, latL, latR)
+        }
 
         bounds = {
-          west: westLng,
-          south: southLat,
-          east: eastLng,
-          north: northLat
+          west: minLng,
+          south: minLat,
+          east: maxLng,
+          north: maxLat
         }
 
       } catch (error) {
@@ -162,10 +166,11 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
         console.warn('Using untransformed bounds - overlay WILL be misaligned')
       }
     } else if (geoKeys.GeographicTypeGeoKey === 4326 || (!geoKeys.ProjectedCSTypeGeoKey && !geoKeys.GeographicTypeGeoKey)) {
-      console.log('GeoTIFF is already in WGS84 (EPSG:4326) or assumed to be')
+      console.info('GeoTIFF is already in WGS84 (EPSG:4326) or assumed to be')
     }
 
-    const data = rasters[0] as Float32Array
+    let data = rasters[0] as Float32Array
+
     let min = Infinity
     let max = -Infinity
 

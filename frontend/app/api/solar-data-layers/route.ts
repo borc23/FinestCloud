@@ -53,8 +53,6 @@ export async function POST(request: NextRequest) {
 
     const url = `${GOOGLE_SOLAR_DATA_LAYERS_URL}?${params.toString()}`
 
-    console.log('Fetching data layers from Google Solar API...')
-
     // Call Google Solar API
     const response = await fetch(url, {
       method: 'GET',
@@ -73,13 +71,6 @@ export async function POST(request: NextRequest) {
     }
 
     const dataLayers: DataLayersResponse = await response.json()
-
-    console.log('Data layers fetched successfully:', {
-      hasAnnualFlux: !!dataLayers.annualFluxUrl,
-      hasRgb: !!dataLayers.rgbUrl,
-      hasDsm: !!dataLayers.dsmUrl,
-      imageryQuality: dataLayers.imageryQuality
-    })
 
     const result: DataLayersApiResponse = {
       success: true,

@@ -87,8 +87,6 @@ export function usePanelGeneration({
     setState(prev => ({ ...prev, isLoadingGeotiff: true }))
 
     try {
-      console.log('Fetching GeoTIFF data for roof at:', roofCenter)
-
       const response = await fetch('/api/solar-data-layers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +107,6 @@ export function usePanelGeneration({
       }
 
       const dataLayersResponse = await response.json()
-      console.log('Data layers response:', dataLayersResponse)
 
       const dataLayers = dataLayersResponse.data || dataLayersResponse
       const annualFluxUrl = dataLayers.annualFluxUrl
@@ -128,12 +125,6 @@ export function usePanelGeneration({
 
       const arrayBuffer = await geotiffResponse.arrayBuffer()
       const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer)
-
-      console.log('GeoTIFF data loaded successfully:', {
-        width: geotiffData.width,
-        height: geotiffData.height,
-        valueRange: [geotiffData.min, geotiffData.max]
-      })
 
       setState(prev => ({ ...prev, geotiffData, isLoadingGeotiff: false }))
       return geotiffData
@@ -184,7 +175,6 @@ export function usePanelGeneration({
       isGenerating: true
     }))
 
-    // Clear existing markers using ref
     markersRef.current.forEach(marker => marker.setMap(null))
     markersRef.current = []
 
@@ -229,7 +219,6 @@ export function usePanelGeneration({
         const results = calculateSystemResults(totalPanels, state.solarData, panelData)
 
         setGridVectors(panelData)
-        // Store markers in ref instead of state
         markersRef.current = markers
 
         setState(prev => ({
@@ -265,7 +254,6 @@ export function usePanelGeneration({
    * Clear all generated panels
    */
   const clearPanels = useCallback(() => {
-    // Clear markers from ref (always gets latest value, no stale closure)
     markersRef.current.forEach(marker => marker.setMap(null))
     markersRef.current = []
 

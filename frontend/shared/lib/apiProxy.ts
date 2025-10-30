@@ -53,8 +53,8 @@ export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
       }
 
       if (logRequests) {
-        console.log(`${method} ${backendUrl} called`)
-        console.log('Request body:', JSON.stringify(body, null, 2))
+        console.debug(`${method} ${backendUrl} called`)
+        console.debug('Request body:', JSON.stringify(body, null, 2))
       }
 
       // Validate request if validator provided
@@ -73,7 +73,7 @@ export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
       if (transformRequest) {
         body = transformRequest(body)
         if (logRequests) {
-          console.log('Transformed request:', JSON.stringify(body, null, 2))
+          console.debug('Transformed request:', JSON.stringify(body, null, 2))
         }
       }
     }
@@ -106,7 +106,7 @@ export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
     }
 
     if (logRequests) {
-      console.log('Forwarding to:', backendUrl)
+      console.debug('Forwarding to:', backendUrl)
     }
 
     // Setup timeout controller
@@ -175,7 +175,7 @@ export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
     }
 
     if (logRequests) {
-      console.log('Backend response:', JSON.stringify(data, null, 2))
+      console.debug('Backend response:', JSON.stringify(data, null, 2))
     }
 
     // Validate response if validator provided

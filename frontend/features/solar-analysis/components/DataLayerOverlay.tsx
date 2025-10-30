@@ -124,12 +124,6 @@ export default function DataLayerOverlay({
     if (!map) return
 
     try {
-      console.log('Rendering GeoTIFF overlay:', {
-        width: geotiffData.width,
-        height: geotiffData.height,
-        bounds: geotiffData.bounds
-      })
-
       // Create canvas and render data
       const canvas = document.createElement('canvas')
       canvas.width = geotiffData.width
@@ -156,8 +150,6 @@ export default function DataLayerOverlay({
 
       // Apply polygon clipping if provided
       if (clipToPolygons && clipToPolygons.length > 0) {
-        console.log('Applying polygon clipping mask to overlay...')
-
         // Create a second canvas for clipping
         const clippedCanvas = document.createElement('canvas')
         clippedCanvas.width = geotiffData.width
@@ -195,12 +187,9 @@ export default function DataLayerOverlay({
           // Use the clipped canvas instead
           ctx.clearRect(0, 0, canvas.width, canvas.height)
           ctx.drawImage(clippedCanvas, 0, 0)
-
-          console.log('Polygon clipping applied successfully')
         }
       }
 
-      // Create bounds for overlay
       const bounds = new google.maps.LatLngBounds(
         new google.maps.LatLng(geotiffData.bounds.south, geotiffData.bounds.west),
         new google.maps.LatLng(geotiffData.bounds.north, geotiffData.bounds.east)
@@ -215,7 +204,6 @@ export default function DataLayerOverlay({
       const overlay = new GeoTIFFOverlay(bounds, canvas, map, visible, opacity)
       overlayRef.current = overlay
 
-      console.log('GeoTIFF overlay created successfully')
       setIsLoading(false)
 
     } catch (err) {
@@ -238,7 +226,6 @@ export default function DataLayerOverlay({
 
     // Prefer preloaded data over fetching from URL
     if (preloadedGeotiffData) {
-      console.log('Using preloaded GeoTIFF data')
       renderOverlay(preloadedGeotiffData)
       return
     }
@@ -260,11 +247,8 @@ export default function DataLayerOverlay({
       setError(null)
 
       try {
-        console.log('Loading GeoTIFF from:', geotiffUrl)
-
         // Use proxy endpoint to fetch GeoTIFF with authentication
         const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(geotiffUrl)}`
-        console.log('Fetching through proxy:', proxyUrl)
 
         // Fetch the GeoTIFF as array buffer
         const response = await fetch(proxyUrl)
@@ -275,18 +259,11 @@ export default function DataLayerOverlay({
         }
 
         const arrayBuffer = await response.arrayBuffer()
-        console.log('GeoTIFF downloaded, size:', arrayBuffer.byteLength, 'bytes')
 
         // Parse GeoTIFF from array buffer
         const geotiffData: GeoTIFFData = await parseGeoTIFFFromBuffer(arrayBuffer)
 
         if (!isMounted) return
-
-        console.log('GeoTIFF loaded:', {
-          width: geotiffData.width,
-          height: geotiffData.height,
-          bounds: geotiffData.bounds
-        })
 
         await renderOverlay(geotiffData)
 
@@ -317,11 +294,6 @@ export default function DataLayerOverlay({
       overlayRef.current.setVisible(visible)
     }
   }, [visible])
-
-  // Render loading/error states (optional - could be shown elsewhere)
-  if (isLoading) {
-    console.log('Loading data layer...')
-  }
 
   if (error) {
     console.error('Data layer error:', error)

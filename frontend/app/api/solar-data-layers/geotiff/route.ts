@@ -34,8 +34,6 @@ export async function GET(request: NextRequest) {
       urlObj.searchParams.set('key', GOOGLE_MAPS_API_KEY)
     }
 
-    console.log('Fetching GeoTIFF from Google Solar API...')
-
     // Fetch the GeoTIFF file
     const response = await fetch(urlObj.toString(), {
       method: 'GET',
@@ -52,8 +50,6 @@ export async function GET(request: NextRequest) {
 
     // Get the GeoTIFF data as array buffer
     const buffer = await response.arrayBuffer()
-
-    console.log('GeoTIFF fetched successfully, size:', buffer.byteLength, 'bytes')
 
     // Return the GeoTIFF file with appropriate headers
     return new NextResponse(buffer, {
