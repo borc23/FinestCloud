@@ -49,7 +49,7 @@ function enrichPanelsWithSunshine(
     })
 
     // Query all sunshine values at once (more efficient)
-    const sunshineValues = getValuesAtCoordinates(geotiffData, centroids, 1) // 1m north offset
+    const sunshineValues = getValuesAtCoordinates(geotiffData, centroids)
 
     // Assign sunshine values to panels
     roof.panels.forEach((panel: Panel, index: number) => {

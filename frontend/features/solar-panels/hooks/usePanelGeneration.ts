@@ -21,25 +21,15 @@ interface PanelGenerationState {
   panelData: PanelGenerationResponse | null
   showAnglePanel: boolean
   showCompletionAnimation: boolean
-  markers: google.maps.Polygon[]
   resultsData: {
     panelCount: number
     systemSize: number
     annualProduction?: number
   } | null
-  geotiffData: GeoTIFFData | null // Cached GeoTIFF data for sunshine values
+  geotiffData: GeoTIFFData | null
   isLoadingGeotiff: boolean
 }
 
-/**
- * Hook to manage solar panel generation workflow
- *
- * Responsibilities:
- * - Fetch solar data for roof polygons
- * - Handle angle panel state
- * - Generate and animate panels
- * - Calculate system results
- */
 export function usePanelGeneration({
   map,
   roofPolygons,
@@ -48,6 +38,7 @@ export function usePanelGeneration({
 }: UsePanelGenerationProps) {
   const { selectedPanel } = usePanelContext()
   const solarPanelApiRef = useRef(new SolarPanelApiService())
+  const markersRef = useRef<google.maps.Polygon[]>([])
 
   const [state, setState] = useState<PanelGenerationState>({
     isGenerating: false,
@@ -56,15 +47,11 @@ export function usePanelGeneration({
     panelData: null,
     showAnglePanel: false,
     showCompletionAnimation: false,
-    markers: [],
     resultsData: null,
     geotiffData: null,
     isLoadingGeotiff: false
   })
 
-  /**
-   * Calculate center of roof polygons for GeoTIFF data request
-   */
   const getRoofCenter = useCallback(() => {
     if (roofPolygons.length === 0) return null
 
@@ -90,9 +77,6 @@ export function usePanelGeneration({
     }
   }, [roofPolygons])
 
-  /**
-   * Load GeoTIFF data for annual sunshine
-   */
   const loadGeotiffData = useCallback(async () => {
     const roofCenter = getRoofCenter()
     if (!roofCenter) {
@@ -105,7 +89,6 @@ export function usePanelGeneration({
     try {
       console.log('Fetching GeoTIFF data for roof at:', roofCenter)
 
-      // Fetch data layers from Solar API
       const response = await fetch('/api/solar-data-layers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +111,6 @@ export function usePanelGeneration({
       const dataLayersResponse = await response.json()
       console.log('Data layers response:', dataLayersResponse)
 
-      // Handle both direct response and wrapped response
       const dataLayers = dataLayersResponse.data || dataLayersResponse
       const annualFluxUrl = dataLayers.annualFluxUrl
 
@@ -137,7 +119,6 @@ export function usePanelGeneration({
         return null
       }
 
-      // Fetch the GeoTIFF through proxy
       const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(annualFluxUrl)}`
       const geotiffResponse = await fetch(proxyUrl)
 
@@ -164,17 +145,12 @@ export function usePanelGeneration({
     }
   }, [getRoofCenter])
 
-  /**
-   * Start the panel generation workflow
-   * Fetches solar data, GeoTIFF data, and shows angle panel
-   */
   const startPanelGeneration = useCallback(async () => {
     if (!map || roofPolygons.length === 0) {
       console.warn('No roof polygons available for panel generation')
       return
     }
 
-    // Reset state and show angle panel
     setState(prev => ({
       ...prev,
       resultsData: null,
@@ -183,7 +159,6 @@ export function usePanelGeneration({
     }))
 
     try {
-      // Fetch solar data
       const mapBounds = solarPanelApiRef.current.getMapBounds(map)
       const result = await solarPanelApiRef.current.fetchSolarDataForPolygons(roofPolygons, mapBounds)
 
@@ -193,7 +168,6 @@ export function usePanelGeneration({
         console.error('Failed to fetch solar panel data:', result.error)
       }
 
-      // Load GeoTIFF data for sunshine values
       await loadGeotiffData()
 
     } catch (err) {
@@ -201,29 +175,23 @@ export function usePanelGeneration({
     }
   }, [map, roofPolygons, loadGeotiffData])
 
-  /**
-   * Handle angle panel confirmation
-   * Generates panels with provided configuration
-   */
   const handleAngleConfirm = useCallback(async (data: AngleConfirmData) => {
     if (!map) return
 
-    // Hide angle panel and start generation
     setState(prev => ({
       ...prev,
       showAnglePanel: false,
       isGenerating: true
     }))
 
-    // Clear existing markers
-    state.markers.forEach(marker => marker.setMap(null))
+    // Clear existing markers using ref
+    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current = []
 
     try {
       let panelData = data.panelData
 
-      // Make API call if request body is provided
       if (data._requestBody) {
-        // Include selected panel specs in the request
         const requestBody = {
           ...data._requestBody,
           panel_specs: selectedPanel ? {
@@ -243,34 +211,29 @@ export function usePanelGeneration({
         panelData = responseData.results || responseData
       }
 
-      // Generate and animate panels
       if (panelData) {
-        // Hide loading overlay before starting panel placement animation
         setState(prev => ({ ...prev, isGenerating: false }))
 
         const { markers, totalPanels } = await generateAndAnimatePanels({
           panelData,
           map,
-          geotiffData: state.geotiffData, // Pass GeoTIFF data for sunshine enrichment
+          geotiffData: state.geotiffData,
           onProgress: (current, total) => {
             setState(prev => ({ ...prev, progress: { current, total } }))
           },
           onFirstPanelPlaced: () => {
-            // Hide roof polygons when first panel is placed
             onPanelsGenerated?.(panelData)
           }
         })
 
-        // Calculate results using per-panel sunshine data if available
         const results = calculateSystemResults(totalPanels, state.solarData, panelData)
 
-        // Set grid vectors for snapping
         setGridVectors(panelData)
+        // Store markers in ref instead of state
+        markersRef.current = markers
 
-        // Update state with final results
         setState(prev => ({
           ...prev,
-          markers,
           panelData,
           resultsData: {
             panelCount: totalPanels,
@@ -280,7 +243,6 @@ export function usePanelGeneration({
           showCompletionAnimation: true
         }))
 
-        // Hide completion animation after delay
         setTimeout(() => {
           setState(prev => ({ ...prev, showCompletionAnimation: false }))
         }, 1500)
@@ -290,7 +252,7 @@ export function usePanelGeneration({
     } finally {
       setState(prev => ({ ...prev, isGenerating: false }))
     }
-  }, [map, state.markers, state.solarData, onPanelsGenerated])
+  }, [map, state.solarData, state.geotiffData, onPanelsGenerated, selectedPanel])
 
   /**
    * Cancel angle panel
@@ -303,18 +265,19 @@ export function usePanelGeneration({
    * Clear all generated panels
    */
   const clearPanels = useCallback(() => {
-    state.markers.forEach(marker => marker.setMap(null))
+    // Clear markers from ref (always gets latest value, no stale closure)
+    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current = []
+
     clearGridVectors()
     setState(prev => ({
       ...prev,
-      markers: [],
       panelData: null,
       resultsData: null
     }))
-  }, [state.markers])
+  }, [])
 
   return {
-    // State
     isGenerating: state.isGenerating,
     progress: state.progress,
     solarData: state.solarData,
@@ -322,11 +285,10 @@ export function usePanelGeneration({
     showAnglePanel: state.showAnglePanel,
     showCompletionAnimation: state.showCompletionAnimation,
     resultsData: state.resultsData,
-    panelMarkers: state.markers,
-    geotiffData: state.geotiffData, // Expose cached GeoTIFF data
+    panelMarkers: markersRef.current,
+    geotiffData: state.geotiffData,
     isLoadingGeotiff: state.isLoadingGeotiff,
 
-    // Actions
     startPanelGeneration,
     handleAngleConfirm,
     handleAngleCancel,

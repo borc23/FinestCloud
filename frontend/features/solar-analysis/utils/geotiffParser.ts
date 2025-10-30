@@ -104,8 +104,8 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
 
     const rasters = await image.readRasters()
 
-    // Get bounding box and check if it's in projected coordinates
-    let bbox = image.getBoundingBox()
+    // Get bounding box and projection information
+    const bbox = image.getBoundingBox()
     console.log('GeoTIFF raw bbox:', bbox)
 
     // Get the projection information
@@ -119,40 +119,50 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
       north: bbox[3]
     }
 
-    // If coordinates are projected (values > 180), transform to WGS84 lat/lng
-    if (Math.abs(bbox[0]) > 180 || Math.abs(bbox[2]) > 180) {
-      console.log('GeoTIFF is in projected coordinates, transforming to lat/lng...')
+    // Determine source coordinate system and reproject to WGS84 if needed
+    let needsReprojection = false
+    let sourceEpsg: number | null = null
 
-      // Get EPSG code from GeoKeys
-      const epsgCode = geoKeys.ProjectedCSTypeGeoKey
+    // Check for projected coordinate system
+    if (geoKeys.ProjectedCSTypeGeoKey) {
+      sourceEpsg = geoKeys.ProjectedCSTypeGeoKey
+      needsReprojection = true
+    }
+    // Check for geographic coordinate system (might not be WGS84)
+    else if (geoKeys.GeographicTypeGeoKey && geoKeys.GeographicTypeGeoKey !== 4326) {
+      sourceEpsg = geoKeys.GeographicTypeGeoKey
+      needsReprojection = true
+    }
+    // If no explicit CRS but coordinates look projected (large values)
+    else if (Math.abs(bbox[0]) > 180 || Math.abs(bbox[2]) > 180) {
+      console.warn('GeoTIFF appears to be in projected coordinates but no EPSG code found')
+      console.warn('This may cause alignment issues - check GeoTIFF metadata')
+    }
 
-      if (epsgCode) {
-        console.log('Using EPSG:', epsgCode)
+    // Perform reprojection if needed
+    if (needsReprojection && sourceEpsg) {
+      try {
+        const fromProj = `EPSG:${sourceEpsg}`
+        const toProj = 'EPSG:4326' // WGS84 lat/lng for Google Maps
 
-        try {
-          // Define projection strings
-          const fromProj = `EPSG:${epsgCode}`
-          const toProj = 'EPSG:4326' // WGS84 lat/lng
+        // Transform all four corners for accuracy
+        const [westLng, southLat] = proj4(fromProj, toProj, [bbox[0], bbox[1]])
+        const [eastLng, northLat] = proj4(fromProj, toProj, [bbox[2], bbox[3]])
 
-          // Transform corner coordinates
-          const [westLng, southLat] = proj4(fromProj, toProj, [bbox[0], bbox[1]])
-          const [eastLng, northLat] = proj4(fromProj, toProj, [bbox[2], bbox[3]])
-
-          bounds = {
-            west: westLng,
-            south: southLat,
-            east: eastLng,
-            north: northLat
-          }
-
-          console.log('Transformed bounds to lat/lng:', bounds)
-        } catch (error) {
-          console.error('Failed to transform coordinates:', error)
-          console.warn('Using untransformed bounds - overlay may not display correctly')
+        bounds = {
+          west: westLng,
+          south: southLat,
+          east: eastLng,
+          north: northLat
         }
-      } else {
-        console.warn('No EPSG code found in GeoTIFF, cannot transform coordinates')
+
+      } catch (error) {
+        console.error('Failed to reproject coordinates:', error)
+        console.error('Source EPSG:', sourceEpsg)
+        console.warn('Using untransformed bounds - overlay WILL be misaligned')
       }
+    } else if (geoKeys.GeographicTypeGeoKey === 4326 || (!geoKeys.ProjectedCSTypeGeoKey && !geoKeys.GeographicTypeGeoKey)) {
+      console.log('GeoTIFF is already in WGS84 (EPSG:4326) or assumed to be')
     }
 
     const data = rasters[0] as Float32Array
@@ -165,17 +175,6 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
         if (value < min) min = value
         if (value > max) max = value
       }
-    }
-    
-    const centerLat = (bounds.north + bounds.south) / 2
-    const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
-    const latitudeOffset = 1 / metersPerDegree
-
-    bounds = {
-      west: bounds.west,
-      south: bounds.south + latitudeOffset,
-      east: bounds.east,
-      north: bounds.north + latitudeOffset
     }
 
     return {
@@ -271,28 +270,20 @@ export function geotiffToRGBA(
 /**
  * Query GeoTIFF value at specific coordinates
  *
- * @param geotiffData - Parsed GeoTIFF data
- * @param lat - Latitude
- * @param lng - Longitude
- * @param offsetMetersNorth - Optional offset in meters to apply northward (default: 1m)
+ * @param geotiffData - Parsed GeoTIFF data (already in WGS84)
+ * @param lat - Latitude in WGS84
+ * @param lng - Longitude in WGS84
  * @returns The value at the specified coordinates, or null if out of bounds
  */
 export function getValueAtCoordinate(
   geotiffData: GeoTIFFData,
   lat: number,
-  lng: number,
-  offsetMetersNorth: number = 1
+  lng: number
 ): number | null {
-  // Apply northward offset to the queried latitude
-  const centerLat = (geotiffData.bounds.north + geotiffData.bounds.south) / 2
-  const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
-  const latitudeOffset = offsetMetersNorth / metersPerDegree
-  const adjustedLat = lat + latitudeOffset
-
   // Check if coordinates are within bounds
   if (
-    adjustedLat < geotiffData.bounds.south ||
-    adjustedLat > geotiffData.bounds.north ||
+    lat < geotiffData.bounds.south ||
+    lat > geotiffData.bounds.north ||
     lng < geotiffData.bounds.west ||
     lng > geotiffData.bounds.east
   ) {
@@ -304,7 +295,7 @@ export function getValueAtCoordinate(
     ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
   )
   const y = Math.floor(
-    ((geotiffData.bounds.north - adjustedLat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+    ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
   )
 
   // Clamp to valid pixel range
@@ -327,27 +318,19 @@ export function getValueAtCoordinate(
  * Query GeoTIFF values for multiple coordinates (batch operation)
  * More efficient than calling getValueAtCoordinate multiple times
  *
- * @param geotiffData - Parsed GeoTIFF data
- * @param coordinates - Array of {lat, lng} coordinates
- * @param offsetMetersNorth - Optional offset in meters to apply northward (default: 1m)
+ * @param geotiffData - Parsed GeoTIFF data (already in WGS84)
+ * @param coordinates - Array of {lat, lng} coordinates in WGS84
  * @returns Array of values (null for out of bounds or no-data)
  */
 export function getValuesAtCoordinates(
   geotiffData: GeoTIFFData,
-  coordinates: { lat: number; lng: number }[],
-  offsetMetersNorth: number = 1
+  coordinates: { lat: number; lng: number }[]
 ): (number | null)[] {
-  const centerLat = (geotiffData.bounds.north + geotiffData.bounds.south) / 2
-  const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
-  const latitudeOffset = offsetMetersNorth / metersPerDegree
-
   return coordinates.map(({ lat, lng }) => {
-    const adjustedLat = lat + latitudeOffset
-
     // Check bounds
     if (
-      adjustedLat < geotiffData.bounds.south ||
-      adjustedLat > geotiffData.bounds.north ||
+      lat < geotiffData.bounds.south ||
+      lat > geotiffData.bounds.north ||
       lng < geotiffData.bounds.west ||
       lng > geotiffData.bounds.east
     ) {
@@ -359,7 +342,7 @@ export function getValuesAtCoordinates(
       ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
     )
     const y = Math.floor(
-      ((geotiffData.bounds.north - adjustedLat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+      ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
     )
 
     // Clamp and get value
