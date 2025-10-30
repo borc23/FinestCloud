@@ -10,7 +10,8 @@ import { parseGeoTIFFFromBuffer, geotiffToRGBA, type GeoTIFFData } from '../util
 
 interface DataLayerOverlayProps {
   map: google.maps.Map | null
-  geotiffUrl: string | null
+  geotiffUrl?: string | null
+  geotiffData?: GeoTIFFData | null // Optional: pre-loaded GeoTIFF data (overrides geotiffUrl)
   visible: boolean
   colorScale?: 'viridis' | 'heat' | 'sunshine'
   opacity?: number
@@ -108,6 +109,7 @@ class GeoTIFFOverlay extends google.maps.OverlayView {
 export default function DataLayerOverlay({
   map,
   geotiffUrl,
+  geotiffData: preloadedGeotiffData,
   visible,
   colorScale = 'sunshine',
   opacity = 0.6,
@@ -117,10 +119,116 @@ export default function DataLayerOverlay({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load and render GeoTIFF when URL changes
+  // Render GeoTIFF overlay from data
+  const renderOverlay = async (geotiffData: GeoTIFFData) => {
+    if (!map) return
+
+    try {
+      console.log('Rendering GeoTIFF overlay:', {
+        width: geotiffData.width,
+        height: geotiffData.height,
+        bounds: geotiffData.bounds
+      })
+
+      // Create canvas and render data
+      const canvas = document.createElement('canvas')
+      canvas.width = geotiffData.width
+      canvas.height = geotiffData.height
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        throw new Error('Failed to get canvas context')
+      }
+
+      // Convert GeoTIFF data to RGBA
+      const rgbaData = geotiffToRGBA(
+        geotiffData.rasters[0],
+        geotiffData.width,
+        geotiffData.height,
+        geotiffData.min,
+        geotiffData.max,
+        colorScale
+      )
+
+      // Create ImageData and put on canvas
+      const imageData = new ImageData(rgbaData, geotiffData.width, geotiffData.height)
+      ctx.putImageData(imageData, 0, 0)
+
+      // Apply polygon clipping if provided
+      if (clipToPolygons && clipToPolygons.length > 0) {
+        console.log('Applying polygon clipping mask to overlay...')
+
+        // Create a second canvas for clipping
+        const clippedCanvas = document.createElement('canvas')
+        clippedCanvas.width = geotiffData.width
+        clippedCanvas.height = geotiffData.height
+        const clippedCtx = clippedCanvas.getContext('2d')
+
+        if (clippedCtx) {
+          // Create clipping path from polygons
+          clippedCtx.beginPath()
+
+          clipToPolygons.forEach(polygon => {
+            const path = polygon.getPath()
+            for (let i = 0; i < path.getLength(); i++) {
+              const point = path.getAt(i)
+              const lat = point.lat()
+              const lng = point.lng()
+
+              // Convert lat/lng to canvas pixel coordinates
+              const x = ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
+              const y = ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+
+              if (i === 0) {
+                clippedCtx.moveTo(x, y)
+              } else {
+                clippedCtx.lineTo(x, y)
+              }
+            }
+            clippedCtx.closePath()
+          })
+
+          // Clip and draw the original canvas
+          clippedCtx.clip()
+          clippedCtx.drawImage(canvas, 0, 0)
+
+          // Use the clipped canvas instead
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          ctx.drawImage(clippedCanvas, 0, 0)
+
+          console.log('Polygon clipping applied successfully')
+        }
+      }
+
+      // Create bounds for overlay
+      const bounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(geotiffData.bounds.south, geotiffData.bounds.west),
+        new google.maps.LatLng(geotiffData.bounds.north, geotiffData.bounds.east)
+      )
+
+      // Remove existing overlay
+      if (overlayRef.current) {
+        overlayRef.current.setMap(null)
+      }
+
+      // Create new overlay
+      const overlay = new GeoTIFFOverlay(bounds, canvas, map, visible, opacity)
+      overlayRef.current = overlay
+
+      console.log('GeoTIFF overlay created successfully')
+      setIsLoading(false)
+
+    } catch (err) {
+      console.error('Error rendering GeoTIFF:', err)
+      setError(err instanceof Error ? err.message : 'Failed to render data layer')
+      setIsLoading(false)
+    }
+  }
+
+  // Load and render GeoTIFF when data changes and visible is true
   useEffect(() => {
-    if (!map || !geotiffUrl) {
-      // Clean up existing overlay
+    if (!map || !visible) {
+      // Clean up existing overlay if not visible
       if (overlayRef.current) {
         overlayRef.current.setMap(null)
         overlayRef.current = null
@@ -128,6 +236,23 @@ export default function DataLayerOverlay({
       return
     }
 
+    // Prefer preloaded data over fetching from URL
+    if (preloadedGeotiffData) {
+      console.log('Using preloaded GeoTIFF data')
+      renderOverlay(preloadedGeotiffData)
+      return
+    }
+
+    if (!geotiffUrl) {
+      // No data or URL provided, clean up
+      if (overlayRef.current) {
+        overlayRef.current.setMap(null)
+        overlayRef.current = null
+      }
+      return
+    }
+
+    // Fetch from URL if no preloaded data
     let isMounted = true
 
     const loadGeoTIFF = async () => {
@@ -163,93 +288,7 @@ export default function DataLayerOverlay({
           bounds: geotiffData.bounds
         })
 
-        // Create canvas and render data
-        const canvas = document.createElement('canvas')
-        canvas.width = geotiffData.width
-        canvas.height = geotiffData.height
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          throw new Error('Failed to get canvas context')
-        }
-
-        // Convert GeoTIFF data to RGBA
-        const rgbaData = geotiffToRGBA(
-          geotiffData.rasters[0],
-          geotiffData.width,
-          geotiffData.height,
-          geotiffData.min,
-          geotiffData.max,
-          colorScale
-        )
-
-        // Create ImageData and put on canvas
-        const imageData = new ImageData(rgbaData, geotiffData.width, geotiffData.height)
-        ctx.putImageData(imageData, 0, 0)
-
-        // Apply polygon clipping if provided
-        if (clipToPolygons && clipToPolygons.length > 0) {
-          console.log('Applying polygon clipping mask to overlay...')
-
-          // Create a second canvas for clipping
-          const clippedCanvas = document.createElement('canvas')
-          clippedCanvas.width = geotiffData.width
-          clippedCanvas.height = geotiffData.height
-          const clippedCtx = clippedCanvas.getContext('2d')
-
-          if (clippedCtx) {
-            // Create clipping path from polygons
-            clippedCtx.beginPath()
-
-            clipToPolygons.forEach(polygon => {
-              const path = polygon.getPath()
-              for (let i = 0; i < path.getLength(); i++) {
-                const point = path.getAt(i)
-                const lat = point.lat()
-                const lng = point.lng()
-
-                // Convert lat/lng to canvas pixel coordinates
-                const x = ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
-                const y = ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
-
-                if (i === 0) {
-                  clippedCtx.moveTo(x, y)
-                } else {
-                  clippedCtx.lineTo(x, y)
-                }
-              }
-              clippedCtx.closePath()
-            })
-
-            // Clip and draw the original canvas
-            clippedCtx.clip()
-            clippedCtx.drawImage(canvas, 0, 0)
-
-            // Use the clipped canvas instead
-            ctx.clearRect(0, 0, canvas.width, canvas.height)
-            ctx.drawImage(clippedCanvas, 0, 0)
-
-            console.log('Polygon clipping applied successfully')
-          }
-        }
-
-        // Create bounds for overlay
-        const bounds = new google.maps.LatLngBounds(
-          new google.maps.LatLng(geotiffData.bounds.south, geotiffData.bounds.west),
-          new google.maps.LatLng(geotiffData.bounds.north, geotiffData.bounds.east)
-        )
-
-        // Remove existing overlay
-        if (overlayRef.current) {
-          overlayRef.current.setMap(null)
-        }
-
-        // Create new overlay
-        const overlay = new GeoTIFFOverlay(bounds, canvas, map, visible, opacity)
-        overlayRef.current = overlay
-
-        console.log('GeoTIFF overlay created successfully')
-        setIsLoading(false)
+        await renderOverlay(geotiffData)
 
       } catch (err) {
         console.error('Error loading GeoTIFF:', err)
@@ -269,9 +308,10 @@ export default function DataLayerOverlay({
         overlayRef.current = null
       }
     }
-  }, [map, geotiffUrl, colorScale, opacity])
+  }, [map, geotiffUrl, preloadedGeotiffData, visible, colorScale, opacity, clipToPolygons])
 
-  // Update visibility when visible prop changes
+  // Note: Visibility is now handled in the main useEffect above
+  // This separate effect is no longer needed but kept for backwards compatibility
   useEffect(() => {
     if (overlayRef.current) {
       overlayRef.current.setVisible(visible)

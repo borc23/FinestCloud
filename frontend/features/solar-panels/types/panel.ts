@@ -14,6 +14,7 @@ export interface Panel {
   coords: PanelCoordinate[]
   lat: number
   lng: number
+  annualSunshineKwh?: number // Annual sunshine flux in kWh/m²/year from GeoTIFF
 }
 
 export interface ModuleSpecs {

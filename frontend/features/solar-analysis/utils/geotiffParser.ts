@@ -166,16 +166,10 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
         if (value > max) max = value
       }
     }
-
-    // Apply 2-meter northward offset to correct alignment
-    // Calculate the offset in degrees (2 meters ≈ 0.000018 degrees latitude at equator)
-    // Using the more accurate formula: degrees = meters / (111320 * cos(latitude))
     
     const centerLat = (bounds.north + bounds.south) / 2
     const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
     const latitudeOffset = 1 / metersPerDegree
-
-    console.log('Applying 2-meter northward offset:', latitudeOffset, 'degrees')
 
     bounds = {
       west: bounds.west,
@@ -272,6 +266,128 @@ export function geotiffToRGBA(
   }
 
   return rgba
+}
+
+/**
+ * Query GeoTIFF value at specific coordinates
+ *
+ * @param geotiffData - Parsed GeoTIFF data
+ * @param lat - Latitude
+ * @param lng - Longitude
+ * @param offsetMetersNorth - Optional offset in meters to apply northward (default: 1m)
+ * @returns The value at the specified coordinates, or null if out of bounds
+ */
+export function getValueAtCoordinate(
+  geotiffData: GeoTIFFData,
+  lat: number,
+  lng: number,
+  offsetMetersNorth: number = 1
+): number | null {
+  // Apply northward offset to the queried latitude
+  const centerLat = (geotiffData.bounds.north + geotiffData.bounds.south) / 2
+  const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
+  const latitudeOffset = offsetMetersNorth / metersPerDegree
+  const adjustedLat = lat + latitudeOffset
+
+  // Check if coordinates are within bounds
+  if (
+    adjustedLat < geotiffData.bounds.south ||
+    adjustedLat > geotiffData.bounds.north ||
+    lng < geotiffData.bounds.west ||
+    lng > geotiffData.bounds.east
+  ) {
+    return null
+  }
+
+  // Convert lat/lng to pixel coordinates
+  const x = Math.floor(
+    ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
+  )
+  const y = Math.floor(
+    ((geotiffData.bounds.north - adjustedLat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+  )
+
+  // Clamp to valid pixel range
+  const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x))
+  const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y))
+
+  // Get value from raster data
+  const index = clampedY * geotiffData.width + clampedX
+  const value = geotiffData.rasters[0][index]
+
+  // Return null for no-data values
+  if (value === null || value === undefined || isNaN(value)) {
+    return null
+  }
+
+  return value
+}
+
+/**
+ * Query GeoTIFF values for multiple coordinates (batch operation)
+ * More efficient than calling getValueAtCoordinate multiple times
+ *
+ * @param geotiffData - Parsed GeoTIFF data
+ * @param coordinates - Array of {lat, lng} coordinates
+ * @param offsetMetersNorth - Optional offset in meters to apply northward (default: 1m)
+ * @returns Array of values (null for out of bounds or no-data)
+ */
+export function getValuesAtCoordinates(
+  geotiffData: GeoTIFFData,
+  coordinates: { lat: number; lng: number }[],
+  offsetMetersNorth: number = 1
+): (number | null)[] {
+  const centerLat = (geotiffData.bounds.north + geotiffData.bounds.south) / 2
+  const metersPerDegree = 111320 * Math.cos(centerLat * Math.PI / 180)
+  const latitudeOffset = offsetMetersNorth / metersPerDegree
+
+  return coordinates.map(({ lat, lng }) => {
+    const adjustedLat = lat + latitudeOffset
+
+    // Check bounds
+    if (
+      adjustedLat < geotiffData.bounds.south ||
+      adjustedLat > geotiffData.bounds.north ||
+      lng < geotiffData.bounds.west ||
+      lng > geotiffData.bounds.east
+    ) {
+      return null
+    }
+
+    // Convert to pixel coordinates
+    const x = Math.floor(
+      ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
+    )
+    const y = Math.floor(
+      ((geotiffData.bounds.north - adjustedLat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+    )
+
+    // Clamp and get value
+    const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x))
+    const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y))
+    const index = clampedY * geotiffData.width + clampedX
+    const value = geotiffData.rasters[0][index]
+
+    return (value === null || value === undefined || isNaN(value)) ? null : value
+  })
+}
+
+/**
+ * Calculate centroid of a polygon
+ */
+export function calculateCentroid(coords: { lat: number; lng: number }[]): { lat: number; lng: number } {
+  const total = coords.reduce(
+    (acc, coord) => ({
+      lat: acc.lat + coord.lat,
+      lng: acc.lng + coord.lng
+    }),
+    { lat: 0, lng: 0 }
+  )
+
+  return {
+    lat: total.lat / coords.length,
+    lng: total.lng / coords.length
+  }
 }
 
 /**
