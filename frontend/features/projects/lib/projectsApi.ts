@@ -24,6 +24,7 @@ export async function createProject(
       map_center_lat: projectData.mapCenter.lat,
       map_center_lng: projectData.mapCenter.lng,
       map_zoom: projectData.mapZoom,
+      annual_flux_url: projectData.annualFluxUrl || null,
     })
     .select()
     .single()
@@ -153,6 +154,7 @@ export async function getProject(projectId: string): Promise<ProjectWithData | n
       mapCenterLat: project.map_center_lat,
       mapCenterLng: project.map_center_lng,
       mapZoom: project.map_zoom,
+      annualFluxUrl: project.annual_flux_url,
       createdAt: project.created_at,
       updatedAt: project.updated_at,
     },

@@ -28,6 +28,7 @@ interface PanelGenerationState {
   } | null
   geotiffData: GeoTIFFData | null
   isLoadingGeotiff: boolean
+  annualFluxUrl: string | null
 }
 
 export function usePanelGeneration({
@@ -49,7 +50,8 @@ export function usePanelGeneration({
     showCompletionAnimation: false,
     resultsData: null,
     geotiffData: null,
-    isLoadingGeotiff: false
+    isLoadingGeotiff: false,
+    annualFluxUrl: null
   })
 
   const getRoofCenter = useCallback(() => {
@@ -126,7 +128,7 @@ export function usePanelGeneration({
       const arrayBuffer = await geotiffResponse.arrayBuffer()
       const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer)
 
-      setState(prev => ({ ...prev, geotiffData, isLoadingGeotiff: false }))
+      setState(prev => ({ ...prev, geotiffData, isLoadingGeotiff: false, annualFluxUrl }))
       return geotiffData
 
     } catch (err) {
@@ -135,6 +137,30 @@ export function usePanelGeneration({
       return null
     }
   }, [getRoofCenter])
+
+  const loadGeotiffDataFromUrl = useCallback(async (url: string) => {
+    setState(prev => ({ ...prev, isLoadingGeotiff: true }))
+
+    try {
+      const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(url)}`
+      const geotiffResponse = await fetch(proxyUrl)
+
+      if (!geotiffResponse.ok) {
+        throw new Error(`Failed to fetch GeoTIFF: ${geotiffResponse.status}`)
+      }
+
+      const arrayBuffer = await geotiffResponse.arrayBuffer()
+      const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer)
+
+      setState(prev => ({ ...prev, geotiffData, isLoadingGeotiff: false, annualFluxUrl: url }))
+      return geotiffData
+
+    } catch (err) {
+      console.error('Failed to load GeoTIFF data from URL:', err)
+      setState(prev => ({ ...prev, isLoadingGeotiff: false }))
+      return null
+    }
+  }, [])
 
   const startPanelGeneration = useCallback(async () => {
     if (!map || roofPolygons.length === 0) {
@@ -278,10 +304,12 @@ export function usePanelGeneration({
     panelMarkers: markersRef.current,
     geotiffData: state.geotiffData,
     isLoadingGeotiff: state.isLoadingGeotiff,
+    annualFluxUrl: state.annualFluxUrl,
 
     startPanelGeneration,
     handleAngleConfirm,
     handleAngleCancel,
-    clearPanels
+    clearPanels,
+    loadGeotiffDataFromUrl
   }
 }

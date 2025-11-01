@@ -67,7 +67,7 @@ export default function MapControls({
       >
         <i className="fas fa-minus"></i>
       </button>
-      {hasPanels && hasGeotiffData && (
+      {/* {hasPanels && hasGeotiffData && (
         <button
           className={`${styles.shadeControl} ${shadeVisualizationEnabled ? styles.active : ''}`}
           onClick={onToggleShadeVisualization}
@@ -76,7 +76,7 @@ export default function MapControls({
         >
           <i className="fas fa-solar-panel"></i>
         </button>
-      )}
+      )} */}
       {hasPanels && hasGeotiffData && (
         <button
           className={`${styles.shadeControl} ${sunshineLayerEnabled ? styles.active : ''}`}

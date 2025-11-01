@@ -54,6 +54,7 @@ export interface Database {
           map_center_lat: number
           map_center_lng: number
           map_zoom: number
+          annual_flux_url: string | null
           created_at: string
           updated_at: string
         }
@@ -65,6 +66,7 @@ export interface Database {
           map_center_lat: number
           map_center_lng: number
           map_zoom?: number
+          annual_flux_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -76,6 +78,7 @@ export interface Database {
           map_center_lat?: number
           map_center_lng?: number
           map_zoom?: number
+          annual_flux_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -190,6 +193,7 @@ export interface Project {
   mapCenterLat: number
   mapCenterLng: number
   mapZoom: number
+  annualFluxUrl: string | null
   createdAt: string
   updatedAt: string
 }
@@ -228,7 +232,10 @@ export interface ObjectPolygon {
 export interface PanelConfiguration {
   id: string
   roofAnalysisId: string
-  panelPositions: Coordinate[][]
+  panelPositions: Array<{
+    coords: Coordinate[]
+    annualSunshineKwh?: number
+  }>
   moduleType: string
   moduleSpecs: {
     power: number
@@ -255,6 +262,7 @@ export interface CreateProjectData {
     lng: number
   }
   mapZoom: number
+  annualFluxUrl?: string | null
   roofs: Array<{
     roofIndex: number
     polygon: Coordinate[]

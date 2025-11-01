@@ -202,10 +202,12 @@ export default function MapContainer({
     panelMarkers,
     geotiffData,
     isLoadingGeotiff,
+    annualFluxUrl,
     startPanelGeneration,
     handleAngleConfirm: handleAngleConfirmHook,
     handleAngleCancel: handleAngleCancelHook,
-    clearPanels
+    clearPanels,
+    loadGeotiffDataFromUrl
   } = usePanelGeneration({
     map,
     roofPolygons,
@@ -282,13 +284,14 @@ export default function MapContainer({
           lng: mapCenter?.lng() ?? 0
         },
         mapZoom: mapZoom ?? 18,
+        annualFluxUrl: annualFluxUrl ?? null,
         roofs,
         objects
       }
     }
 
     onRegisterProjectDataGetter(getProjectData)
-  }, [map, roofPolygons, objectPolygons, panelData, solarData, onRegisterProjectDataGetter])
+  }, [map, roofPolygons, objectPolygons, panelData, solarData, annualFluxUrl, onRegisterProjectDataGetter])
 
   // Register project loader for load functionality
   useEffect(() => {
@@ -323,6 +326,11 @@ export default function MapContainer({
         }))
         if (objectCoords.length > 0) {
           renderPolygons(objectCoords, false, false)
+        }
+
+        // Load GeoTIFF data if available
+        if (projectWithData.project.annualFluxUrl) {
+          loadGeotiffDataFromUrl(projectWithData.project.annualFluxUrl)
         }
 
         setTimeout(() => {
@@ -364,7 +372,7 @@ export default function MapContainer({
     }
 
     onRegisterProjectLoader(loadProject)
-  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader, startPanelGeneration])
+  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader, startPanelGeneration, loadGeotiffDataFromUrl, handleAngleConfirmHook, togglePolygonVisibility])
 
   // Panel placement
   const {
