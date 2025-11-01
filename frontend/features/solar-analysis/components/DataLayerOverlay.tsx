@@ -190,9 +190,14 @@ export default function DataLayerOverlay({
         }
       }
 
+      // Apply 1 meter offset towards north
+      // 1 meter latitude offset ≈ 0.000009 degrees
+      const OFFSET_METERS = 1
+      const LATITUDE_OFFSET = OFFSET_METERS * 0.000009
+
       const bounds = new google.maps.LatLngBounds(
-        new google.maps.LatLng(geotiffData.bounds.south, geotiffData.bounds.west),
-        new google.maps.LatLng(geotiffData.bounds.north, geotiffData.bounds.east)
+        new google.maps.LatLng(geotiffData.bounds.south + LATITUDE_OFFSET, geotiffData.bounds.west),
+        new google.maps.LatLng(geotiffData.bounds.north + LATITUDE_OFFSET, geotiffData.bounds.east)
       )
 
       // Remove existing overlay

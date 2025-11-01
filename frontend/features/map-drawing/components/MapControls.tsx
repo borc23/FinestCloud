@@ -88,8 +88,8 @@ export default function MapControls({
         <button
           className={styles.clearControl}
           onClick={handleClearAll}
-          aria-label="Clear all polygons"
-          title="Clear all polygons"
+          aria-label="Clear map"
+          title="Clear map"
         >
           <i className="fas fa-redo-alt"></i>
         </button>
