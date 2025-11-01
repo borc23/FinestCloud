@@ -261,7 +261,9 @@ export function usePanelGeneration({
     setState(prev => ({
       ...prev,
       panelData: null,
-      resultsData: null
+      resultsData: null,
+      geotiffData: null,
+      solarData: null
     }))
   }, [])
 

@@ -210,6 +210,16 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
               role="radiogroup"
               aria-label="Panel orientation"
             >
+              <div
+                className={styles.orientationSlider}
+                style={{
+                  transform: panelOrientation === 'vertical'
+                    ? 'translateX(0%)'
+                    : panelOrientation === 'horizontal'
+                    ? 'translateX(100%)'
+                    : 'translateX(200%)'
+                }}
+              />
               <button
                 type="button"
                 className={`${styles.orientationOption} ${panelOrientation === 'vertical' ? styles.active : ''}`}
@@ -217,7 +227,6 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
                 role="radio"
                 aria-checked={panelOrientation === 'vertical'}
               >
-                {panelOrientation === 'vertical' && <div className={styles.orientationSlider} />}
                 <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <rect x="9" y="4" width="6" height="16" rx="1" />
                 </svg>
@@ -230,7 +239,6 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
                 role="radio"
                 aria-checked={panelOrientation === 'horizontal'}
               >
-                {panelOrientation === 'horizontal' && <div className={styles.orientationSlider} />}
                 <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <rect x="4" y="9" width="16" height="6" rx="1" />
                 </svg>
@@ -243,7 +251,6 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
                 role="radio"
                 aria-checked={panelOrientation === 'best'}
               >
-                {panelOrientation === 'best' && <div className={styles.orientationSlider} />}
                 <svg className={styles.orientationIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                   <path d="M2 17l10 5 10-5" />

@@ -445,6 +445,10 @@ export default function MapContainer({
     // Clear capture overlay
     setShowCaptureOverlay(false)
 
+    // Clear sunshine layer visualization
+    setShowSunshineLayer(false)
+    setShowShadeVisualization(false)
+
     // Reset tool to default
     onToolChange?.('')
 
