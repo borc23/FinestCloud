@@ -8,38 +8,33 @@ interface ShadeTooltipProps {
   y: number
   data: {
     panelIndex: number
-    shadePercentage: number
-    shadeLossFactor: number
-    sunshineHours?: number
-    productionLoss?: number
-    segmentInfo?: {
-      pitch: number
-      azimuth: number
-    }
+    annualFlux?: number  // Annual solar flux in kWh/m²/year
   } | null
 }
 
 /**
- * Tooltip showing detailed shade information for a panel
+ * Tooltip showing detailed solar flux information for a panel
  */
 export default function ShadeTooltip({ visible, x, y, data }: ShadeTooltipProps) {
   if (!visible || !data) return null
 
-  const getShadeCategory = (shade: number): string => {
-    if (shade < 5) return 'Excellent'
-    if (shade < 15) return 'Good'
-    if (shade < 25) return 'Moderate'
-    if (shade < 40) return 'Significant'
-    return 'High Shade'
+  const getFluxCategory = (flux: number): string => {
+    if (flux > 1400) return 'Excellent'
+    if (flux > 1200) return 'Good'
+    if (flux > 1000) return 'Moderate'
+    if (flux > 800) return 'Low'
+    return 'Very Low'
   }
 
-  const getCategoryColor = (shade: number): string => {
-    if (shade < 5) return '#00C853'
-    if (shade < 15) return '#64DD17'
-    if (shade < 25) return '#FFD600'
-    if (shade < 40) return '#FF6D00'
+  const getCategoryColor = (flux: number): string => {
+    if (flux > 1400) return '#00C853'
+    if (flux > 1200) return '#64DD17'
+    if (flux > 1000) return '#FFD600'
+    if (flux > 800) return '#FF6D00'
     return '#DD2C00'
   }
+
+  const annualFlux = data.annualFlux ?? 0
 
   return (
     <div
@@ -53,50 +48,17 @@ export default function ShadeTooltip({ visible, x, y, data }: ShadeTooltipProps)
         <span className={styles.title}>Panel #{data.panelIndex + 1}</span>
         <div
           className={styles.categoryBadge}
-          style={{ backgroundColor: getCategoryColor(data.shadePercentage) }}
+          style={{ backgroundColor: getCategoryColor(annualFlux) }}
         >
-          {getShadeCategory(data.shadePercentage)}
+          {getFluxCategory(annualFlux)}
         </div>
       </div>
 
       <div className={styles.content}>
         <div className={styles.row}>
-          <span className={styles.label}>Shade Impact:</span>
-          <span className={styles.value}>{data.shadePercentage.toFixed(1)}%</span>
+          <span className={styles.label}>Annual Solar Flux:</span>
+          <span className={styles.value}>{annualFlux.toFixed(0)} kWh/m²</span>
         </div>
-
-        <div className={styles.row}>
-          <span className={styles.label}>Production Factor:</span>
-          <span className={styles.value}>{(data.shadeLossFactor * 100).toFixed(1)}%</span>
-        </div>
-
-        {data.sunshineHours && (
-          <div className={styles.row}>
-            <span className={styles.label}>Sunshine Hours:</span>
-            <span className={styles.value}>{data.sunshineHours.toLocaleString()} hrs/year</span>
-          </div>
-        )}
-
-        {data.productionLoss && (
-          <div className={styles.row}>
-            <span className={styles.label}>Est. Loss:</span>
-            <span className={styles.value}>{data.productionLoss.toFixed(0)} kWh/year</span>
-          </div>
-        )}
-
-        {data.segmentInfo && (
-          <>
-            <div className={styles.divider}></div>
-            <div className={styles.row}>
-              <span className={styles.label}>Roof Pitch:</span>
-              <span className={styles.value}>{data.segmentInfo.pitch.toFixed(0)}°</span>
-            </div>
-            <div className={styles.row}>
-              <span className={styles.label}>Azimuth:</span>
-              <span className={styles.value}>{data.segmentInfo.azimuth.toFixed(0)}°</span>
-            </div>
-          </>
-        )}
       </div>
     </div>
   )

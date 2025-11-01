@@ -6,18 +6,18 @@ import styles from './ShadeLegend.module.css'
 interface ShadeLegendProps {
   visible: boolean
   panelStats?: {
-    excellent: number  // 0-5%
-    good: number       // 5-15%
-    moderate: number   // 15-25%
-    significant: number // 25-40%
-    high: number       // 40%+
+    excellent: number  // > 1400 kWh/m²/year
+    good: number       // 1200-1400 kWh/m²/year
+    moderate: number   // 1000-1200 kWh/m²/year
+    significant: number // 800-1000 kWh/m²/year
+    high: number       // < 800 kWh/m²/year
     total: number
-    averageShade: number
+    averageShade: number // Average annual flux
   }
 }
 
 /**
- * Legend showing shade percentage color coding with panel statistics
+ * Legend showing annual solar flux color coding with panel statistics
  */
 export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -29,7 +29,7 @@ export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
       <div className={styles.header} onClick={() => setIsCollapsed(!isCollapsed)}>
         <div className={styles.headerLeft}>
           <i className="fas fa-sun"></i>
-          <span>Shade Analysis</span>
+          <span>Solar Flux Analysis</span>
         </div>
         <button
           className={styles.collapseButton}
@@ -52,8 +52,8 @@ export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
                 <span className={styles.summaryValue}>{panelStats.total}</span>
               </div>
               <div className={styles.summaryItem}>
-                <span className={styles.summaryLabel}>Average Shade:</span>
-                <span className={styles.summaryValue}>{panelStats.averageShade.toFixed(1)}%</span>
+                <span className={styles.summaryLabel}>Avg Solar Flux:</span>
+                <span className={styles.summaryValue}>{panelStats.averageShade.toFixed(0)} kWh/m²</span>
               </div>
             </div>
           )}
@@ -61,7 +61,7 @@ export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
           <div className={styles.items}>
             <div className={styles.item}>
               <div className={styles.colorBox} style={{ background: '#00C853' }}></div>
-              <span className={styles.label}>0-5%</span>
+              <span className={styles.label}>&gt;1400</span>
               <span className={styles.description}>Excellent</span>
               {panelStats && panelStats.excellent > 0 && (
                 <span className={styles.count}>({panelStats.excellent})</span>
@@ -69,7 +69,7 @@ export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
             </div>
             <div className={styles.item}>
               <div className={styles.colorBox} style={{ background: '#64DD17' }}></div>
-              <span className={styles.label}>5-15%</span>
+              <span className={styles.label}>1200-1400</span>
               <span className={styles.description}>Good</span>
               {panelStats && panelStats.good > 0 && (
                 <span className={styles.count}>({panelStats.good})</span>
@@ -77,7 +77,7 @@ export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
             </div>
             <div className={styles.item}>
               <div className={styles.colorBox} style={{ background: '#FFD600' }}></div>
-              <span className={styles.label}>15-25%</span>
+              <span className={styles.label}>1000-1200</span>
               <span className={styles.description}>Moderate</span>
               {panelStats && panelStats.moderate > 0 && (
                 <span className={styles.count}>({panelStats.moderate})</span>
@@ -85,16 +85,16 @@ export default function ShadeLegend({ visible, panelStats }: ShadeLegendProps) {
             </div>
             <div className={styles.item}>
               <div className={styles.colorBox} style={{ background: '#FF6D00' }}></div>
-              <span className={styles.label}>25-40%</span>
-              <span className={styles.description}>Significant</span>
+              <span className={styles.label}>800-1000</span>
+              <span className={styles.description}>Low</span>
               {panelStats && panelStats.significant > 0 && (
                 <span className={styles.count}>({panelStats.significant})</span>
               )}
             </div>
             <div className={styles.item}>
               <div className={styles.colorBox} style={{ background: '#DD2C00' }}></div>
-              <span className={styles.label}>40%+</span>
-              <span className={styles.description}>High Shade</span>
+              <span className={styles.label}>&lt;800</span>
+              <span className={styles.description}>Very Low</span>
               {panelStats && panelStats.high > 0 && (
                 <span className={styles.count}>({panelStats.high})</span>
               )}

@@ -6,6 +6,7 @@ interface MapControlsProps {
   map: google.maps.Map | null
   hasPolygons?: boolean
   hasPanels?: boolean
+  hasGeotiffData?: boolean
   shadeVisualizationEnabled?: boolean
   sunshineLayerEnabled?: boolean
   onClearAll?: () => void
@@ -21,6 +22,7 @@ export default function MapControls({
   map,
   hasPolygons = false,
   hasPanels = false,
+  hasGeotiffData = false,
   shadeVisualizationEnabled = false,
   sunshineLayerEnabled = false,
   onClearAll,
@@ -65,23 +67,24 @@ export default function MapControls({
       >
         <i className="fas fa-minus"></i>
       </button>
-      {hasPanels && (
+      {hasPanels && hasGeotiffData && (
         <button
           className={`${styles.shadeControl} ${shadeVisualizationEnabled ? styles.active : ''}`}
+          onClick={onToggleShadeVisualization}
           aria-label={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
           title={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
         >
-          <i className="fas fa-sun"></i>
+          <i className="fas fa-solar-panel"></i>
         </button>
       )}
-      {hasPanels && (
+      {hasPanels && hasGeotiffData && (
         <button
           className={`${styles.shadeControl} ${sunshineLayerEnabled ? styles.active : ''}`}
           onClick={onToggleSunshineLayer}
           aria-label={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
           title={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
         >
-          <i className="fas fa-solar-panel"></i>
+          <i className="fas fa-sun"></i>
         </button>
       )}
       {hasPolygons && (

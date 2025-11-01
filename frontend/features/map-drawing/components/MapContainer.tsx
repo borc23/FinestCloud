@@ -804,6 +804,7 @@ export default function MapContainer({
         map={map}
         hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0 || panelData !== null}
         hasPanels={allPanels.length > 0}
+        hasGeotiffData={geotiffData !== null && geotiffData !== undefined}
         shadeVisualizationEnabled={showShadeVisualization}
         sunshineLayerEnabled={showSunshineLayer}
         onClearAll={handleReset}

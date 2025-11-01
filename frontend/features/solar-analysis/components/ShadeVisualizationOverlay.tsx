@@ -1,17 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSolarShade } from '@/features/solar-analysis/hooks/useSolarShade'
 import ShadeTooltip from './ShadeTooltip'
 
 interface PanelStats {
-  excellent: number
-  good: number
-  moderate: number
-  significant: number
-  high: number
+  excellent: number  // > 1400 kWh/kW/year
+  good: number       // 1200-1400 kWh/kW/year
+  moderate: number   // 1000-1200 kWh/kW/year
+  significant: number // 800-1000 kWh/kW/year
+  high: number       // < 800 kWh/kW/year
   total: number
-  averageShade: number
+  averageShade: number // Average annual flux
 }
 
 interface ShadeVisualizationOverlayProps {
@@ -23,8 +22,8 @@ interface ShadeVisualizationOverlayProps {
 }
 
 /**
- * Color-codes solar panels based on shade analysis from Google Solar API
- * Green = minimal shade, Yellow = moderate shade, Red = high shade
+ * Color-codes solar panels based on annual solar flux from GeoTIFF data
+ * Red = low flux, Yellow = moderate flux, Green = high flux
  */
 export default function ShadeVisualizationOverlay({
   map,
@@ -41,15 +40,8 @@ export default function ShadeVisualizationOverlay({
     data: any
   }>({ visible: false, x: 0, y: 0, data: null })
 
-  // Fetch shade analysis data
-  const { shadeData, getPanelShadeData, isLoading } = useSolarShade({
-    latitude: location?.lat,
-    longitude: location?.lng,
-    autoFetch: enabled && !!location
-  })
-
   useEffect(() => {
-    if (!map || !panels.length || !enabled || !shadeData) {
+    if (!map || !panels.length || !enabled) {
       // Restore original colors when disabled with smooth transition
       if (!enabled && originalColors.size > 0) {
         originalColors.forEach((color, panel) => {
@@ -85,49 +77,46 @@ export default function ShadeVisualizationOverlay({
       averageShade: 0
     }
 
-    let totalShade = 0
+    let totalFlux = 0
+    let panelsWithData = 0
 
-    // Apply shade-based colors to panels
+    // Apply flux-based colors to panels
     panels.forEach((panel, index) => {
       if (!panel.getMap()) return
 
-      // Get panel center
-      const path = panel.getPath()
-      if (!path || path.getLength() === 0) return
+      // Get annual sunshine value stored on the panel
+      const annualFlux = (panel as any).annualSunshineKwh
 
-      const bounds = new google.maps.LatLngBounds()
-      path.forEach((point: google.maps.LatLng) => {
-        bounds.extend(point)
-      })
-      const center = bounds.getCenter()
-
-      // Get shade data for this panel location
-      const panelShade = getPanelShadeData(center.lat(), center.lng())
-
-      let shadePercentage: number
-      if (!panelShade) {
-        // No specific shade data, use average
-        shadePercentage = shadeData.shadePercentage
-      } else {
-        shadePercentage = panelShade.shadePercentage
+      if (annualFlux === undefined || annualFlux === null) {
+        // No flux data available for this panel, skip coloring
+        return
       }
 
       // Update statistics
-      totalShade += shadePercentage
-      if (shadePercentage < 5) {
+      totalFlux += annualFlux
+      panelsWithData++
+
+      // Categorize based on annual flux (kWh/m²/year)
+      // Typical ranges for solar flux:
+      // Excellent: > 1400 kWh/m²/year
+      // Good: 1200-1400
+      // Moderate: 1000-1200
+      // Significant shade: 800-1000
+      // High shade: < 800
+      if (annualFlux > 1400) {
         stats.excellent++
-      } else if (shadePercentage < 15) {
+      } else if (annualFlux > 1200) {
         stats.good++
-      } else if (shadePercentage < 25) {
+      } else if (annualFlux > 1000) {
         stats.moderate++
-      } else if (shadePercentage < 40) {
+      } else if (annualFlux > 800) {
         stats.significant++
       } else {
         stats.high++
       }
 
       // Apply color with smooth transition
-      const targetColor = getShadeColor(shadePercentage)
+      const targetColor = getFluxColor(annualFlux)
       const currentColor = panel.get('fillColor') || originalColors.get(panel) || '#1E90FF'
 
       // Animate color transition
@@ -138,26 +127,13 @@ export default function ShadeVisualizationOverlay({
         if (!event.domEvent) return
         const mouseEvent = event.domEvent as MouseEvent
 
-        // Find roof segment data if available
-        const panelShadeInfo = getPanelShadeData(center.lat(), center.lng())
-        const segment = shadeData.roofSegmentShade.find((seg) => {
-          // Match by comparing shade percentages (rough match)
-          return panelShadeInfo && Math.abs(seg.shadePercentage - panelShadeInfo.shadePercentage) < 0.1
-        })
-
         setTooltipData({
           visible: true,
           x: mouseEvent.clientX,
           y: mouseEvent.clientY,
           data: {
             panelIndex: index,
-            shadePercentage,
-            shadeLossFactor: panelShadeInfo?.shadeLossFactor || shadeData.shadeLossFactor,
-            sunshineHours: segment?.sunshineHoursPerYear,
-            segmentInfo: segment ? {
-              pitch: segment.pitchDegrees,
-              azimuth: segment.azimuthDegrees
-            } : undefined
+            annualFlux: annualFlux
           }
         })
       })
@@ -170,8 +146,8 @@ export default function ShadeVisualizationOverlay({
       ;(panel as any).__shadeListeners = [mousemoveListener, mouseoutListener]
     })
 
-    // Calculate average shade
-    stats.averageShade = totalShade / panels.length
+    // Calculate average flux
+    stats.averageShade = panelsWithData > 0 ? totalFlux / panelsWithData : 0
 
     // Pass statistics to parent
     onStatsUpdate?.(stats)
@@ -208,7 +184,7 @@ export default function ShadeVisualizationOverlay({
       // Hide tooltip
       setTooltipData({ visible: false, x: 0, y: 0, data: null })
     }
-  }, [map, panels, enabled, shadeData, getPanelShadeData, originalColors])
+  }, [map, panels, enabled, originalColors, onStatsUpdate])
 
   return (
     <ShadeTooltip
@@ -221,22 +197,22 @@ export default function ShadeVisualizationOverlay({
 }
 
 /**
- * Get color based on shade percentage
- * 0-5%: Excellent (Green)
- * 5-15%: Good (Light Green/Yellow-Green)
- * 15-25%: Moderate (Yellow/Orange)
- * 25-40%: Significant (Orange/Red-Orange)
- * 40%+: High (Red)
+ * Get color based on annual solar flux (kWh/m²/year)
+ * > 1400: Excellent (Bright Green)
+ * 1200-1400: Good (Yellow-Green)
+ * 1000-1200: Moderate (Yellow)
+ * 800-1000: Significant shade (Orange)
+ * < 800: High shade (Red)
  */
-function getShadeColor(shadePercentage: number): string {
-  if (shadePercentage < 5) {
+function getFluxColor(annualFlux: number): string {
+  if (annualFlux > 1400) {
     return '#00C853' // Bright green - excellent
-  } else if (shadePercentage < 15) {
+  } else if (annualFlux > 1200) {
     return '#64DD17' // Yellow-green - good
-  } else if (shadePercentage < 25) {
+  } else if (annualFlux > 1000) {
     return '#FFD600' // Yellow - moderate
-  } else if (shadePercentage < 40) {
-    return '#FF6D00' // Orange - significant
+  } else if (annualFlux > 800) {
+    return '#FF6D00' // Orange - significant shade
   } else {
     return '#DD2C00' // Red - high shade
   }

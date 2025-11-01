@@ -148,7 +148,20 @@ export default function DataLayerOverlay({
       const imageData = new ImageData(rgbaData, geotiffData.width, geotiffData.height)
       ctx.putImageData(imageData, 0, 0)
 
-      // Apply polygon clipping if provided
+      // Apply 1 meter offset towards north BEFORE clipping
+      // 1 meter latitude offset ≈ 0.000009 degrees
+      const OFFSET_METERS = 1
+      const LATITUDE_OFFSET = OFFSET_METERS * 0.000009
+
+      // Calculate offset bounds that will be used for both clipping and final overlay placement
+      const offsetBounds = {
+        north: geotiffData.bounds.north + LATITUDE_OFFSET,
+        south: geotiffData.bounds.south + LATITUDE_OFFSET,
+        east: geotiffData.bounds.east,
+        west: geotiffData.bounds.west
+      }
+
+      // Apply polygon clipping if provided (using offset bounds for coordinate conversion)
       if (clipToPolygons && clipToPolygons.length > 0) {
         // Create a second canvas for clipping
         const clippedCanvas = document.createElement('canvas')
@@ -167,9 +180,9 @@ export default function DataLayerOverlay({
               const lat = point.lat()
               const lng = point.lng()
 
-              // Convert lat/lng to canvas pixel coordinates
-              const x = ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
-              const y = ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
+              // Convert lat/lng to canvas pixel coordinates using OFFSET bounds
+              const x = ((lng - offsetBounds.west) / (offsetBounds.east - offsetBounds.west)) * geotiffData.width
+              const y = ((offsetBounds.north - lat) / (offsetBounds.north - offsetBounds.south)) * geotiffData.height
 
               if (i === 0) {
                 clippedCtx.moveTo(x, y)
@@ -190,14 +203,10 @@ export default function DataLayerOverlay({
         }
       }
 
-      // Apply 1 meter offset towards north
-      // 1 meter latitude offset ≈ 0.000009 degrees
-      const OFFSET_METERS = 1
-      const LATITUDE_OFFSET = OFFSET_METERS * 0.000009
-
+      // Create bounds with the offset applied
       const bounds = new google.maps.LatLngBounds(
-        new google.maps.LatLng(geotiffData.bounds.south + LATITUDE_OFFSET, geotiffData.bounds.west),
-        new google.maps.LatLng(geotiffData.bounds.north + LATITUDE_OFFSET, geotiffData.bounds.east)
+        new google.maps.LatLng(offsetBounds.south, offsetBounds.west),
+        new google.maps.LatLng(offsetBounds.north, offsetBounds.east)
       )
 
       // Remove existing overlay

@@ -14,6 +14,7 @@ interface PanelData {
   path: Coordinate[]
   options: google.maps.PolygonOptions
   gridId: number
+  annualSunshineKwh?: number
 }
 
 interface GeneratePanelsParams {
@@ -82,7 +83,7 @@ export async function generateAndAnimatePanels({
   const allPanelData: PanelData[] = []
   let totalPanels = 0
 
-  // Collect all panel data first, tagging each with its roof's gridId
+  // Collect all panel data first, tagging each with its roof's gridId and sunshine value
   if (panelData.roofs) {
     panelData.roofs.forEach((roof: RoofPanelData, roofIndex: number) => {
       if (roof.panels && Array.isArray(roof.panels)) {
@@ -98,7 +99,12 @@ export async function generateAndAnimatePanels({
             : []
 
           const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
-          allPanelData.push({ path, options: panelOptions, gridId: roofIndex })
+          allPanelData.push({
+            path,
+            options: panelOptions,
+            gridId: roofIndex,
+            annualSunshineKwh: panel.annualSunshineKwh
+          })
         })
       }
     })
@@ -113,7 +119,7 @@ export async function generateAndAnimatePanels({
 
     onProgress?.(i + 1, allPanelData.length)
 
-    const { path, options, gridId } = allPanelData[i]
+    const { path, options, gridId, annualSunshineKwh } = allPanelData[i]
 
     const polygon = new google.maps.Polygon({
       paths: path,
@@ -125,6 +131,11 @@ export async function generateAndAnimatePanels({
       fillOpacity: 0,
       strokeOpacity: 0
     } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
+
+    // Store annual sunshine value on the polygon for later use (e.g., shade visualization)
+    if (annualSunshineKwh !== undefined) {
+      (polygon as any).annualSunshineKwh = annualSunshineKwh
+    }
 
     tagPanelWithGrid(polygon, gridId)
 
