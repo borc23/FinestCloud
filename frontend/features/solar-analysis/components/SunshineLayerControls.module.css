@@ -2,21 +2,24 @@
   composes: glass-dark from global;
   position: absolute;
   right: 72px;
-  bottom: 16px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   padding: 4px;
   border-radius: 14px;
   z-index: 101;
   animation: glassFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 40px;
+  box-sizing: border-box;
 }
 
 .toggleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 0 10px;
   min-width: 140px;
+  height: 100%;
   transition: all var(--transition-base);
   border-radius: 10px;
   background: transparent;
@@ -38,22 +41,24 @@
 .toggleText {
   flex: 1;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: -0.02em;
   user-select: none;
+  line-height: 1;
 }
 
 .toggleIcon {
-  font-size: 16px;
+  font-size: 15px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  line-height: 1;
 }
 
 .toggleSwitch {
   position: relative;
-  width: 51px;
-  height: 31px;
+  width: 44px;
+  height: 26px;
   flex-shrink: 0;
 }
 
@@ -72,7 +77,7 @@
   right: 0;
   bottom: 0;
   background: rgba(120, 120, 128, 0.32);
-  border-radius: 31px;
+  border-radius: 26px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow:
     0 0 0 0.5px rgba(0, 0, 0, 0.04) inset,
@@ -82,8 +87,8 @@
 .toggleSlider::before {
   position: absolute;
   content: "";
-  height: 27px;
-  width: 27px;
+  height: 22px;
+  width: 22px;
   left: 2px;
   bottom: 2px;
   background: white;
@@ -102,7 +107,7 @@
 }
 
 .toggleInput:checked + .toggleSlider::before {
-  transform: translateX(20px);
+  transform: translateX(18px);
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.25),
     0 1px 3px rgba(0, 0, 0, 0.15),
