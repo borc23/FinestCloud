@@ -74,6 +74,9 @@ export default function MapContainer({
   const [showShadeVisualization, setShowShadeVisualization] = useState(false)
   const [showSunshineLayer, setShowSunshineLayer] = useState(false)
   const [hidePanelsInSunshineMode, setHidePanelsInSunshineMode] = useState(false)
+
+  // Ref to access dashboard minimize function
+  const dashboardMinimizeRef = useRef<(() => void) | null>(null)
   const [shadeStats, setShadeStats] = useState<{
     excellent: number
     good: number
@@ -695,7 +698,14 @@ export default function MapContainer({
             lng: map.getCenter()!.lng()
           } : undefined}
           isEditMode={isEditMode || (activeTool !== '' && activeTool !== 'panels')}
-          onMinimizeChange={setIsDashboardMinimized}
+          minimizeRef={dashboardMinimizeRef}
+          onMinimizeChange={(minimized) => {
+            setIsDashboardMinimized(minimized)
+            // If opening (un-minimizing) the analytics dashboard, turn off shade visualization
+            if (!minimized) {
+              setShowShadeVisualization(false)
+            }
+          }}
           currentPanelCount={allPanels.length}
           onSaveProject={onSaveProject}
           isAuthenticated={isAuthenticated}
@@ -808,7 +818,14 @@ export default function MapContainer({
         shadeVisualizationEnabled={showShadeVisualization}
         sunshineLayerEnabled={showSunshineLayer}
         onClearAll={handleReset}
-        onToggleShadeVisualization={() => setShowShadeVisualization(!showShadeVisualization)}
+        onToggleShadeVisualization={() => {
+          const newState = !showShadeVisualization
+          setShowShadeVisualization(newState)
+          // If turning ON shade visualization, minimize the analytics dashboard
+          if (newState && dashboardMinimizeRef.current) {
+            dashboardMinimizeRef.current()
+          }
+        }}
         onToggleSunshineLayer={() => setShowSunshineLayer(!showSunshineLayer)}
       />
     </div>

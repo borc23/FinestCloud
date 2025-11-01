@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import styles from './SolarResultsDashboard.module.css'
 import MonthlyProductionChart from './MonthlyProductionChart'
 import FinancialCalculator from '@/features/financial/components/FinancialCalculator'
@@ -18,6 +19,7 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
   onMinimizeChange?: (minimized: boolean) => void
   onSaveProject?: () => void
   isAuthenticated?: boolean
+  minimizeRef?: React.MutableRefObject<(() => void) | null>
 }) {
   // Extract and prepare all dashboard data
   const {
@@ -54,6 +56,13 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     shadeImpact,
     capacityFactor: pvwattsData?.capacity_factor
   })
+
+  // Expose minimize function to parent via ref
+  useEffect(() => {
+    if (props.minimizeRef) {
+      props.minimizeRef.current = () => setIsMinimized(true)
+    }
+  }, [props.minimizeRef, setIsMinimized])
 
   if (!panelData) {
     return null
