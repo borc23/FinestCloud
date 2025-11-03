@@ -85,43 +85,47 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
   const renderPolygons = useCallback((polygonData: RoofModel[], isRoof: boolean, enableHover: boolean = true) => {
     if (!map || !polygonData) return
 
+    // Batch polygon creation to avoid N+1 rendering issue
+    // Create all polygons first without adding to map
     const newPolygons: google.maps.Polygon[] = []
 
-    polygonData.forEach((roof, index) => {
-      if (!roof || !roof.coords || roof.coords.length === 0) return
+    for (const roof of polygonData) {
+      if (!roof || !roof.coords || roof.coords.length === 0) continue
 
       const latLngCoords = convertCoordinatesToLatLng(roof.coords)
-      if (latLngCoords.length === 0) return
+      if (latLngCoords.length === 0) continue
 
       const options = createPolygonOptions(isRoof)
 
+      // Create polygon without map first to batch rendering
       const polygon = new google.maps.Polygon({
         paths: latLngCoords,
         ...options,
-        map: map
+        map: null
       })
 
-      if (enableHover) {
-        addHoverEffects(polygon, isRoof, map)
-      }
       newPolygons.push(polygon)
-    })
-
-    if (isRoof) {
-      setRoofPolygons(prev => [...prev, ...newPolygons])
-    } else {
-      setObjectPolygons(prev => [...prev, ...newPolygons])
     }
+
+    // Single state update triggers one re-render instead of N
+    const updateState = isRoof ? setRoofPolygons : setObjectPolygons
+
+    updateState(prev => {
+      // Now attach all polygons to map and add listeners in one batch
+      newPolygons.forEach(polygon => {
+        polygon.setMap(map)
+        if (enableHover) {
+          addHoverEffects(polygon, isRoof, map)
+        }
+      })
+
+      return [...prev, ...newPolygons]
+    })
   }, [map, convertCoordinatesToLatLng, createPolygonOptions, addHoverEffects])
 
-  const clearPolygonGroup = useCallback((polygons: google.maps.Polygon[], type: string) => {
-    polygons.forEach((polygon, index) => {
+  const clearPolygonGroup = useCallback((polygons: google.maps.Polygon[]) => {
+    polygons.forEach((polygon) => {
       if (polygon) {
-        const path = polygon.getPath()
-        if (path) {
-          const coords = path.getArray().map(p => ({ lat: p.lat(), lng: p.lng() }))
-        }
-
         const listeners = polygonListenersRef.current.get(polygon)
         if (listeners) {
           listeners.forEach(listener => google.maps.event.removeListener(listener))
@@ -134,11 +138,11 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
   const clearAllPolygons = useCallback(() => {
     setRoofPolygons(prevRoof => {
-      clearPolygonGroup(prevRoof, 'ROOF')
+      clearPolygonGroup(prevRoof)
       return []
     })
     setObjectPolygons(prevObj => {
-      clearPolygonGroup(prevObj, 'OBJECT')
+      clearPolygonGroup(prevObj)
       return []
     })
   }, [clearPolygonGroup])
@@ -208,27 +212,17 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
 
     setRoofPolygons(prev => {
       const toRemove = prev.filter(p => polygonSet.has(p))
-      toRemove.forEach((polygon, index) => {
-        const path = polygon.getPath()
-        if (path) {
-          const coords = path.getArray().map(p => ({ lat: p.lat(), lng: p.lng() }))
-        }
-        clearPolygonGroup([polygon], 'ROOF-INDIVIDUAL')
+      toRemove.forEach((polygon) => {
+        clearPolygonGroup([polygon])
       })
       const remaining = prev.filter(p => !polygonSet.has(p))
-      remaining.forEach((polygon, index) => {
-        const path = polygon.getPath()
-        if (path) {
-          const coords = path.getArray().map(p => ({ lat: p.lat(), lng: p.lng() }))
-        }
-      })
       return remaining
     })
 
     setObjectPolygons(prev => {
       const toRemove = prev.filter(p => polygonSet.has(p))
       toRemove.forEach(polygon => {
-        clearPolygonGroup([polygon], 'OBJECT-INDIVIDUAL')
+        clearPolygonGroup([polygon])
       })
       const remaining = prev.filter(p => !polygonSet.has(p))
       return remaining
