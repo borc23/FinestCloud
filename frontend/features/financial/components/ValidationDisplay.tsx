@@ -1,9 +1,10 @@
 /**
  * Validation Display Component
  * Shows validation errors and warnings to the user
+ * Memoized for performance
  */
 
-import React from 'react'
+import { memo } from 'react'
 import styles from './FinancialCalculator.module.css'
 import type { ValidationResult } from '@/features/financial/utils/validation'
 
@@ -11,7 +12,7 @@ interface ValidationDisplayProps {
   validation: ValidationResult
 }
 
-export default function ValidationDisplay({ validation }: ValidationDisplayProps) {
+const ValidationDisplay = memo(function ValidationDisplay({ validation }: ValidationDisplayProps) {
   return (
     <>
       {/* Validation Errors */}
@@ -41,4 +42,11 @@ export default function ValidationDisplay({ validation }: ValidationDisplayProps
       )}
     </>
   )
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if validation state actually changed
+  return prevProps.validation.isValid === nextProps.validation.isValid &&
+         prevProps.validation.errors.length === nextProps.validation.errors.length &&
+         prevProps.validation.warnings.length === nextProps.validation.warnings.length
+})
+
+export default ValidationDisplay

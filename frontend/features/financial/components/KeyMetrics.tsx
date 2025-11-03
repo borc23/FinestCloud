@@ -1,9 +1,10 @@
 /**
  * Key Metrics Component
  * Displays the main financial metrics in a card grid
+ * Memoized for performance - only re-renders when results change
  */
 
-import React from 'react'
+import { memo } from 'react'
 import styles from './FinancialCalculator.module.css'
 import type { FinancialResults } from '@/features/financial/types/financial'
 
@@ -12,7 +13,7 @@ interface KeyMetricsProps {
   discountRate: number
 }
 
-export default function KeyMetrics({ results, discountRate }: KeyMetricsProps) {
+const KeyMetrics = memo(function KeyMetrics({ results, discountRate }: KeyMetricsProps) {
   return (
     <div className={styles.keyMetrics}>
       <div className={styles.metricCard}>
@@ -47,4 +48,13 @@ export default function KeyMetrics({ results, discountRate }: KeyMetricsProps) {
       </div>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  return prevProps.results.npv === nextProps.results.npv &&
+         prevProps.results.roi === nextProps.results.roi &&
+         prevProps.results.irr === nextProps.results.irr &&
+         prevProps.results.paybackPeriod === nextProps.results.paybackPeriod &&
+         prevProps.results.twentyFiveYearSavings === nextProps.results.twentyFiveYearSavings &&
+         prevProps.discountRate === nextProps.discountRate
+})
+
+export default KeyMetrics
