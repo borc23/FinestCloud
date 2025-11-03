@@ -18,7 +18,8 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     financing,
     systemDegradation = 0.5, // 0.5% per year is industry standard
     analysisYears = 25,
-    selfConsumptionRate = 30 // 30% is typical for German households without battery
+    selfConsumptionRate = 30, // 30% is typical for German households without battery
+    discountRate = 4 // 4% discount rate for NPV
   } = inputs
 
   // Calculate gross and net system costs
@@ -50,6 +51,7 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   let totalSavings = 0
   let totalFeedInRevenue = 0
   let paybackYear = analysisYears
+  let npv = -netSystemCost // Start with negative initial investment
 
   for (let year = 1; year <= analysisYears; year++) {
     // Apply degradation to production (compounds each year)
@@ -69,6 +71,11 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
 
     // Calculate revenue from feed-in tariff (fixed for 20 years in Germany)
     const feedInRevenue = yearGridFeedIn * feedInTariff
+
+    // Calculate NPV: discount future cash flows to present value
+    const yearCashFlow = savings + feedInRevenue
+    const discountFactor = Math.pow(1 + discountRate / 100, year)
+    npv += yearCashFlow / discountFactor
 
     cumulativeSavings += savings + feedInRevenue
     totalSavings += savings
@@ -105,6 +112,9 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   // Calculate ROI (including feed-in revenue)
   const totalReturn = totalSavings + totalFeedInRevenue
   const roi = ((totalReturn - netSystemCost) / netSystemCost) * 100
+
+  // Calculate IRR (Internal Rate of Return)
+  const irr = calculateIRR(netSystemCost, yearlyBreakdown)
 
   // Calculate energy offset percentage (German household average: ~3,500 kWh/year)
   const avgHouseholdUsage = utilityRates.avgMonthlyBill
@@ -154,6 +164,8 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     twentyFiveYearSavings: Math.round(totalSavings),
     twentyFiveYearFeedInRevenue: Math.round(totalFeedInRevenue),
     roi: Math.round(roi * 10) / 10,
+    irr: Math.round(irr * 10) / 10,
+    npv: Math.round(npv),
     energyOffsetPercentage: Math.round(energyOffsetPercentage * 10) / 10,
     selfConsumptionAmount: Math.round(selfConsumptionAmount),
     gridFeedInAmount: Math.round(gridFeedInAmount),
@@ -166,6 +178,65 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     totalLoanCost: totalLoanCost ? Math.round(totalLoanCost) : undefined,
     yearlyBreakdown
   }
+}
+
+/**
+ * Calculate Internal Rate of Return (IRR) using Newton-Raphson method
+ * IRR is the discount rate that makes NPV = 0
+ */
+export function calculateIRR(
+  initialInvestment: number,
+  yearlyBreakdown: YearlyBreakdown[]
+): number {
+  // Build cash flow array: negative initial investment, then positive annual cash flows
+  const cashFlows = [
+    -initialInvestment,
+    ...yearlyBreakdown.map(year => year.savings + year.feedInRevenue)
+  ]
+
+  // Newton-Raphson method to find IRR
+  let irr = 0.1 // Initial guess: 10%
+  const maxIterations = 100
+  const tolerance = 0.00001
+
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    let npv = 0
+    let derivative = 0
+
+    // Calculate NPV and its derivative at current IRR
+    for (let year = 0; year < cashFlows.length; year++) {
+      const discountFactor = Math.pow(1 + irr, year)
+      npv += cashFlows[year] / discountFactor
+
+      // Derivative of NPV with respect to IRR
+      if (year > 0) {
+        derivative -= (year * cashFlows[year]) / Math.pow(1 + irr, year + 1)
+      }
+    }
+
+    // Check for convergence
+    if (Math.abs(npv) < tolerance) {
+      return Math.round(irr * 1000) / 10 // Return as percentage with 1 decimal
+    }
+
+    // Avoid division by zero
+    if (Math.abs(derivative) < tolerance) {
+      break
+    }
+
+    // Newton-Raphson iteration: x_new = x_old - f(x) / f'(x)
+    const newIrr = irr - npv / derivative
+
+    // Prevent negative or extremely large IRR values
+    if (newIrr < -0.99 || newIrr > 10) {
+      break
+    }
+
+    irr = newIrr
+  }
+
+  // If IRR calculation fails or doesn't converge, return 0
+  return 0
 }
 
 /**

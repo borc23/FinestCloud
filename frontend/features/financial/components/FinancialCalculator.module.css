@@ -113,6 +113,13 @@
   color: #2196f3;
 }
 
+.metricHint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  font-weight: var(--font-normal);
+}
+
 /* Sections */
 .section {
   padding: 20px;
@@ -396,6 +403,45 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Style only the dropdown popup options, not the select itself */
+select.input {
+  cursor: pointer;
+}
+
+/* Dark glass liquid iOS-style dropdown options */
+select.input option {
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 12px 16px;
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-lg);
+  margin: 4px 0;
+  transition: all 0.2s ease-out;
+}
+
+select.input option:hover {
+  background: rgba(33, 150, 243, 0.2);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: rgba(255, 255, 255, 1);
+  transform: scale(1.02);
+}
+
+select.input option:checked,
+select.input option:focus {
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.3) 0%,
+    rgba(33, 150, 243, 0.15) 100%
+  );
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
 /* Feed-in Tariff Section */
 .feedInInfo {
   display: flex;
@@ -623,6 +669,151 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* Financing Comparison */
+.financingComparison {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comparisonTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.comparisonTable thead th {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: var(--font-semibold);
+  font-size: 12px;
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.comparisonTable tbody tr {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease-out;
+}
+
+.comparisonTable tbody tr:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(1.01);
+}
+
+.comparisonTable tbody tr.selectedRow {
+  background: rgba(33, 150, 243, 0.15);
+  border: 1px solid rgba(33, 150, 243, 0.4);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+}
+
+.comparisonTable tbody td {
+  padding: 12px 10px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+}
+
+.comparisonTable tbody td strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+}
+
+.comparisonTable tbody td small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+}
+
+.comparisonTable .positive {
+  color: #4caf50;
+  font-weight: var(--font-semibold);
+}
+
+.comparisonTable .negative {
+  color: #ff6b6b;
+  font-weight: var(--font-semibold);
+}
+
+.financingInsight {
+  padding: 14px;
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  border-radius: var(--radius-lg);
+}
+
+.financingInsight p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.financingInsight strong {
+  color: rgba(33, 150, 243, 1);
+  font-weight: var(--font-semibold);
+}
+
+/* Monthly Cash Flow Visualization */
+.monthlyCashFlow {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.monthlyCashFlow h5 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: var(--font-semibold);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cashFlowBars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cashFlowItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cashFlowLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: var(--font-medium);
+}
+
+.cashFlowBar {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+  font-weight: var(--font-semibold);
+  text-align: right;
+  min-width: 80px;
+  transition: all 0.3s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cashFlowBar:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.inputHint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+}
+
 /* Responsive */
 @media (max-width: 796px) {
   .container {
@@ -671,5 +862,27 @@
 
   .inputs {
     grid-template-columns: 1fr;
+  }
+
+  .comparisonTable {
+    font-size: 11px;
+  }
+
+  .comparisonTable thead th {
+    padding: 8px 6px;
+    font-size: 10px;
+  }
+
+  .comparisonTable tbody td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  .comparisonTable tbody td strong {
+    font-size: 12px;
+  }
+
+  .keyMetrics {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

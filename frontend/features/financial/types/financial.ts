@@ -42,6 +42,7 @@ export interface FinancialInputs {
   systemDegradation?: number // % per year (default 0.5%)
   analysisYears?: number // years (default 25)
   selfConsumptionRate?: number // % of energy consumed directly (default 30%)
+  discountRate?: number // % for NPV calculation (default 4%)
 }
 
 export interface YearlyBreakdown {
@@ -69,6 +70,8 @@ export interface FinancialResults {
   twentyFiveYearSavings: number // € total savings
   twentyFiveYearFeedInRevenue: number // € total feed-in revenue
   roi: number // % return on investment
+  irr: number // % Internal Rate of Return
+  npv: number // € Net Present Value
 
   // Energy metrics
   energyOffsetPercentage: number // % of energy needs covered

@@ -35,7 +35,19 @@ export default function FinancialCalculator({
   const [selfConsumptionRate, setSelfConsumptionRate] = useState(30) // %
   const [stateGrant, setStateGrant] = useState(0) // € State grant
   const [municipalGrant, setMunicipalGrant] = useState(0) // € Municipal grant
+  const [discountRate, setDiscountRate] = useState(4) // % discount rate for NPV
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  // Financing options
+  const [financingType, setFinancingType] = useState<'cash' | 'kfw' | 'loan'>('cash')
+  const [downPayment, setDownPayment] = useState(0) // € down payment for loans
+  const [loanTerm, setLoanTerm] = useState(15) // years
+  const [kfwInterestRate, setKfwInterestRate] = useState(2.5) // % for KfW loan (2.0-3.5% typical)
+  const [customInterestRate, setCustomInterestRate] = useState(4.5) // % for standard loan
+
+  // Calculate net system cost after incentives for financing
+  const vatSavingsAmount = systemSize <= 30 ? systemCostInput * 0.19 : 0
+  const netSystemCost = systemCostInput - vatSavingsAmount - stateGrant - municipalGrant
 
   // Calculate financials
   const financialInputs: FinancialInputs = useMemo(() => ({
@@ -56,10 +68,57 @@ export default function FinancialCalculator({
       stateGrant,
       municipalGrant
     },
-    selfConsumptionRate
-  }), [annualProduction, systemSize, costPerKwh, avgMonthlyBill, escalationRate, systemCostInput, feedInTariff, selfConsumptionRate, stateGrant, municipalGrant])
+    financing: financingType !== 'cash' ? {
+      type: financingType,
+      downPayment,
+      loanAmount: netSystemCost - downPayment,
+      interestRate: financingType === 'kfw' ? kfwInterestRate : customInterestRate,
+      loanTerm
+    } : undefined,
+    selfConsumptionRate,
+    discountRate
+  }), [annualProduction, systemSize, costPerKwh, avgMonthlyBill, escalationRate, systemCostInput, feedInTariff, selfConsumptionRate, stateGrant, municipalGrant, discountRate, financingType, downPayment, loanTerm, kfwInterestRate, customInterestRate, netSystemCost])
 
   const results = useMemo(() => calculateFinancials(financialInputs), [financialInputs])
+
+  // Calculate financing comparison scenarios
+  const financingScenarios = useMemo(() => {
+    const calculateLoan = (type: 'kfw' | 'loan', interestRate: number) => {
+      const loanAmount = netSystemCost - downPayment
+      const monthlyRate = interestRate / 100 / 12
+      const numPayments = loanTerm * 12
+
+      let monthlyPayment = 0
+      let totalInterest = 0
+
+      if (monthlyRate > 0) {
+        monthlyPayment = (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
+          (Math.pow(1 + monthlyRate, numPayments) - 1)
+        totalInterest = (monthlyPayment * numPayments) - loanAmount
+      } else {
+        monthlyPayment = loanAmount / numPayments
+        totalInterest = 0
+      }
+
+      return {
+        type,
+        monthlyPayment: Math.round(monthlyPayment),
+        totalInterest: Math.round(totalInterest),
+        totalCost: Math.round(loanAmount + totalInterest + downPayment)
+      }
+    }
+
+    return {
+      cash: {
+        type: 'cash' as const,
+        monthlyPayment: 0,
+        totalInterest: 0,
+        totalCost: Math.round(netSystemCost)
+      },
+      kfw: calculateLoan('kfw', kfwInterestRate),
+      standardLoan: calculateLoan('loan', customInterestRate)
+    }
+  }, [netSystemCost, downPayment, loanTerm, kfwInterestRate, customInterestRate])
 
   // VAT savings for display
   const vatSavings = systemSize <= 30 ? systemCostInput * 0.19 : 0
@@ -204,6 +263,13 @@ export default function FinancialCalculator({
         {/* Key Metrics */}
         <div className={styles.keyMetrics}>
         <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Net Present Value</div>
+          <div className={`${styles.metricValue} ${results.npv >= 0 ? styles.savings : styles.negative}`}>
+            €{results.npv.toLocaleString()}
+          </div>
+          <div className={styles.metricHint}>Present value at {discountRate}% discount</div>
+        </div>
+        <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Payback Period</div>
           <div className={styles.metricValue}>{results.paybackPeriod} years</div>
         </div>
@@ -216,6 +282,11 @@ export default function FinancialCalculator({
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>ROI</div>
           <div className={`${styles.metricValue} ${styles.roi}`}>{results.roi}%</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>IRR</div>
+          <div className={`${styles.metricValue} ${styles.roi}`}>{results.irr}%</div>
+          <div className={styles.metricHint}>Internal Rate of Return</div>
         </div>
       </div>
 
@@ -362,6 +433,118 @@ export default function FinancialCalculator({
         </div>
       </div>
 
+      {/* Financing Options Comparison */}
+      <div className={styles.section}>
+        <h4 className={styles.sectionTitle}>💰 Financing Options Comparison</h4>
+        <div className={styles.financingComparison}>
+          <table className={styles.comparisonTable}>
+            <thead>
+              <tr>
+                <th>Payment Method</th>
+                <th>Monthly Payment</th>
+                <th>Solar Savings</th>
+                <th>Net Monthly</th>
+                <th>Total Interest</th>
+                <th>Total Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Cash Purchase */}
+              <tr className={financingType === 'cash' ? styles.selectedRow : ''}>
+                <td>
+                  <strong>Cash Purchase</strong>
+                  <br />
+                  <small>Pay upfront</small>
+                </td>
+                <td>€0</td>
+                <td className={styles.positive}>+€{results.avgMonthlySavings}</td>
+                <td className={styles.positive}>
+                  <strong>+€{results.avgMonthlySavings}</strong>
+                </td>
+                <td>€0</td>
+                <td>€{financingScenarios.cash.totalCost.toLocaleString()}</td>
+              </tr>
+
+              {/* KfW Loan */}
+              <tr className={financingType === 'kfw' ? styles.selectedRow : ''}>
+                <td>
+                  <strong>KfW 270 Loan</strong>
+                  <br />
+                  <small>{kfwInterestRate}% interest, {loanTerm} years</small>
+                </td>
+                <td>€{financingScenarios.kfw.monthlyPayment}</td>
+                <td className={styles.positive}>+€{results.avgMonthlySavings}</td>
+                <td className={results.avgMonthlySavings > financingScenarios.kfw.monthlyPayment ? styles.positive : styles.negative}>
+                  <strong>{results.avgMonthlySavings > financingScenarios.kfw.monthlyPayment ? '+' : ''}€{results.avgMonthlySavings - financingScenarios.kfw.monthlyPayment}</strong>
+                </td>
+                <td>€{financingScenarios.kfw.totalInterest.toLocaleString()}</td>
+                <td>€{financingScenarios.kfw.totalCost.toLocaleString()}</td>
+              </tr>
+
+              {/* Standard Loan */}
+              <tr className={financingType === 'loan' ? styles.selectedRow : ''}>
+                <td>
+                  <strong>Standard Loan</strong>
+                  <br />
+                  <small>{customInterestRate}% interest, {loanTerm} years</small>
+                </td>
+                <td>€{financingScenarios.standardLoan.monthlyPayment}</td>
+                <td className={styles.positive}>+€{results.avgMonthlySavings}</td>
+                <td className={results.avgMonthlySavings > financingScenarios.standardLoan.monthlyPayment ? styles.positive : styles.negative}>
+                  <strong>{results.avgMonthlySavings > financingScenarios.standardLoan.monthlyPayment ? '+' : ''}€{results.avgMonthlySavings - financingScenarios.standardLoan.monthlyPayment}</strong>
+                </td>
+                <td>€{financingScenarios.standardLoan.totalInterest.toLocaleString()}</td>
+                <td>€{financingScenarios.standardLoan.totalCost.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Key Insight */}
+          <div className={styles.financingInsight}>
+            {financingType === 'cash' ? (
+              <p>💡 <strong>Cash purchase maximizes savings:</strong> No interest payments means you keep all €{results.twentyFiveYearSavings.toLocaleString()} in 25-year savings.</p>
+            ) : financingType === 'kfw' ? (
+              <p>💡 <strong>KfW financing advantage:</strong> Government-subsidized {kfwInterestRate}% interest rate means you save €{(financingScenarios.standardLoan.totalInterest - financingScenarios.kfw.totalInterest).toLocaleString()} vs standard loans!</p>
+            ) : (
+              <p>💡 <strong>Standard loan option:</strong> While interest is higher, solar savings of €{results.avgMonthlySavings}/month help offset your €{financingScenarios.standardLoan.monthlyPayment}/month payment.</p>
+            )}
+          </div>
+
+          {/* Monthly Cash Flow Visualization */}
+          {financingType !== 'cash' && (
+            <div className={styles.monthlyCashFlow}>
+              <h5>Monthly Cash Flow Impact</h5>
+              <div className={styles.cashFlowBars}>
+                <div className={styles.cashFlowItem}>
+                  <div className={styles.cashFlowLabel}>Loan Payment</div>
+                  <div className={styles.cashFlowBar} style={{ width: '100%', backgroundColor: '#ff6b6b' }}>
+                    €{financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment}
+                  </div>
+                </div>
+                <div className={styles.cashFlowItem}>
+                  <div className={styles.cashFlowLabel}>Solar Savings</div>
+                  <div className={styles.cashFlowBar} style={{
+                    width: `${(results.avgMonthlySavings / (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment)) * 100}%`,
+                    backgroundColor: '#4caf50'
+                  }}>
+                    €{results.avgMonthlySavings}
+                  </div>
+                </div>
+                <div className={styles.cashFlowItem}>
+                  <div className={styles.cashFlowLabel}>Net Monthly Impact</div>
+                  <div className={styles.cashFlowBar} style={{
+                    width: `${Math.abs(results.avgMonthlySavings - (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment)) / (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment) * 100}%`,
+                    backgroundColor: results.avgMonthlySavings > (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment) ? '#4caf50' : '#ff6b6b'
+                  }}>
+                    {results.avgMonthlySavings > (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment) ? '+' : ''}€{results.avgMonthlySavings - (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Energy & Environmental */}
       <div className={styles.section}>
         <h4 className={styles.sectionTitle}>Energy & Environmental Impact</h4>
@@ -437,6 +620,102 @@ export default function FinancialCalculator({
 
         {showAdvanced && (
           <div className={styles.inputs}>
+            {/* Financing Options */}
+            <div className={styles.inputGroup}>
+              <label className={styles.inputLabel}>
+                Financing Method
+                <select
+                  className={styles.input}
+                  value={financingType}
+                  onChange={(e) => setFinancingType(e.target.value as 'cash' | 'kfw' | 'loan')}
+                >
+                  <option value="cash">Cash Purchase</option>
+                  <option value="kfw">KfW 270 Loan (Government-Subsidized)</option>
+                  <option value="loan">Standard Bank Loan</option>
+                </select>
+              </label>
+              {financingType === 'kfw' && (
+                <small className={styles.inputHint}>
+                  ℹ️ KfW 270 "Renewable Energy - Standard" offers low-interest government-backed loans for solar installations
+                </small>
+              )}
+            </div>
+
+            {financingType !== 'cash' && (
+              <>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>
+                    Down Payment (€)
+                    <input
+                      type="number"
+                      className={styles.input}
+                      value={downPayment}
+                      onChange={(e) => setDownPayment(parseFloat(e.target.value) || 0)}
+                      step="1000"
+                      min="0"
+                      max={netSystemCost}
+                    />
+                  </label>
+                  <small className={styles.inputHint}>
+                    Loan amount: €{(netSystemCost - downPayment).toLocaleString()}
+                  </small>
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>
+                    Loan Term (years)
+                    <input
+                      type="number"
+                      className={styles.input}
+                      value={loanTerm}
+                      onChange={(e) => setLoanTerm(parseInt(e.target.value) || 15)}
+                      step="1"
+                      min="5"
+                      max="25"
+                    />
+                  </label>
+                </div>
+
+                {financingType === 'kfw' ? (
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>
+                      KfW Interest Rate (%)
+                      <input
+                        type="number"
+                        className={styles.input}
+                        value={kfwInterestRate}
+                        onChange={(e) => setKfwInterestRate(parseFloat(e.target.value) || 2.5)}
+                        step="0.1"
+                        min="2.0"
+                        max="3.5"
+                      />
+                    </label>
+                    <small className={styles.inputHint}>
+                      Typical KfW 270 range: 2.0-3.5% (varies by credit rating)
+                    </small>
+                  </div>
+                ) : financingType === 'loan' && (
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>
+                      Interest Rate (%)
+                      <input
+                        type="number"
+                        className={styles.input}
+                        value={customInterestRate}
+                        onChange={(e) => setCustomInterestRate(parseFloat(e.target.value) || 4.5)}
+                        step="0.1"
+                        min="0"
+                        max="15"
+                      />
+                    </label>
+                    <small className={styles.inputHint}>
+                      Typical German range: 3.5-6.5% (secured loans: 2-4%)
+                    </small>
+                  </div>
+                )}
+              </>
+            )}
+
             <div className={styles.inputGroup}>
               <label className={styles.inputLabel}>
                 Electricity Rate (€/kWh)
@@ -549,6 +828,24 @@ export default function FinancialCalculator({
                   min="0"
                 />
               </label>
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label className={styles.inputLabel}>
+                Discount Rate (% for NPV)
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={discountRate}
+                  onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
+                  step="0.5"
+                  min="0"
+                  max="15"
+                />
+              </label>
+              <small className={styles.inputHint}>
+                Typical: 3-6% (conservative to aggressive)
+              </small>
             </div>
           </div>
         )}
