@@ -798,54 +798,123 @@ select.input option:focus {
   font-weight: var(--font-semibold);
 }
 
-/* Monthly Cash Flow Visualization */
+/* Monthly Cash Flow Visualization - Premium Design */
 .monthlyCashFlow {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  margin-top: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .monthlyCashFlow h5 {
-  margin: 0 0 12px 0;
-  font-size: 13px;
+  margin: 0 0 20px 0;
+  font-size: 15px;
   font-weight: var(--font-semibold);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthlyCashFlow h5::before {
+  content: '📊';
+  font-size: 18px;
 }
 
 .cashFlowBars {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .cashFlowItem {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease-out;
+}
+
+.cashFlowItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
 }
 
 .cashFlowLabel {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  flex: 0 0 140px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
   font-weight: var(--font-medium);
 }
 
+.cashFlowBarContainer {
+  flex: 1;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-lg);
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+}
+
 .cashFlowBar {
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 14px;
-  font-weight: var(--font-semibold);
-  text-align: right;
-  min-width: 80px;
-  transition: all 0.3s ease-out;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  height: 100%;
+  border-radius: var(--radius-lg);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.cashFlowBar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease-out;
+}
+
+.cashFlowItem:hover .cashFlowBar::before {
+  transform: translateX(100%);
 }
 
 .cashFlowBar:hover {
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.15);
+}
+
+.cashFlowValue {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.98);
+  font-size: 14px;
+  font-weight: var(--font-semibold);
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .inputHint {
@@ -924,5 +993,37 @@ select.input option:focus {
 
   .keyMetrics {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Responsive Cash Flow */
+  .monthlyCashFlow {
+    padding: 16px;
+  }
+
+  .monthlyCashFlow h5 {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .cashFlowLabel {
+    flex: 0 0 110px;
+    font-size: 12px;
+  }
+
+  .cashFlowBarContainer {
+    height: 36px;
+  }
+
+  .cashFlowValue {
+    font-size: 13px;
+    right: 10px;
+  }
+
+  .cashFlowBars {
+    gap: 12px;
+  }
+
+  .cashFlowItem {
+    padding: 10px;
   }
 }

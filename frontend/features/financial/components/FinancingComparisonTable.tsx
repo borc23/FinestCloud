@@ -119,38 +119,80 @@ export default function FinancingComparisonTable({
         </div>
 
         {/* Monthly Cash Flow Visualization */}
-        {financingType !== 'cash' && (
-          <div className={styles.monthlyCashFlow}>
-            <h5>Monthly Cash Flow Impact</h5>
-            <div className={styles.cashFlowBars}>
-              <div className={styles.cashFlowItem}>
-                <div className={styles.cashFlowLabel}>Loan Payment</div>
-                <div className={styles.cashFlowBar} style={{ width: '100%', backgroundColor: '#ff6b6b' }}>
-                  €{financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment}
+        {financingType !== 'cash' && (() => {
+          const monthlyPayment = financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment
+          const netImpact = results.avgMonthlySavings - monthlyPayment
+
+          // Calculate max value for scaling (use the maximum of payment and savings)
+          const maxValue = Math.max(monthlyPayment, results.avgMonthlySavings, Math.abs(netImpact))
+
+          // Calculate widths as percentages of max value (with minimum 15% for visibility)
+          const paymentWidth = Math.max((monthlyPayment / maxValue) * 100, 15)
+          const savingsWidth = Math.max((results.avgMonthlySavings / maxValue) * 100, 15)
+          const netWidth = Math.max((Math.abs(netImpact) / maxValue) * 100, 15)
+
+          return (
+            <div className={styles.monthlyCashFlow}>
+              <h5>Monthly Cash Flow Impact</h5>
+              <div className={styles.cashFlowBars}>
+                {/* Loan Payment */}
+                <div className={styles.cashFlowItem}>
+                  <div className={styles.cashFlowLabel}>Loan Payment</div>
+                  <div className={styles.cashFlowBarContainer}>
+                    <div
+                      className={styles.cashFlowBar}
+                      style={{
+                        width: `${paymentWidth}%`,
+                        background: 'linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%)'
+                      }}
+                    />
+                    <span className={styles.cashFlowValue}>
+                      €{monthlyPayment}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.cashFlowItem}>
-                <div className={styles.cashFlowLabel}>Solar Savings</div>
-                <div className={styles.cashFlowBar} style={{
-                  width: `${(results.avgMonthlySavings / (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment)) * 100}%`,
-                  backgroundColor: '#4caf50'
-                }}>
-                  €{results.avgMonthlySavings}
+
+                {/* Solar Savings */}
+                <div className={styles.cashFlowItem}>
+                  <div className={styles.cashFlowLabel}>Solar Savings</div>
+                  <div className={styles.cashFlowBarContainer}>
+                    <div
+                      className={styles.cashFlowBar}
+                      style={{
+                        width: `${savingsWidth}%`,
+                        background: 'linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)'
+                      }}
+                    />
+                    <span className={styles.cashFlowValue}>
+                      +€{results.avgMonthlySavings}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.cashFlowItem}>
-                <div className={styles.cashFlowLabel}>Net Monthly Impact</div>
-                <div className={styles.cashFlowBar} style={{
-                  width: `${Math.abs(results.avgMonthlySavings - (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment)) / (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment) * 100}%`,
-                  backgroundColor: results.avgMonthlySavings > (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment) ? '#4caf50' : '#ff6b6b'
-                }}>
-                  {results.avgMonthlySavings > (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment) ? '+' : ''}
-                  €{results.avgMonthlySavings - (financingType === 'kfw' ? financingScenarios.kfw.monthlyPayment : financingScenarios.standardLoan.monthlyPayment)}
+
+                {/* Net Monthly Impact */}
+                <div className={styles.cashFlowItem}>
+                  <div className={styles.cashFlowLabel}>Net Monthly Impact</div>
+                  <div className={styles.cashFlowBarContainer}>
+                    <div
+                      className={styles.cashFlowBar}
+                      style={{
+                        width: `${netWidth}%`,
+                        background: netImpact >= 0
+                          ? 'linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)'
+                          : 'linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%)'
+                      }}
+                    />
+                    <span className={styles.cashFlowValue} style={{
+                      color: netImpact >= 0 ? '#4caf50' : '#ff6b6b'
+                    }}>
+                      {netImpact >= 0 ? '+' : ''}€{Math.abs(netImpact).toFixed(0)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
     </div>
   )
