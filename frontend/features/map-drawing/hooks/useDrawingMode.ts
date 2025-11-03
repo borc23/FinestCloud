@@ -161,13 +161,23 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
   const createEventOverlay = useCallback((
     eventType: string,
     callback: (latLng: google.maps.LatLng, point: google.maps.Point, e: MouseEvent) => void
-  ) => {
+  ): { overlay: google.maps.OverlayView; abort: () => void } | null => {
     if (!map) return null
+
+    // AbortController for automatic cleanup if component unmounts during setup
+    const abortController = new AbortController()
 
     class EventOverlay extends google.maps.OverlayView {
       private handler: ((e: MouseEvent) => void) | null = null
+      private aborted = false
 
       onAdd() {
+        // Check if already aborted before proceeding
+        if (abortController.signal.aborted) {
+          this.aborted = true
+          return
+        }
+
         const panes = this.getPanes()
         if (!panes) return
 
@@ -187,13 +197,29 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
           if (latLng) callback(latLng, point, e)
         }
 
-        mapDiv.addEventListener(eventType, this.handler, { capture: true })
+        // Use AbortController signal for automatic cleanup
+        mapDiv.addEventListener(eventType, this.handler, {
+          capture: true,
+          signal: abortController.signal
+        })
       }
 
       onRemove() {
+        // Abort any pending operations
+        if (!this.aborted) {
+          abortController.abort()
+          this.aborted = true
+        }
+
+        // Manual cleanup as fallback (addEventListener with signal handles this automatically)
         const mapDiv = map.getDiv()
         if (this.handler) {
-          mapDiv.removeEventListener(eventType, this.handler, { capture: true })
+          try {
+            // This may throw if already removed by AbortController
+            mapDiv.removeEventListener(eventType, this.handler, { capture: true })
+          } catch (e) {
+            // Ignore - listener already removed by AbortController
+          }
           this.handler = null
         }
       }
@@ -203,7 +229,16 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       }
     }
 
-    return new EventOverlay()
+    const overlay: google.maps.OverlayView = new EventOverlay()
+
+    // Return overlay with abort function for emergency cleanup
+    return {
+      overlay,
+      abort: () => {
+        abortController.abort()
+        overlay.setMap(null)
+      }
+    }
   }, [map])
 
   useEffect(() => {
@@ -215,11 +250,11 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       return
     }
 
-    const clickOverlay = createEventOverlay('click', (latLng, point, e) => {
+    const clickOverlayWrapper = createEventOverlay('click', (latLng, point, e) => {
       if (pathRef.current.length >= 3 && markersRef.current[0]) {
         const firstMarkerPos = markersRef.current[0].getPosition()
-        if (firstMarkerPos && clickOverlay) {
-          const projection = clickOverlay.getProjection()
+        if (firstMarkerPos && clickOverlayWrapper) {
+          const projection = clickOverlayWrapper.overlay.getProjection()
           if (projection) {
             const firstMarkerPixel = projection.fromLatLngToContainerPixel(firstMarkerPos)
             if (firstMarkerPixel) {
@@ -241,14 +276,16 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       addPoint(latLng)
     })
 
-    if (clickOverlay) clickOverlay.setMap(map)
+    if (clickOverlayWrapper) clickOverlayWrapper.overlay.setMap(map)
 
     clickListenerRef.current = google.maps.event.addListener(map, 'click', (e: google.maps.MapMouseEvent) => {
       if (e.latLng) addPoint(e.latLng)
     })
 
     return () => {
-      if (clickOverlay) clickOverlay.setMap(null)
+      if (clickOverlayWrapper) {
+        clickOverlayWrapper.abort() // Use abort for proper cleanup
+      }
       if (clickListenerRef.current) {
         google.maps.event.removeListener(clickListenerRef.current)
         clickListenerRef.current = null
@@ -265,19 +302,21 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
       return
     }
 
-    const mouseMoveOverlay = createEventOverlay('mousemove', (latLng) => {
+    const mouseMoveOverlayWrapper = createEventOverlay('mousemove', (latLng) => {
       if (pathRef.current.length === 0) return
       updateTempLine(latLng)
     })
 
-    if (mouseMoveOverlay) mouseMoveOverlay.setMap(map)
+    if (mouseMoveOverlayWrapper) mouseMoveOverlayWrapper.overlay.setMap(map)
 
     mouseMoveListenerRef.current = google.maps.event.addListener(map, 'mousemove', (e: google.maps.MapMouseEvent) => {
       if (e.latLng && pathRef.current.length > 0) updateTempLine(e.latLng)
     })
 
     return () => {
-      if (mouseMoveOverlay) mouseMoveOverlay.setMap(null)
+      if (mouseMoveOverlayWrapper) {
+        mouseMoveOverlayWrapper.abort() // Use abort for proper cleanup
+      }
       if (mouseMoveListenerRef.current) {
         google.maps.event.removeListener(mouseMoveListenerRef.current)
         mouseMoveListenerRef.current = null
