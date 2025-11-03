@@ -121,9 +121,23 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   }, [isEditMode])
 
   useEffect(() => {
-    if (!map || !isEditMode || isDrawingPolygon) return
+    if (!map || !isEditMode || isDrawingPolygon) {
+      // Clean up any ongoing drag operation when exiting edit mode or starting drawing
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null)
+        polylineRef.current = null
+      }
+      isDraggingRef.current = false
+      selectedDuringDragRef.current = new Set()
+      dragHighlightedPolygonsRef.current.clear()
+      trailRef.current = []
+      return
+    }
 
-    const TRAIL_SAMPLE_INTERVAL = 2
+    // Constants for drag-to-select behavior
+    const TRAIL_SAMPLE_INTERVAL = 2  // Check polygon intersection every 2 points
+    const MAX_TRAIL_LENGTH = 10      // Maximum trail points to keep in memory
+
     let trailPointCount = 0
     const polygonListeners: google.maps.MapsEventListener[] = []
 
@@ -154,11 +168,18 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       })
     }
 
+    const cleanupPolygonListeners = () => {
+      polygonListeners.forEach(listener => {
+        google.maps.event.removeListener(listener)
+      })
+      polygonListeners.length = 0
+    }
+
     const handleMouseMove = (e: google.maps.MapMouseEvent) => {
       if (!isDraggingRef.current || !e.latLng || !polylineRef.current) return
 
       trailRef.current.push(e.latLng)
-      if (trailRef.current.length > 10) {
+      if (trailRef.current.length > MAX_TRAIL_LENGTH) {
         trailRef.current.shift()
       }
 
@@ -181,6 +202,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         draggable: false
       })
 
+      // Add mousemove listeners to all polygons for intersection detection
       allPolygonsRef.current.forEach((polygon) => {
         const listener = polygon.addListener('mousemove', handleMouseMove)
         polygonListeners.push(listener)
@@ -210,10 +232,8 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         draggable: !isEditMode
       })
 
-      polygonListeners.forEach(listener => {
-        google.maps.event.removeListener(listener)
-      })
-      polygonListeners.length = 0
+      // Clean up polygon listeners immediately after drag completes
+      cleanupPolygonListeners()
 
       // Restore original colors and add to selection
       dragHighlightedPolygonsRef.current.forEach((colors, polygon) => {
@@ -253,20 +273,31 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     document.addEventListener('mouseup', onMouseUp)
 
     return () => {
+      // Cleanup when effect re-runs or component unmounts
       google.maps.event.removeListener(downListener)
       google.maps.event.removeListener(moveListener)
       google.maps.event.removeListener(upListener)
       document.removeEventListener('mouseup', onMouseUp)
 
-      polygonListeners.forEach(listener => {
-        google.maps.event.removeListener(listener)
-      })
+      // Clean up any remaining polygon listeners (important for memory leak prevention)
+      cleanupPolygonListeners()
 
-      polylineRef.current?.setMap(null)
+      // Clean up visual artifacts
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null)
+        polylineRef.current = null
+      }
+
+      // Restore map draggability
       map.setOptions({
         draggable: true
       })
+
+      // Reset all state
       isDraggingRef.current = false
+      selectedDuringDragRef.current = new Set()
+      dragHighlightedPolygonsRef.current.clear()
+      trailRef.current = []
     }
   }, [map, isEditMode, isDrawingPolygon])
 
