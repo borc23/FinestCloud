@@ -4,9 +4,11 @@
  */
 
 import type { FinancialInputs, FinancialResults, YearlyBreakdown } from '@/features/financial/types/financial'
+import { safeDivide } from './validation'
 
 /**
  * Calculate comprehensive financial analysis for solar system (German market)
+ * @throws {Error} If critical input values are invalid
  */
 export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   const {
@@ -22,6 +24,20 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     discountRate = 4 // 4% discount rate for NPV
   } = inputs
 
+  // Validate critical inputs to prevent calculation errors
+  if (!Number.isFinite(systemSize) || systemSize <= 0) {
+    throw new Error('System size must be a positive number')
+  }
+  if (!Number.isFinite(annualProduction) || annualProduction <= 0) {
+    throw new Error('Annual production must be a positive number')
+  }
+  if (!Number.isFinite(systemCost.totalCost) || systemCost.totalCost <= 0) {
+    throw new Error('System cost must be a positive number')
+  }
+  if (!Number.isFinite(utilityRates.costPerKwh) || utilityRates.costPerKwh <= 0) {
+    throw new Error('Electricity cost must be a positive number')
+  }
+
   // Calculate gross and net system costs
   const grossSystemCost = systemCost.totalCost
 
@@ -35,8 +51,8 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   const totalIncentives = vatSavings + stateGrant + municipalGrant
   const netSystemCost = grossSystemCost - totalIncentives
 
-  // Calculate effective cost per watt
-  const effectiveCostPerWatt = netSystemCost / (systemSize * 1000) // convert kW to W
+  // Calculate effective cost per watt (safe division to prevent divide by zero)
+  const effectiveCostPerWatt = safeDivide(netSystemCost, systemSize * 1000, 0) // convert kW to W
 
   // Self-consumption and feed-in amounts
   const selfConsumptionAmount = annualProduction * (selfConsumptionRate / 100)
@@ -109,28 +125,28 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   // Average annual savings over analysis period
   const annualSavings = totalSavings / analysisYears
 
-  // Calculate ROI (including feed-in revenue)
+  // Calculate ROI (including feed-in revenue) - safe division
   const totalReturn = totalSavings + totalFeedInRevenue
-  const roi = ((totalReturn - netSystemCost) / netSystemCost) * 100
+  const roi = safeDivide((totalReturn - netSystemCost) * 100, netSystemCost, 0)
 
   // Calculate IRR (Internal Rate of Return)
   const irr = calculateIRR(netSystemCost, yearlyBreakdown)
 
-  // Calculate energy offset percentage (German household average: ~3,500 kWh/year)
+  // Calculate energy offset percentage (German household average: ~3,500 kWh/year) - safe division
   const avgHouseholdUsage = utilityRates.avgMonthlyBill
-    ? (utilityRates.avgMonthlyBill * 12) / utilityRates.costPerKwh
+    ? safeDivide(utilityRates.avgMonthlyBill * 12, utilityRates.costPerKwh, 3500)
     : 3500 // typical German household
-  const energyOffsetPercentage = Math.min((selfConsumptionAmount / avgHouseholdUsage) * 100, 100)
+  const energyOffsetPercentage = Math.min(safeDivide(selfConsumptionAmount * 100, avgHouseholdUsage, 0), 100)
 
   // Calculate CO2 offset (485g CO2 per kWh is German grid average 2024)
   const lifetimeCO2Offset = (annualProduction * analysisYears * 0.485) / 1000 // convert kg to tons
 
-  // Monthly bill calculations
-  const avgMonthlyBillBefore = utilityRates.avgMonthlyBill || (avgHouseholdUsage * utilityRates.costPerKwh) / 12
+  // Monthly bill calculations - safe divisions
+  const avgMonthlyBillBefore = utilityRates.avgMonthlyBill || safeDivide(avgHouseholdUsage * utilityRates.costPerKwh, 12, 0)
   const remainingPurchase = Math.max(0, avgHouseholdUsage - selfConsumptionAmount)
-  const avgMonthlyBillAfter = (remainingPurchase * utilityRates.costPerKwh) / 12
+  const avgMonthlyBillAfter = safeDivide(remainingPurchase * utilityRates.costPerKwh, 12, 0)
   const avgMonthlySavings = avgMonthlyBillBefore - avgMonthlyBillAfter
-  const avgMonthlyFeedInRevenue = firstYearFeedInRevenue / 12
+  const avgMonthlyFeedInRevenue = safeDivide(firstYearFeedInRevenue, 12, 0)
 
   // Loan calculations if applicable (including KfW loans)
   let monthlyLoanPayment: number | undefined
@@ -138,18 +154,20 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
 
   if (financing?.type === 'loan' || financing?.type === 'kfw') {
     const principal = financing.loanAmount || netSystemCost
-    const monthlyRate = (financing.interestRate || (financing.type === 'kfw' ? 2.5 : 4.5)) / 100 / 12
+    const monthlyRate = safeDivide((financing.interestRate || (financing.type === 'kfw' ? 2.5 : 4.5)), 100 * 12, 0)
     const numPayments = (financing.loanTerm || 15) * 12
 
-    if (monthlyRate > 0) {
-      // Standard loan payment formula
-      monthlyLoanPayment =
-        (principal * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
-        (Math.pow(1 + monthlyRate, numPayments) - 1)
+    if (monthlyRate > 0 && numPayments > 0) {
+      // Standard loan payment formula - safe calculation
+      const powerTerm = Math.pow(1 + monthlyRate, numPayments)
+      monthlyLoanPayment = safeDivide(principal * monthlyRate * powerTerm, powerTerm - 1, 0)
       totalLoanCost = monthlyLoanPayment * numPayments
-    } else {
-      monthlyLoanPayment = principal / numPayments
+    } else if (numPayments > 0) {
+      monthlyLoanPayment = safeDivide(principal, numPayments, 0)
       totalLoanCost = principal
+    } else {
+      monthlyLoanPayment = 0
+      totalLoanCost = 0
     }
   }
 

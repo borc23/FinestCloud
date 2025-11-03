@@ -8,6 +8,7 @@ import type { ShadeImpactSummary } from '@/features/solar-analysis/types/solar-a
 import { calculateFinancials, estimateSystemCost } from '@/features/financial/utils/financialCalculations'
 import { generateSolarReport, downloadPDF } from '@/features/reports/utils/pdfGenerator'
 import { validateGermanProduction } from '@/features/solar-analysis/utils/germanSolarCalculations'
+import { validateFinancialInputs, sanitizeNumericInput, type ValidationResult } from '@/features/financial/utils/validation'
 
 interface FinancialCalculatorProps {
   annualProduction: number // kWh/year (already adjusted for shade)
@@ -38,6 +39,9 @@ export default function FinancialCalculator({
   const [discountRate, setDiscountRate] = useState(4) // % discount rate for NPV
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  // Validation state
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
+
   // Financing options
   const [financingType, setFinancingType] = useState<'cash' | 'kfw' | 'loan'>('cash')
   const [downPayment, setDownPayment] = useState(0) // € down payment for loans
@@ -48,6 +52,49 @@ export default function FinancialCalculator({
   // Calculate net system cost after incentives for financing
   const vatSavingsAmount = systemSize <= 30 ? systemCostInput * 0.19 : 0
   const netSystemCost = systemCostInput - vatSavingsAmount - stateGrant - municipalGrant
+
+  // Validate all inputs before calculations
+  const validation = useMemo(() => {
+    const result = validateFinancialInputs({
+      systemSize,
+      annualProduction,
+      costPerKwh,
+      avgMonthlyBill,
+      escalationRate,
+      systemCost: systemCostInput,
+      feedInTariff,
+      selfConsumptionRate,
+      stateGrant,
+      municipalGrant,
+      discountRate,
+      downPayment: financingType !== 'cash' ? downPayment : undefined,
+      loanTerm: financingType !== 'cash' ? loanTerm : undefined,
+      interestRate: financingType !== 'cash' ? (financingType === 'kfw' ? kfwInterestRate : customInterestRate) : undefined,
+      netSystemCost
+    })
+
+    // Update validation state
+    setValidationResult(result)
+    return result
+  }, [
+    systemSize,
+    annualProduction,
+    costPerKwh,
+    avgMonthlyBill,
+    escalationRate,
+    systemCostInput,
+    feedInTariff,
+    selfConsumptionRate,
+    stateGrant,
+    municipalGrant,
+    discountRate,
+    financingType,
+    downPayment,
+    loanTerm,
+    kfwInterestRate,
+    customInterestRate,
+    netSystemCost
+  ])
 
   // Calculate financials
   const financialInputs: FinancialInputs = useMemo(() => ({
@@ -79,7 +126,20 @@ export default function FinancialCalculator({
     discountRate
   }), [annualProduction, systemSize, costPerKwh, avgMonthlyBill, escalationRate, systemCostInput, feedInTariff, selfConsumptionRate, stateGrant, municipalGrant, discountRate, financingType, downPayment, loanTerm, kfwInterestRate, customInterestRate, netSystemCost])
 
-  const results = useMemo(() => calculateFinancials(financialInputs), [financialInputs])
+  const results = useMemo(() => {
+    // Only calculate if validation passes
+    if (!validation.isValid) {
+      return null
+    }
+
+    try {
+      return calculateFinancials(financialInputs)
+    } catch (error) {
+      console.error('Financial calculation error:', error)
+      // Return null on calculation error - error UI will be shown
+      return null
+    }
+  }, [financialInputs, validation.isValid])
 
   // Calculate financing comparison scenarios
   const financingScenarios = useMemo(() => {
@@ -260,6 +320,35 @@ export default function FinancialCalculator({
       </div>
 
       <div className={styles.scrollableContent}>
+        {/* Validation Errors */}
+        {!validation.isValid && validation.errors.length > 0 && (
+          <div className={styles.errorBox}>
+            <div className={styles.errorIcon}>⛔</div>
+            <div className={styles.errorContent}>
+              <div className={styles.errorTitle}>Invalid Inputs</div>
+              {validation.errors.map((error, idx) => (
+                <p key={idx} className={styles.errorText}>{error}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Validation Warnings */}
+        {validation.warnings.length > 0 && (
+          <div className={styles.warningBox}>
+            <div className={styles.warningIcon}>⚠️</div>
+            <div className={styles.warningContent}>
+              <div className={styles.warningTitle}>Please Review</div>
+              {validation.warnings.map((warning, idx) => (
+                <p key={idx} className={styles.warningText}>{warning}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Only show results if validation passes */}
+        {results && (
+          <>
         {/* Key Metrics */}
         <div className={styles.keyMetrics}>
         <div className={styles.metricCard}>
@@ -650,7 +739,7 @@ export default function FinancialCalculator({
                       type="number"
                       className={styles.input}
                       value={downPayment}
-                      onChange={(e) => setDownPayment(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setDownPayment(sanitizeNumericInput(e.target.value, 0))}
                       step="1000"
                       min="0"
                       max={netSystemCost}
@@ -668,7 +757,7 @@ export default function FinancialCalculator({
                       type="number"
                       className={styles.input}
                       value={loanTerm}
-                      onChange={(e) => setLoanTerm(parseInt(e.target.value) || 15)}
+                      onChange={(e) => setLoanTerm(Math.round(sanitizeNumericInput(e.target.value, 15)))}
                       step="1"
                       min="5"
                       max="25"
@@ -684,7 +773,7 @@ export default function FinancialCalculator({
                         type="number"
                         className={styles.input}
                         value={kfwInterestRate}
-                        onChange={(e) => setKfwInterestRate(parseFloat(e.target.value) || 2.5)}
+                        onChange={(e) => setKfwInterestRate(sanitizeNumericInput(e.target.value, 2.5))}
                         step="0.1"
                         min="2.0"
                         max="3.5"
@@ -702,7 +791,7 @@ export default function FinancialCalculator({
                         type="number"
                         className={styles.input}
                         value={customInterestRate}
-                        onChange={(e) => setCustomInterestRate(parseFloat(e.target.value) || 4.5)}
+                        onChange={(e) => setCustomInterestRate(sanitizeNumericInput(e.target.value, 4.5))}
                         step="0.1"
                         min="0"
                         max="15"
@@ -723,7 +812,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={costPerKwh}
-                  onChange={(e) => setCostPerKwh(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setCostPerKwh(sanitizeNumericInput(e.target.value, 0.37))}
                   step="0.01"
                   min="0"
                 />
@@ -737,7 +826,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={avgMonthlyBill}
-                  onChange={(e) => setAvgMonthlyBill(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setAvgMonthlyBill(sanitizeNumericInput(e.target.value, 130))}
                   step="10"
                   min="0"
                 />
@@ -751,7 +840,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={escalationRate}
-                  onChange={(e) => setEscalationRate(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setEscalationRate(sanitizeNumericInput(e.target.value, 4))}
                   step="0.5"
                   min="0"
                   max="10"
@@ -766,7 +855,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={systemCostInput}
-                  onChange={(e) => setSystemCostInput(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setSystemCostInput(sanitizeNumericInput(e.target.value, estimateSystemCost(systemSize)))}
                   step="100"
                   min="0"
                 />
@@ -780,7 +869,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={feedInTariff}
-                  onChange={(e) => setFeedInTariff(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setFeedInTariff(sanitizeNumericInput(e.target.value, 0.1623))}
                   step="0.001"
                   min="0"
                 />
@@ -794,7 +883,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={selfConsumptionRate}
-                  onChange={(e) => setSelfConsumptionRate(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setSelfConsumptionRate(sanitizeNumericInput(e.target.value, 30))}
                   step="5"
                   min="0"
                   max="100"
@@ -809,7 +898,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={stateGrant}
-                  onChange={(e) => setStateGrant(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setStateGrant(sanitizeNumericInput(e.target.value, 0))}
                   step="100"
                   min="0"
                 />
@@ -823,7 +912,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={municipalGrant}
-                  onChange={(e) => setMunicipalGrant(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setMunicipalGrant(sanitizeNumericInput(e.target.value, 0))}
                   step="100"
                   min="0"
                 />
@@ -837,7 +926,7 @@ export default function FinancialCalculator({
                   type="number"
                   className={styles.input}
                   value={discountRate}
-                  onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setDiscountRate(sanitizeNumericInput(e.target.value, 4))}
                   step="0.5"
                   min="0"
                   max="15"
@@ -871,16 +960,19 @@ export default function FinancialCalculator({
         </div>
       )}
 
-      {/* Disclaimer */}
-      <div className={styles.disclaimer}>
-        <p>
-          * Estimates based on {systemSize.toFixed(1)}kW system producing{' '}
-          {annualProduction.toLocaleString()} kWh/year. Actual savings may vary based on usage,
-          utility rates, and system performance. {systemSize <= 30 &&
-          '0% VAT applies to systems ≤30kWp (since Jan 2023).'}
-          {' '}Typical German solar systems achieve 850-1,050 full load hours annually (~10% capacity factor).
-        </p>
-      </div>
+          </>
+        )}
+
+        {/* Disclaimer */}
+        <div className={styles.disclaimer}>
+          <p>
+            * Estimates based on {systemSize.toFixed(1)}kW system producing{' '}
+            {annualProduction.toLocaleString()} kWh/year. Actual savings may vary based on usage,
+            utility rates, and system performance. {systemSize <= 30 &&
+            '0% VAT applies to systems ≤30kWp (since Jan 2023).'}
+            {' '}Typical German solar systems achieve 850-1,050 full load hours annually (~10% capacity factor).
+          </p>
+        </div>
       </div>
     </div>
   )
