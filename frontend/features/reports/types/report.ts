@@ -5,7 +5,6 @@
 
 import type { FinancialResults } from './financial'
 import type { ElectricalDesign } from './electrical'
-import type { ShadeImpactSummary } from './solar-api'
 
 export interface CustomerInfo {
   name: string
@@ -25,7 +24,6 @@ export interface SiteInfo {
   roofMaterial?: string // e.g., "Tile", "Metal", "Membrane"
   roofAge?: number // years
   roofCondition?: 'excellent' | 'good' | 'fair' | 'poor'
-  shadeAnalysis?: ShadeImpactSummary
 }
 
 export interface SystemSpecifications {

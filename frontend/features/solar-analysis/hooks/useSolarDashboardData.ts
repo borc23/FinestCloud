@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { usePanelData } from '@/features/solar-panels/hooks/usePanelData'
 import { usePVWatts } from '@/features/solar-analysis/hooks/usePVWatts'
-import { useSolarShade } from '@/features/solar-analysis/hooks/useSolarShade'
 import { isComplexData } from '@/features/solar-analysis/types/result_dashboard'
 import type { SolarResultsDashboardProps } from '@/features/solar-analysis/types/result_dashboard'
 
@@ -74,26 +73,9 @@ export function useSolarDashboardData(props: SolarResultsDashboardProps) {
     autoFetch: true
   })
 
-  // Fetch shade analysis
-  const { shadeData, getShadeImpact } = useSolarShade({
-    latitude: location?.lat,
-    longitude: location?.lng,
-    autoFetch: true
-  })
-
-  // Calculate production with shade adjustment
-  const rawAnnualProduction = pvwattsData?.annual_production ||
+  // Use PVWatts production directly (no shade adjustment)
+  const annualProduction = pvwattsData?.annual_production ||
     (!isComplexData(props) ? props.annualProduction : undefined)
-
-  const shadeLossFactor = shadeData?.shadeLossFactor ?? 1.0
-  const annualProduction = rawAnnualProduction
-    ? Math.round(rawAnnualProduction * shadeLossFactor)
-    : undefined
-
-  // Calculate shade impact
-  const shadeImpact = annualProduction && shadeData && panelData
-    ? getShadeImpact(panelData.totalPanels, rawAnnualProduction!, 0.37)
-    : null
 
   return {
     panelData,
@@ -101,7 +83,6 @@ export function useSolarDashboardData(props: SolarResultsDashboardProps) {
     pvwattsData,
     isLoading,
     annualProduction,
-    shadeImpact,
     costEstimate: props.costEstimate
   }
 }

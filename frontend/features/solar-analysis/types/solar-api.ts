@@ -173,56 +173,9 @@ export interface DataLayersResponse {
   imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
-// Shade analysis types
-export interface ShadeAnalysis {
-  buildingInsights: BuildingInsights
-  dataLayers?: DataLayersResponse
-  shadePercentage: number
-  annualShadeHours: number
-  maxSunshineHours: number
-  shadeLossFactor: number // 0-1, multiply by production
-  roofSegmentShade: RoofSegmentShade[]
-}
-
-export interface RoofSegmentShade {
-  segmentIndex: number
-  pitchDegrees: number
-  azimuthDegrees: number
-  shadePercentage: number
-  sunshineHoursPerYear: number
-  shadeLossFactor: number
-  areaMeters2: number
-}
-
-// Panel shade data
-export interface PanelShadeData {
-  panelIndex: number
-  center: LatLng
-  segmentIndex: number
-  shadePercentage: number
-  shadeLossFactor: number
-  yearlyEnergyDcKwh: number
-  adjustedYearlyEnergyDcKwh: number
-}
-
 // Service response types
-export interface SolarShadeResponse {
-  success: boolean
-  data?: ShadeAnalysis
-  error?: string
-}
-
 export interface DataLayersApiResponse {
   success: boolean
   data?: DataLayersResponse
   error?: string
-}
-
-export interface ShadeImpactSummary {
-  totalPanels: number
-  averageShadePercentage: number
-  totalShadeLossFactor: number
-  estimatedAnnualLoss: number // kWh
-  estimatedFinancialLoss: number // €
-  recommendation: string
 }

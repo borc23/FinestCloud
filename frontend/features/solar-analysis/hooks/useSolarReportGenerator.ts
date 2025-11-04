@@ -3,7 +3,6 @@ import { generateSolarReport, downloadPDF } from '@/features/reports/utils/pdfGe
 import { calculateFinancials, estimateSystemCost } from '@/features/financial/utils/financialCalculations'
 import { generateMonthlyEstimate, generate25YearProjection } from '@/features/solar-analysis/utils/solarCalculations'
 import type { ReportData } from '@/features/reports/types/report'
-import type { ShadeImpactSummary } from '@/features/solar-analysis/types/solar-api'
 
 interface PanelData {
   totalPanels: number
@@ -23,7 +22,6 @@ interface UseSolarReportGeneratorProps {
   annualProduction?: number
   location?: Location
   costEstimate?: number
-  shadeImpact: ShadeImpactSummary | null
   capacityFactor?: number
 }
 
@@ -35,7 +33,6 @@ export function useSolarReportGenerator({
   annualProduction,
   location,
   costEstimate,
-  shadeImpact,
   capacityFactor
 }: UseSolarReportGeneratorProps) {
 
@@ -71,8 +68,7 @@ export function useSolarReportGenerator({
         address: location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'Installation Address',
         location: location,
         roofType: 'Pitched',
-        roofCondition: 'good',
-        shadeAnalysis: shadeImpact || undefined
+        roofCondition: 'good'
       },
       systemSpecs: {
         panelCount: panelData.totalPanels,
@@ -125,7 +121,7 @@ export function useSolarReportGenerator({
 
     const doc = generateSolarReport(reportData)
     downloadPDF(doc, `solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`)
-  }, [annualProduction, panelData, location, costEstimate, shadeImpact, capacityFactor])
+  }, [annualProduction, panelData, location, costEstimate, capacityFactor])
 
   return { handleGeneratePDF }
 }

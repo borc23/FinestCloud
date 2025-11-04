@@ -9,7 +9,6 @@
 import { useState, useMemo } from 'react'
 import styles from './FinancialCalculator.module.css'
 import type { FinancialInputs } from '@/features/financial/types/financial'
-import type { ShadeImpactSummary } from '@/features/solar-analysis/types/solar-api'
 import { calculateFinancials, estimateSystemCost } from '@/features/financial/utils/financialCalculations'
 import { validateGermanProduction } from '@/features/solar-analysis/utils/germanSolarCalculations'
 import { validateFinancialInputs } from '@/features/financial/utils/validation'
@@ -22,11 +21,10 @@ import FinancialInputForm from './FinancialInputForm'
 import ValidationDisplay from './ValidationDisplay'
 
 interface FinancialCalculatorProps {
-  annualProduction: number // kWh/year (already adjusted for shade)
+  annualProduction: number // kWh/year
   systemSize: number // kW
   panelCount?: number
   panelWattage?: number
-  shadeImpact?: ShadeImpactSummary | null
   onClose?: () => void
 }
 
@@ -35,7 +33,6 @@ export default function FinancialCalculator({
   systemSize,
   panelCount,
   panelWattage = 400,
-  shadeImpact,
   onClose
 }: FinancialCalculatorProps) {
   // User inputs with German market defaults
@@ -81,8 +78,7 @@ export default function FinancialCalculator({
       downPayment: financingType !== 'cash' ? downPayment : undefined,
       loanTerm: financingType !== 'cash' ? loanTerm : undefined,
       interestRate: financingType !== 'cash' ? (financingType === 'kfw' ? kfwInterestRate : customInterestRate) : undefined,
-      netSystemCost,
-      shadePercentage: shadeImpact?.averageShadePercentage
+      netSystemCost
     })
     setValidationResult(result)
     return result
@@ -90,7 +86,7 @@ export default function FinancialCalculator({
     systemSize, annualProduction, costPerKwh, avgMonthlyBill, escalationRate,
     systemCostInput, feedInTariff, selfConsumptionRate, stateGrant, municipalGrant,
     discountRate, financingType, downPayment, loanTerm, kfwInterestRate,
-    customInterestRate, netSystemCost, shadeImpact
+    customInterestRate, netSystemCost
   ])
 
   // Calculate financials
@@ -341,66 +337,6 @@ export default function FinancialCalculator({
                 </div>
               </div>
             </div>
-
-            {/* Shade Analysis */}
-            {shadeImpact && shadeImpact.averageShadePercentage > 0 && (
-              <div className={styles.section}>
-                <h4 className={styles.sectionTitle}>☀️ Shade Analysis</h4>
-
-                {/* Critical warning for excessive shade */}
-                {shadeImpact.averageShadePercentage > 25 && (
-                  <div className={styles.warningBox} style={{ marginBottom: '1rem' }}>
-                    <div className={styles.warningIcon}>🚨</div>
-                    <div className={styles.warningContent}>
-                      <div className={styles.warningTitle}>CRITICAL: Excessive Shade Loss</div>
-                      <p className={styles.warningText}>
-                        Your {shadeImpact.averageShadePercentage.toFixed(1)}% shade loss is extremely high.
-                        Typical residential systems experience 5-15% shade loss.
-                      </p>
-                      <p className={styles.warningText}>
-                        <strong>This shade is costing you approximately:</strong>
-                        <br />• €{shadeImpact.estimatedFinancialLoss.toFixed(0)}/year in lost self-consumption
-                        <br />• €{(shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year in lost feed-in revenue
-                        <br />• <strong>Total: €{(shadeImpact.estimatedFinancialLoss + shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year</strong>
-                        <br />• <strong>25-Year Loss: €{((shadeImpact.estimatedFinancialLoss + shadeImpact.estimatedAnnualLoss * feedInTariff) * 25).toLocaleString()}</strong>
-                      </p>
-                      <p className={styles.warningText}>
-                        <strong>Recommendations:</strong> Consider alternative roof placement, tree removal,
-                        or microinverters to mitigate this massive energy loss.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className={styles.shadeInfo}>
-                  <div className={styles.shadeItem}>
-                    <span className={styles.shadeLabel}>Average Shade Impact</span>
-                    <span className={styles.shadeValue}>{shadeImpact.averageShadePercentage.toFixed(1)}%</span>
-                  </div>
-                  <div className={styles.shadeItem}>
-                    <span className={styles.shadeLabel}>Annual Energy Loss</span>
-                    <span className={styles.shadeValue}>{shadeImpact.estimatedAnnualLoss.toLocaleString()} kWh</span>
-                  </div>
-                  <div className={styles.shadeItem}>
-                    <span className={styles.shadeLabel}>Annual Financial Loss (Self-Consumption)</span>
-                    <span className={styles.shadeValue}>€{shadeImpact.estimatedFinancialLoss.toFixed(0)}/year</span>
-                  </div>
-                  <div className={styles.shadeItem}>
-                    <span className={styles.shadeLabel}>Annual Feed-In Revenue Loss</span>
-                    <span className={styles.shadeValue}>€{(shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year</span>
-                  </div>
-                  <div className={styles.shadeItem}>
-                    <span className={styles.shadeLabel}>Total Annual Loss</span>
-                    <span className={styles.shadeValue} style={{ fontWeight: 'bold', color: '#ef4444' }}>
-                      €{(shadeImpact.estimatedFinancialLoss + shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year
-                    </span>
-                  </div>
-                  <div className={styles.shadeRecommendation}>
-                    {shadeImpact.recommendation}
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
 

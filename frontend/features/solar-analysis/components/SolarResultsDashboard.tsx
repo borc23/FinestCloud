@@ -28,7 +28,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     pvwattsData,
     isLoading,
     annualProduction,
-    shadeImpact,
     costEstimate
   } = useSolarDashboardData(props)
 
@@ -53,7 +52,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     annualProduction,
     location,
     costEstimate,
-    shadeImpact,
     capacityFactor: pvwattsData?.capacity_factor
   })
 
@@ -103,22 +101,7 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
                 />
               )}
               {pvwattsData && (
-                <>
-                  {shadeImpact && shadeImpact.averageShadePercentage > 0 ? (
-                    <MetricItem
-                      label="Capacity Factor (actual with shade)"
-                      value={`${(pvwattsData.capacity_factor * (1 - shadeImpact.averageShadePercentage / 100)).toFixed(1)}%`}
-                    />
-                  ) : (
-                    <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
-                  )}
-                </>
-              )}
-              {shadeImpact && shadeImpact.averageShadePercentage > 0 && (
-                <MetricItem
-                  label="Shade Impact"
-                  value={`${shadeImpact.averageShadePercentage.toFixed(1)}% (-${shadeImpact.estimatedAnnualLoss.toLocaleString()} kWh)`}
-                />
+                <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
               )}
               {costEstimate && (
                 <MetricItem label="Estimated Cost" value={`$${costEstimate.toLocaleString()}`} />
@@ -155,7 +138,6 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
           systemSize={panelData.systemSize}
           panelCount={panelData.totalPanels}
           panelWattage={panelData.panelWattage}
-          shadeImpact={shadeImpact}
           onClose={() => {
             setShowFinancials(false)
             setIsMinimized(false)
