@@ -39,6 +39,9 @@ const KeyMetrics = memo(function KeyMetrics({ results, discountRate }: KeyMetric
       <div className={styles.metricCard}>
         <div className={styles.metricLabel}>ROI</div>
         <div className={`${styles.metricValue} ${styles.roi}`}>{results.roi}%</div>
+        <div className={styles.metricHint}>
+          ({results.twentyFiveYearSavings.toLocaleString()} + {results.twentyFiveYearFeedInRevenue.toLocaleString()} - {results.netSystemCost.toLocaleString()}) / {results.netSystemCost.toLocaleString()}
+        </div>
       </div>
 
       <div className={styles.metricCard}>

@@ -15,6 +15,19 @@ interface ValidationDisplayProps {
 const ValidationDisplay = memo(function ValidationDisplay({ validation }: ValidationDisplayProps) {
   return (
     <>
+      {/* Critical Warnings (e.g., excessive shade) */}
+      {validation.criticalWarnings && validation.criticalWarnings.length > 0 && (
+        <div className={styles.errorBox} style={{ borderColor: '#ef4444', backgroundColor: '#fef2f2' }}>
+          <div className={styles.errorIcon}>🚨</div>
+          <div className={styles.errorContent}>
+            <div className={styles.errorTitle} style={{ color: '#dc2626' }}>Critical Warning</div>
+            {validation.criticalWarnings.map((warning, idx) => (
+              <p key={idx} className={styles.errorText} style={{ color: '#991b1b' }}>{warning}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Validation Errors */}
       {!validation.isValid && validation.errors.length > 0 && (
         <div className={styles.errorBox}>
@@ -46,7 +59,8 @@ const ValidationDisplay = memo(function ValidationDisplay({ validation }: Valida
   // Only re-render if validation state actually changed
   return prevProps.validation.isValid === nextProps.validation.isValid &&
          prevProps.validation.errors.length === nextProps.validation.errors.length &&
-         prevProps.validation.warnings.length === nextProps.validation.warnings.length
+         prevProps.validation.warnings.length === nextProps.validation.warnings.length &&
+         (prevProps.validation.criticalWarnings?.length ?? 0) === (nextProps.validation.criticalWarnings?.length ?? 0)
 })
 
 export default ValidationDisplay

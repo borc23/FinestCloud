@@ -81,7 +81,8 @@ export default function FinancialCalculator({
       downPayment: financingType !== 'cash' ? downPayment : undefined,
       loanTerm: financingType !== 'cash' ? loanTerm : undefined,
       interestRate: financingType !== 'cash' ? (financingType === 'kfw' ? kfwInterestRate : customInterestRate) : undefined,
-      netSystemCost
+      netSystemCost,
+      shadePercentage: shadeImpact?.averageShadePercentage
     })
     setValidationResult(result)
     return result
@@ -89,7 +90,7 @@ export default function FinancialCalculator({
     systemSize, annualProduction, costPerKwh, avgMonthlyBill, escalationRate,
     systemCostInput, feedInTariff, selfConsumptionRate, stateGrant, municipalGrant,
     discountRate, financingType, downPayment, loanTerm, kfwInterestRate,
-    customInterestRate, netSystemCost
+    customInterestRate, netSystemCost, shadeImpact
   ])
 
   // Calculate financials
@@ -317,17 +318,25 @@ export default function FinancialCalculator({
               <h4 className={styles.sectionTitle}>Feed-in Tariff Revenue</h4>
               <div className={styles.feedInInfo}>
                 <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>Grid Feed-in per Year</span>
+                  <span className={styles.feedInLabel}>Grid Feed-in per Year (Year 1)</span>
                   <span className={styles.feedInValue}>{results.gridFeedInAmount.toLocaleString()} kWh</span>
                 </div>
                 <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>Tariff Rate ({(feedInTariff * 100).toFixed(1)} ct/kWh)</span>
+                  <span className={styles.feedInLabel}>Tariff Rate ({(feedInTariff * 100).toFixed(2)} ct/kWh, fixed)</span>
                   <span className={styles.feedInValue}>€{results.firstYearFeedInRevenue} / year</span>
                 </div>
                 <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>25-Year Feed-in Revenue</span>
+                  <span className={styles.feedInLabel}>25-Year Feed-in Revenue (with degradation)</span>
                   <span className={`${styles.feedInValue} ${styles.feedInHighlight}`}>
                     €{results.twentyFiveYearFeedInRevenue.toLocaleString()}
+                  </span>
+                </div>
+                <div className={styles.feedInRow}>
+                  <span className={styles.feedInLabel} style={{ fontSize: '0.85em', color: '#666' }}>
+                    Without degradation: €{(results.firstYearFeedInRevenue * 25).toLocaleString()}
+                  </span>
+                  <span className={styles.feedInValue} style={{ fontSize: '0.85em', color: '#666' }}>
+                    Difference: -€{((results.firstYearFeedInRevenue * 25) - results.twentyFiveYearFeedInRevenue).toLocaleString()} (0.5% annual degradation)
                   </span>
                 </div>
               </div>
@@ -337,6 +346,32 @@ export default function FinancialCalculator({
             {shadeImpact && shadeImpact.averageShadePercentage > 0 && (
               <div className={styles.section}>
                 <h4 className={styles.sectionTitle}>☀️ Shade Analysis</h4>
+
+                {/* Critical warning for excessive shade */}
+                {shadeImpact.averageShadePercentage > 25 && (
+                  <div className={styles.warningBox} style={{ marginBottom: '1rem' }}>
+                    <div className={styles.warningIcon}>🚨</div>
+                    <div className={styles.warningContent}>
+                      <div className={styles.warningTitle}>CRITICAL: Excessive Shade Loss</div>
+                      <p className={styles.warningText}>
+                        Your {shadeImpact.averageShadePercentage.toFixed(1)}% shade loss is extremely high.
+                        Typical residential systems experience 5-15% shade loss.
+                      </p>
+                      <p className={styles.warningText}>
+                        <strong>This shade is costing you approximately:</strong>
+                        <br />• €{shadeImpact.estimatedFinancialLoss.toFixed(0)}/year in lost self-consumption
+                        <br />• €{(shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year in lost feed-in revenue
+                        <br />• <strong>Total: €{(shadeImpact.estimatedFinancialLoss + shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year</strong>
+                        <br />• <strong>25-Year Loss: €{((shadeImpact.estimatedFinancialLoss + shadeImpact.estimatedAnnualLoss * feedInTariff) * 25).toLocaleString()}</strong>
+                      </p>
+                      <p className={styles.warningText}>
+                        <strong>Recommendations:</strong> Consider alternative roof placement, tree removal,
+                        or microinverters to mitigate this massive energy loss.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className={styles.shadeInfo}>
                   <div className={styles.shadeItem}>
                     <span className={styles.shadeLabel}>Average Shade Impact</span>
@@ -347,8 +382,18 @@ export default function FinancialCalculator({
                     <span className={styles.shadeValue}>{shadeImpact.estimatedAnnualLoss.toLocaleString()} kWh</span>
                   </div>
                   <div className={styles.shadeItem}>
-                    <span className={styles.shadeLabel}>Financial Loss</span>
+                    <span className={styles.shadeLabel}>Annual Financial Loss (Self-Consumption)</span>
                     <span className={styles.shadeValue}>€{shadeImpact.estimatedFinancialLoss.toFixed(0)}/year</span>
+                  </div>
+                  <div className={styles.shadeItem}>
+                    <span className={styles.shadeLabel}>Annual Feed-In Revenue Loss</span>
+                    <span className={styles.shadeValue}>€{(shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year</span>
+                  </div>
+                  <div className={styles.shadeItem}>
+                    <span className={styles.shadeLabel}>Total Annual Loss</span>
+                    <span className={styles.shadeValue} style={{ fontWeight: 'bold', color: '#ef4444' }}>
+                      €{(shadeImpact.estimatedFinancialLoss + shadeImpact.estimatedAnnualLoss * feedInTariff).toFixed(0)}/year
+                    </span>
                   </div>
                   <div className={styles.shadeRecommendation}>
                     {shadeImpact.recommendation}

@@ -94,7 +94,7 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
 
             <div className={styles.details}>
               <MetricItem label="Panel Count" value={panelData.totalPanels} />
-              <MetricItem label="System Size" value={`${panelData.systemSize.toFixed(1)} kW`} />
+              <MetricItem label="System Size" value={`${panelData.systemSize.toFixed(3)} kW`} />
               {annualProduction && (
                 <MetricItem
                   label="Annual Production"
@@ -103,7 +103,16 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
                 />
               )}
               {pvwattsData && (
-                <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
+                <>
+                  {shadeImpact && shadeImpact.averageShadePercentage > 0 ? (
+                    <MetricItem
+                      label="Capacity Factor (actual with shade)"
+                      value={`${(pvwattsData.capacity_factor * (1 - shadeImpact.averageShadePercentage / 100)).toFixed(1)}%`}
+                    />
+                  ) : (
+                    <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
+                  )}
+                </>
               )}
               {shadeImpact && shadeImpact.averageShadePercentage > 0 && (
                 <MetricItem

@@ -72,8 +72,7 @@ export function usePanelData(panelGenerationData: PanelGenerationData | null): A
       0
     )
 
-    const panelWattage = panelGenerationData.roofs[0]?.module_specs?.power ?? DEFAULT_PANEL_WATTAGE
-
+    const panelWattage = panelGenerationData.roofs[0]?.module_specs?.power_w ?? DEFAULT_PANEL_WATTAGE
     const systemSize = (totalPanels * panelWattage) / 1000
 
     let totalPitchWeight = 0

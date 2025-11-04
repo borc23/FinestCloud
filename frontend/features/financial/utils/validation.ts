@@ -7,6 +7,7 @@ export interface ValidationResult {
   isValid: boolean
   errors: string[]
   warnings: string[]
+  criticalWarnings?: string[]
 }
 
 export interface FinancialInputValidation {
@@ -165,9 +166,11 @@ export function validateFinancialInputs(inputs: {
   loanTerm?: number
   interestRate?: number
   netSystemCost?: number
+  shadePercentage?: number
 }): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
+  const criticalWarnings: string[] = []
 
   // Validate basic inputs
   const fields = [
@@ -292,12 +295,26 @@ export function validateFinancialInputs(inputs: {
         'Self-consumption rate above 70% typically requires a battery storage system.'
       )
     }
+
+    // Critical shade warnings
+    if (inputs.shadePercentage !== undefined) {
+      if (inputs.shadePercentage > 25) {
+        criticalWarnings.push(
+          `CRITICAL: Your ${inputs.shadePercentage.toFixed(1)}% shade loss is extremely high. Typical residential systems experience 5-15% shade loss. This represents a massive financial loss and you should strongly consider alternative roof placement, tree removal, or microinverters.`
+        )
+      } else if (inputs.shadePercentage > 15) {
+        warnings.push(
+          `Your ${inputs.shadePercentage.toFixed(1)}% shade loss is moderate to high. Consider using microinverters or power optimizers to minimize the impact.`
+        )
+      }
+    }
   }
 
   return {
     isValid: errors.length === 0,
     errors,
-    warnings
+    warnings,
+    criticalWarnings
   }
 }
 

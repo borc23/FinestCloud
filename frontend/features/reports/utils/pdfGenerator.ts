@@ -259,7 +259,7 @@ function addSystemSpecifications(
   yPos += 5
 
   const specs = [
-    ['System Size', `${data.systemSpecs.systemSize.toFixed(2)} kW`],
+    ['System Size', `${data.systemSpecs.systemSize.toFixed(3)} kW`],
     ['Number of Panels', data.systemSpecs.panelCount.toString()],
     ['Panel Wattage', `${data.systemSpecs.panelWattage} W`],
     ['Annual Production', `${data.systemSpecs.annualProduction.toLocaleString()} kWh`],
