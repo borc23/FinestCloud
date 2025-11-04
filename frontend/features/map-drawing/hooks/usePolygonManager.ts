@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { StyleConfig } from '../../../shared/utils/styleConfig'
-import {
-  snapPolygonToGrid,
-  getPolygonGridId,
-  calculateGridDelta,
-  applyGridDelta,
-  worldToGrid,
-  type LatLng,
-  type GridDelta
-} from '@/features/solar-panels/utils/gridSnapping'
+import { usePanelGridDrag, handleNonPanelDrag } from './usePanelGridDrag'
 
 interface ExtendedPolygon extends google.maps.Polygon {
   isPanelElement?: boolean
@@ -41,6 +33,11 @@ export function usePolygonManager({
   useEffect(() => {
     selectedPolygonsRef.current = selectedPolygons
   }, [selectedPolygons])
+
+  // Use the extracted panel grid drag hook for clean separation of concerns
+  const { handleDragStart, handleDrag, handleDragEnd } = usePanelGridDrag({
+    selectedPolygonsRef
+  })
 
   const updatePolygonState = useCallback((polygon: google.maps.Polygon, isRoof: boolean) => {
     const isSelected = selectedPolygonsRef.current.has(polygon)
@@ -107,126 +104,45 @@ export function usePolygonManager({
       })
     )
 
-    // Multi-polygon drag support - pure grid-space mathematics
+    // Multi-polygon drag support with grid snapping
+    // Extracted to usePanelGridDrag hook for better maintainability
     const dragStartPositions = new WeakMap<google.maps.Polygon, google.maps.LatLng[]>()
 
+    // Dragstart: Store initial positions and snap panels to grid
     listeners.push(
       polygon.addListener('dragstart', () => {
-        // Store original paths for all selected polygons
+        // Use extracted hook for panel logic
+        handleDragStart()
+
+        // Also store positions for non-panel polygons
         selectedPolygonsRef.current.forEach(p => {
-          const extP = p as ExtendedPolygon
-          let path = p.getPath().getArray()
-          const gridId = getPolygonGridId(p)
-          const isPanel = extP.isPanelElement === true
-
-          // Snap panels to grid BEFORE storing start positions
-          // This ensures we start from integer grid coordinates
-          if (isPanel && gridId !== undefined) {
-            const snapped = snapPolygonToGrid(path, p)
-            const firstCorner = { lat: path[0].lat(), lng: path[0].lng() }
-            const gridCoords = worldToGrid(firstCorner, gridId)
-
-            if (gridCoords) {
-              const isOffGrid = Math.abs(gridCoords.x - Math.round(gridCoords.x)) > 0.01 ||
-                               Math.abs(gridCoords.y - Math.round(gridCoords.y)) > 0.01
-
-              if (isOffGrid) {
-                p.setPath(snapped)
-                path = snapped
-              }
-            }
+          if (!(p as ExtendedPolygon).isPanelElement) {
+            const path = p.getPath().getArray()
+            dragStartPositions.set(p, path.map(ll => new google.maps.LatLng(ll.lat(), ll.lng())))
           }
-
-          dragStartPositions.set(p, path.map(ll => new google.maps.LatLng(ll.lat(), ll.lng())))
         })
       })
     )
 
+    // Drag: Apply grid snapping for panels, simple translation for non-panels
     listeners.push(
       polygon.addListener('drag', () => {
         const extendedPolygon = polygon as ExtendedPolygon
+
         if (extendedPolygon.isPanelElement) {
-          // Snap primary panel to its grid
-          const currentPath = polygon.getPath().getArray()
-          const snappedPath = snapPolygonToGrid(currentPath, polygon)
-
-          // Only update if position changed (avoid infinite loop)
-          if (currentPath[0].lat() !== snappedPath[0].lat() || currentPath[0].lng() !== snappedPath[0].lng()) {
-            polygon.setPath(snappedPath)
-          }
-
-          // Multi-polygon drag - pure grid-space mathematics
-          if (selectedPolygonsRef.current.size > 1) {
-            const primaryGridId = getPolygonGridId(polygon)
-            const primaryStartPath = dragStartPositions.get(polygon)
-
-            if (primaryGridId !== undefined && primaryStartPath) {
-              // Calculate grid delta: how many grid steps the primary panel moved
-              const primaryStartPos: LatLng = { lat: primaryStartPath[0].lat(), lng: primaryStartPath[0].lng() }
-              const primaryCurrentPos: LatLng = { lat: snappedPath[0].lat(), lng: snappedPath[0].lng() }
-
-              const gridDelta = calculateGridDelta(primaryStartPos, primaryCurrentPos, primaryGridId)
-
-              if (gridDelta) {
-                const { dx, dy } = gridDelta
-
-                selectedPolygonsRef.current.forEach(p => {
-                  if (p === polygon) return
-
-                  const pGridId = getPolygonGridId(p)
-                  const pStartPath = dragStartPositions.get(p)
-
-                  if (pGridId !== undefined && pStartPath) {
-                    const pStartPos: LatLng = { lat: pStartPath[0].lat(), lng: pStartPath[0].lng() }
-
-                    // Apply grid delta in this panel's grid space
-                    const newPos = applyGridDelta(pStartPos, { dx, dy }, pGridId, true)
-
-                    if (newPos) {
-                      // Calculate offset from original first corner
-                      const offsetLat = newPos.lat - pStartPos.lat
-                      const offsetLng = newPos.lng - pStartPos.lng
-
-                      // Apply offset to entire polygon
-                      const newPath = pStartPath.map(ll =>
-                        new google.maps.LatLng(ll.lat() + offsetLat, ll.lng() + offsetLng)
-                      )
-                      p.setPath(newPath)
-                    }
-                  }
-                })
-              }
-            }
-          }
+          // Use extracted hook for complex panel grid snapping logic
+          handleDrag(polygon)
         } else {
-          // Non-panel polygons: original multi-drag behavior
-          if (selectedPolygonsRef.current.size <= 1) return
-
-          const draggedPath = polygon.getPath().getArray()
-          const draggedStart = dragStartPositions.get(polygon)
-          if (!draggedStart) return
-
-          const latDiff = draggedPath[0].lat() - draggedStart[0].lat()
-          const lngDiff = draggedPath[0].lng() - draggedStart[0].lng()
-
-          selectedPolygonsRef.current.forEach(p => {
-            if (p === polygon) return
-
-            const startPath = dragStartPositions.get(p)
-            if (!startPath) return
-
-            const newPath = startPath.map(ll => new google.maps.LatLng(ll.lat() + latDiff, ll.lng() + lngDiff))
-            p.setPath(newPath)
-          })
+          // Simple lat/lng delta for non-panel polygons
+          handleNonPanelDrag(polygon, selectedPolygonsRef, dragStartPositions)
         }
       })
     )
 
-    // Dragend - cleanup (snapping already handled during drag)
+    // Dragend: Cleanup (snapping already handled during drag)
     listeners.push(
       polygon.addListener('dragend', () => {
-        // All snapping happens during drag for smooth UX
-        // This listener is kept for potential future dragend-specific logic
+        handleDragEnd()
       })
     )
 
