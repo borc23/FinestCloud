@@ -71,9 +71,6 @@ class PVWattsService:
         }
 
         try:
-            logger.info(
-                f"Requesting PVWatts data for location ({latitude}, {longitude}), capacity: {system_capacity}kW"
-            )
             response = requests.get(self.BASE_URL, params=params, timeout=10)
 
             logger.debug(f"PVWatts API response status: {response.status_code}")

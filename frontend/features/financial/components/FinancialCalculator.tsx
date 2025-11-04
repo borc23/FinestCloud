@@ -12,6 +12,11 @@ import type { FinancialInputs } from '@/features/financial/types/financial'
 import { calculateFinancials, estimateSystemCost } from '@/features/financial/utils/financialCalculations'
 import { validateGermanProduction } from '@/features/solar-analysis/utils/germanSolarCalculations'
 import { validateFinancialInputs } from '@/features/financial/utils/validation'
+import {
+  calculateGermanFeedInTariff,
+  getFeedInTariffBreakdown,
+  formatFeedInTariff
+} from '@/features/financial/utils/germanFeedInTariff'
 
 // Sub-components
 import KeyMetrics from './KeyMetrics'
@@ -35,12 +40,18 @@ export default function FinancialCalculator({
   panelWattage = 400,
   onClose
 }: FinancialCalculatorProps) {
+  // Calculate accurate German feed-in tariff based on system size (EEG 2025)
+  const calculatedFeedInTariff = useMemo(
+    () => calculateGermanFeedInTariff(systemSize, true, false),
+    [systemSize]
+  )
+
   // User inputs with German market defaults
   const [costPerKwh, setCostPerKwh] = useState(0.37)
   const [avgMonthlyBill, setAvgMonthlyBill] = useState(130)
   const [escalationRate, setEscalationRate] = useState(4)
   const [systemCostInput, setSystemCostInput] = useState(estimateSystemCost(systemSize))
-  const [feedInTariff, setFeedInTariff] = useState(0.1623)
+  const [feedInTariff, setFeedInTariff] = useState(calculatedFeedInTariff)
   const [selfConsumptionRate, setSelfConsumptionRate] = useState(30)
   const [stateGrant, setStateGrant] = useState(0)
   const [municipalGrant, setMunicipalGrant] = useState(0)
@@ -314,12 +325,26 @@ export default function FinancialCalculator({
               <h4 className={styles.sectionTitle}>Feed-in Tariff Revenue</h4>
               <div className={styles.feedInInfo}>
                 <div className={styles.feedInRow}>
+                  <span className={styles.feedInLabel}>EEG 2025 Tiered Rates for {systemSize.toFixed(1)} kW</span>
+                  <span className={styles.feedInValue}>
+                    {getFeedInTariffBreakdown(systemSize, true, false).map((tier, idx) => (
+                      <div key={idx}>
+                        {tier.tier}: {tier.capacityKw.toFixed(2)} kW @ {formatFeedInTariff(tier.rateEuroPerKwh)}
+                      </div>
+                    ))}
+                  </span>
+                </div>
+                <div className={styles.feedInRow}>
+                  <span className={styles.feedInLabel}>Weighted Average Rate</span>
+                  <span className={styles.feedInValue}>{formatFeedInTariff(feedInTariff)} (fixed for 20 years)</span>
+                </div>
+                <div className={styles.feedInRow}>
                   <span className={styles.feedInLabel}>Grid Feed-in per Year (Year 1)</span>
                   <span className={styles.feedInValue}>{results.gridFeedInAmount.toLocaleString()} kWh</span>
                 </div>
                 <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>Tariff Rate ({(feedInTariff * 100).toFixed(2)} ct/kWh, fixed)</span>
-                  <span className={styles.feedInValue}>€{results.firstYearFeedInRevenue} / year</span>
+                  <span className={styles.feedInLabel}>Annual Feed-in Revenue (Year 1)</span>
+                  <span className={styles.feedInValue}>€{results.firstYearFeedInRevenue}</span>
                 </div>
                 <div className={styles.feedInRow}>
                   <span className={styles.feedInLabel}>25-Year Feed-in Revenue (with degradation)</span>
@@ -327,14 +352,9 @@ export default function FinancialCalculator({
                     €{results.twentyFiveYearFeedInRevenue.toLocaleString()}
                   </span>
                 </div>
-                <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel} style={{ fontSize: '0.85em', color: '#666' }}>
-                    Without degradation: €{(results.firstYearFeedInRevenue * 25).toLocaleString()}
-                  </span>
-                  <span className={styles.feedInValue} style={{ fontSize: '0.85em', color: '#666' }}>
-                    Difference: -€{((results.firstYearFeedInRevenue * 25) - results.twentyFiveYearFeedInRevenue).toLocaleString()} (0.5% annual degradation)
-                  </span>
-                </div>
+              </div>
+              <div className={styles.feedInNote}>
+                Note: Includes 0.6 ct/kWh bonus to compensate for exclusion during negative-price hours (2025 regulation)
               </div>
             </div>
           </>

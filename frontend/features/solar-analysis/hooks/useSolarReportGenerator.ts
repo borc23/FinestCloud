@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { generateSolarReport, downloadPDF } from '@/features/reports/utils/pdfGenerator'
 import { calculateFinancials, estimateSystemCost } from '@/features/financial/utils/financialCalculations'
 import { generateMonthlyEstimate, generate25YearProjection } from '@/features/solar-analysis/utils/solarCalculations'
+import { calculateGermanFeedInTariff } from '@/features/financial/utils/germanFeedInTariff'
 import type { ReportData } from '@/features/reports/types/report'
 
 interface PanelData {
@@ -43,12 +44,14 @@ export function useSolarReportGenerator({
     }
 
     const systemCost = costEstimate || estimateSystemCost(panelData.systemSize)
+    const feedInTariff = calculateGermanFeedInTariff(panelData.systemSize, true, false)
+
     const financials = calculateFinancials({
       annualProduction,
       systemSize: panelData.systemSize,
       utilityRates: {
         costPerKwh: 0.37,
-        feedInTariff: 0.082,
+        feedInTariff: feedInTariff,
         escalationRate: 0.03
       },
       systemCost: {
@@ -90,7 +93,7 @@ export function useSolarReportGenerator({
       financials: financials,
       electricityRate: 0.37,
       monthlyBill: financials.avgMonthlySavings,
-      feedInTariff: 0.082,
+      feedInTariff: feedInTariff,
       selfConsumptionRate: 0.30,
       systemCost: systemCost,
       monitoring: {

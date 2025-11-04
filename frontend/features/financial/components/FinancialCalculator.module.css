@@ -489,6 +489,16 @@ select.input option:focus {
   margin-top: 4px;
 }
 
+.feedInNote {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  font-style: italic;
+}
+
 /* Shade Analysis Section */
 .shadeInfo {
   display: flex;

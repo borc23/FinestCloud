@@ -70,10 +70,6 @@ async def calculate_solar_production(
     using NREL's PVWatts model.
     """
     try:
-        logger.info(
-            f"Calculating production for {request.panel_count} panels at ({request.latitude}, {request.longitude})"
-        )
-
         result = pvwatts_service.calculate_for_panels(
             latitude=request.latitude,
             longitude=request.longitude,

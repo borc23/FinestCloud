@@ -271,15 +271,15 @@ export function validateFinancialInputs(inputs: {
       )
     }
 
-    // Check if feed-in tariff is reasonable
+    // Check if feed-in tariff is reasonable (EEG 2025: 5.62-8.54 ct/kWh for partial feed-in)
     if (inputs.feedInTariff < 0.05) {
       warnings.push(
-        `Feed-in tariff (€${inputs.feedInTariff.toFixed(4)}/kWh) is lower than typical German rates (€0.08-€0.16/kWh).`
+        `Feed-in tariff (${(inputs.feedInTariff * 100).toFixed(2)} ct/kWh) is lower than German EEG 2025 rates (5.62-8.54 ct/kWh for partial feed-in).`
       )
     }
-    if (inputs.feedInTariff > 0.25) {
+    if (inputs.feedInTariff > 0.13) {
       warnings.push(
-        `Feed-in tariff (€${inputs.feedInTariff.toFixed(4)}/kWh) is higher than typical German rates (€0.08-€0.16/kWh).`
+        `Feed-in tariff (${(inputs.feedInTariff * 100).toFixed(2)} ct/kWh) is higher than German EEG 2025 rates. For partial feed-in (Überschusseinspeisung), rates are 5.62-8.54 ct/kWh. Full feed-in rates are up to ~13.07 ct/kWh.`
       )
     }
 

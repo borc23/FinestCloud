@@ -124,11 +124,30 @@ function getInitialState(systemSize: number): FinancialState {
     return size * 1000 * pricePerWatt
   }
 
+  // Calculate accurate German feed-in tariff (EEG 2025)
+  const calculateGermanFeedInTariff = (systemSizeKw: number) => {
+    const tier1Rate = 7.94 + 0.6  // 0-10 kWp + bonus
+    const tier2Rate = 6.88 + 0.6  // 10-40 kWp + bonus
+    const tier3Rate = 5.62 + 0.6  // 40-100 kWp + bonus
+
+    let totalRevenue = 0
+    if (systemSizeKw <= 10) {
+      totalRevenue = systemSizeKw * tier1Rate
+    } else if (systemSizeKw <= 40) {
+      totalRevenue = 10 * tier1Rate + (systemSizeKw - 10) * tier2Rate
+    } else if (systemSizeKw <= 100) {
+      totalRevenue = 10 * tier1Rate + 30 * tier2Rate + (systemSizeKw - 40) * tier3Rate
+    } else {
+      totalRevenue = 10 * tier1Rate + 30 * tier2Rate + 60 * tier3Rate
+    }
+    return totalRevenue / systemSizeKw / 100  // Convert ct/kWh to €/kWh
+  }
+
   return {
     costPerKwh: 0.37,
     avgMonthlyBill: 130,
     escalationRate: 4,
-    feedInTariff: 0.1623,
+    feedInTariff: calculateGermanFeedInTariff(systemSize),
     systemCostInput: estimateSystemCost(systemSize),
     stateGrant: 0,
     municipalGrant: 0,
