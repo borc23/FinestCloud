@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import styles from './ImageUploadModal.module.css'
 
 interface ImageUploadModalProps {
@@ -44,7 +45,7 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file')
+      toast.error('Please upload an image file')
       return
     }
 
@@ -55,9 +56,10 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
       const imageUrl = URL.createObjectURL(file)
       onImageUpload(imageUrl)
       onClose()
+      toast.success('Image uploaded successfully')
     } catch (error) {
       console.error('Error uploading image:', error)
-      alert('Failed to upload image')
+      toast.error('Failed to upload image')
     } finally {
       setUploading(false)
     }

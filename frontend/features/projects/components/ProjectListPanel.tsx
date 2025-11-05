@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { getProjects, deleteProject } from '@/features/projects/lib/projectsApi'
 import type { Project } from '@/features/auth/types/database'
+import { toast } from 'sonner'
 import ProjectCard from './ProjectCard'
 import styles from './ProjectListPanel.module.css'
 
@@ -67,9 +68,10 @@ export default function ProjectListPanel({
     try {
       await deleteProject(projectId)
       setProjects(projects.filter(p => p.id !== projectId))
+      toast.success('Project deleted successfully')
     } catch (err: any) {
       console.error('Error deleting project:', err)
-      alert('Failed to delete project: ' + (err.message || 'Unknown error'))
+      toast.error('Failed to delete project: ' + (err.message || 'Unknown error'))
     } finally {
       setDeletingId(null)
     }

@@ -6,6 +6,7 @@ import { getProfile, updateProfile, setDefaultLocation } from '@/features/auth/l
 import { getProjects, deleteProject } from '@/features/projects/lib/projectsApi'
 import { createClient } from '@/shared/lib/supabase/client'
 import type { Project } from '@/features/auth/types/database'
+import { toast } from 'sonner'
 import ProjectCard from '@/features/projects/components/ProjectCard'
 import styles from './ProfilePanel.module.css'
 
@@ -189,7 +190,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       if (error) throw error
 
       setAuthError(null)
-      alert('Check your email for confirmation link!')
+      toast.success('Check your email for confirmation link!')
 
       // Reset form
       setEmail('')
@@ -398,9 +399,10 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
     try {
       await deleteProject(projectId)
       setProjects(projects.filter(p => p.id !== projectId))
+      toast.success('Project deleted successfully')
     } catch (err: any) {
       console.error('Error deleting project:', err)
-      alert('Failed to delete project: ' + (err.message || 'Unknown error'))
+      toast.error('Failed to delete project: ' + (err.message || 'Unknown error'))
     } finally {
       setDeletingId(null)
     }

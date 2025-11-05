@@ -11,9 +11,11 @@ import SaveProjectModal from '@/features/projects/components/SaveProjectModal'
 import ProjectListPanel from '@/features/projects/components/ProjectListPanel'
 import ProfilePanel from '@/features/auth/components/ProfilePanel'
 import AuthRequiredOverlay from '@/features/auth/components/AuthRequiredOverlay'
-import { useState, useRef } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import type { CreateProjectData } from '@/features/auth/types/database'
+import { useToolState } from '@/shared/hooks/useToolState'
+import { useModalState } from '@/shared/hooks/useModalState'
+import { useProjectState } from '@/shared/hooks/useProjectState'
+import { toast } from 'sonner'
 
 const MapContainer = dynamic(() => import('@/features/map-drawing/components/MapContainer'), {
   ssr: false,
@@ -22,27 +24,35 @@ const MapContainer = dynamic(() => import('@/features/map-drawing/components/Map
 
 export default function HomePage() {
   const { user } = useAuth()
-  const [activeTool, setActiveTool] = useState('')
-  const [showToolStrip, setShowToolStrip] = useState(true)
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-  const [showPanelsTool, setShowPanelsTool] = useState(false)
-  const [isImageMode, setIsImageMode] = useState(false)
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showPanelSelector, setShowPanelSelector] = useState(false)
-  const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
-  const [isRoofAnglePanelOpen, setIsRoofAnglePanelOpen] = useState(false)
 
-  // Profile panel
-  const [showProfilePanel, setShowProfilePanel] = useState(false)
-
-  // Project modals
-  const [showSaveModal, setShowSaveModal] = useState(false)
-  const [showLoadPanel, setShowLoadPanel] = useState(false)
-
-  // Project data callback refs
-  const getProjectDataRef = useRef<(() => Omit<CreateProjectData, 'projectName' | 'status'>) | null>(null)
-  const loadProjectRef = useRef<((projectId: string) => Promise<void>) | null>(null)
+  // Custom hooks for state management
+  const { activeTool, setActiveTool, showToolStrip, showPanelsTool, setShowPanelsTool } = useToolState()
+  const {
+    showUploadModal,
+    setShowUploadModal,
+    showPanelSelector,
+    setShowPanelSelector,
+    showProfilePanel,
+    setShowProfilePanel,
+    showSaveModal,
+    setShowSaveModal,
+    showLoadPanel,
+    setShowLoadPanel,
+    isDashboardMinimized,
+    setIsDashboardMinimized,
+    isRoofAnglePanelOpen,
+    setIsRoofAnglePanelOpen,
+  } = useModalState()
+  const {
+    map,
+    setMap,
+    isImageMode,
+    setIsImageMode,
+    uploadedImage,
+    setUploadedImage,
+    getProjectDataRef,
+    loadProjectRef,
+  } = useProjectState()
 
   const handleToolSelect = (tool: string) => {
     if (!user) {
@@ -173,10 +183,11 @@ export default function HomePage() {
             if (loadProjectRef.current) {
               await loadProjectRef.current(projectId)
               setShowLoadPanel(false)
+              toast.success('Project loaded successfully')
             }
           } catch (error) {
             console.error('Failed to load project:', error)
-            alert('Failed to load project. Please try again.')
+            toast.error('Failed to load project. Please try again.')
           }
         }}
       />
@@ -189,10 +200,11 @@ export default function HomePage() {
           try {
             if (loadProjectRef.current) {
               await loadProjectRef.current(projectId)
+              toast.success('Project loaded successfully')
             }
           } catch (error) {
             console.error('Failed to load project:', error)
-            alert('Failed to load project. Please try again.')
+            toast.error('Failed to load project. Please try again.')
           }
         }}
       />

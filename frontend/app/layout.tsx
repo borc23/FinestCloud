@@ -3,6 +3,7 @@ import Script from 'next/script'
 import '@/styles/globals.css'
 import { PanelProvider } from '@/features/solar-panels/context/PanelContext'
 import { AuthProvider } from '@/features/auth/context/AuthContext'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'FinestCloud Solar',
@@ -39,6 +40,7 @@ export default function RootLayout({
             {children}
           </PanelProvider>
         </AuthProvider>
+        <Toaster position="top-right" richColors />
         {/* Google Maps API */}
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places&loading=async`}
