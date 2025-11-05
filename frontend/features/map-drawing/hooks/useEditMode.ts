@@ -20,10 +20,9 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   const polylineRef = useRef<google.maps.Polyline | null>(null)
   const allPolygonsRef = useRef<google.maps.Polygon[]>([])
   const isDraggingRef = useRef(false)
-  const selectedDuringDragRef = useRef<Set<google.maps.Polygon>>(new Set())
   const isCtrlPressedRef = useRef(false)
   const justCompletedDragRef = useRef(false)
-  const dragHighlightedPolygonsRef = useRef<Map<google.maps.Polygon, { originalStroke: string, originalFill: string }>>(new Map())
+  const selectedPolygonsRef = useRef(selectedPolygons)
 
   useEffect(() => {
     allPolygonsRef.current = allPolygons
@@ -32,6 +31,10 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   useEffect(() => {
     isCtrlPressedRef.current = isCtrlPressed
   }, [isCtrlPressed])
+
+  useEffect(() => {
+    selectedPolygonsRef.current = selectedPolygons
+  }, [selectedPolygons])
 
   const toggleEditMode = useCallback(() => {
     setIsEditMode(prev => {
@@ -128,8 +131,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         polylineRef.current = null
       }
       isDraggingRef.current = false
-      selectedDuringDragRef.current = new Set()
-      dragHighlightedPolygonsRef.current.clear()
       trailRef.current = []
       return
     }
@@ -142,30 +143,25 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const polygonListeners: google.maps.MapsEventListener[] = []
 
     const checkPolygonIntersection = (point: google.maps.LatLng) => {
+      const newlySelected: google.maps.Polygon[] = []
+
       allPolygonsRef.current.forEach((polygon) => {
-        if (selectedDuringDragRef.current.has(polygon)) return
+        // Skip if already selected
+        if (selectedPolygonsRef.current.has(polygon)) return
 
         if (google.maps.geometry.poly.containsLocation(point, polygon)) {
-          selectedDuringDragRef.current.add(polygon)
-
-          // Store original colors before applying blue highlight
-          if (!dragHighlightedPolygonsRef.current.has(polygon)) {
-            const originalStroke = polygon.get('strokeColor') || '#000000'
-            const originalFill = polygon.get('fillColor') || '#000000'
-            dragHighlightedPolygonsRef.current.set(polygon, { originalStroke, originalFill })
-          }
-
-          // Apply temporary blue highlight during drag (no editable vertices)
-          polygon.setOptions({
-            strokeColor: '#3498db',
-            fillColor: '#3498db',
-            strokeWeight: 2,
-            fillOpacity: 0.3,
-            editable: false,
-            draggable: false
-          })
+          newlySelected.push(polygon)
         }
       })
+
+      // Add to selection immediately - StyleConfig will handle visual updates
+      if (newlySelected.length > 0) {
+        setSelectedPolygons(prev => {
+          const newSet = new Set(prev)
+          newlySelected.forEach(p => newSet.add(p))
+          return newSet
+        })
+      }
     }
 
     const cleanupPolygonListeners = () => {
@@ -195,9 +191,9 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       if (!e.latLng) return
 
       isDraggingRef.current = true
-      selectedDuringDragRef.current = new Set()
       trailPointCount = 0
 
+      // Disable map dragging during selection
       map.setOptions({
         draggable: false
       })
@@ -208,12 +204,15 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         polygonListeners.push(listener)
       })
 
+      // Clear previous selection if Ctrl is not pressed
       if (!isCtrlPressedRef.current) {
         setSelectedPolygons(new Set())
       }
 
+      // Initialize trail
       trailRef.current = [e.latLng]
 
+      // Create visual trail polyline
       polylineRef.current = new google.maps.Polyline({
         map,
         path: trailRef.current,
@@ -228,42 +227,27 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const onMouseUp = () => {
       if (!isDraggingRef.current) return
 
+      // Re-enable map dragging
       map.setOptions({
         draggable: !isEditMode
       })
 
-      // Clean up polygon listeners immediately after drag completes
+      // Clean up polygon listeners
       cleanupPolygonListeners()
 
-      // Restore original colors and add to selection
-      dragHighlightedPolygonsRef.current.forEach((colors, polygon) => {
-        // Restore original colors
-        polygon.setOptions({
-          strokeColor: colors.originalStroke,
-          fillColor: colors.originalFill
-        })
-      })
+      // Clean up visual trail
+      polylineRef.current?.setMap(null)
+      polylineRef.current = null
+      trailRef.current = []
 
-      // Now add them to the actual selection state
-      if (selectedDuringDragRef.current.size > 0) {
-        setSelectedPolygons(prev => {
-          const newSet = new Set(prev)
-          selectedDuringDragRef.current.forEach(p => newSet.add(p))
-          return newSet
-        })
-      }
+      // Reset drag state
+      isDraggingRef.current = false
 
+      // Prevent accidental map click from clearing selection
       justCompletedDragRef.current = true
       setTimeout(() => {
         justCompletedDragRef.current = false
       }, 100)
-
-      polylineRef.current?.setMap(null)
-      polylineRef.current = null
-      trailRef.current = []
-      isDraggingRef.current = false
-      selectedDuringDragRef.current = new Set()
-      dragHighlightedPolygonsRef.current.clear()
     }
 
     const downListener = map.addListener('mousedown', onMouseDown)
@@ -293,10 +277,8 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         draggable: true
       })
 
-      // Reset all state
+      // Reset drag state
       isDraggingRef.current = false
-      selectedDuringDragRef.current = new Set()
-      dragHighlightedPolygonsRef.current.clear()
       trailRef.current = []
     }
   }, [map, isEditMode, isDrawingPolygon])

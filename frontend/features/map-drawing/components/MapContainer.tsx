@@ -22,7 +22,6 @@ import { useDrawingMode } from '@/features/map-drawing/hooks/useDrawingMode'
 import { usePanelGeneration } from '@/features/solar-panels/hooks/usePanelGeneration'
 import { usePanelPlacement } from '@/features/solar-panels/hooks/usePanelPlacement'
 import { tagPanelWithGrid } from '@/features/solar-panels/utils/gridSnapping'
-import EditModeIndicator from './EditModeIndicator'
 import { usePanelContext } from '@/features/solar-panels/context/PanelContext'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { getDefaultLocation } from '@/features/auth/lib/profilesApi'
@@ -679,12 +678,6 @@ export default function MapContainer({
         />
       )}
 
-      {/* Edit Mode Indicator with Trash Zone */}
-      <EditModeIndicator
-        isActive={isEditMode}
-        selectedCount={selectedPolygons.size}
-        onDeleteSelected={deleteSelected}
-      />
 
       {/* Roof Angle Panel */}
       {showAnglePanel && (

@@ -59,18 +59,8 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
       if (!polygon.get('clickable')) {
         return
       }
-
-      if (event.latLng && currentMap) {
-        const bounds = new google.maps.LatLngBounds()
-        const path = polygon.getPath()
-
-        if (path) {
-          path.forEach((latLng: google.maps.LatLng) => {
-            bounds.extend(latLng)
-          })
-          currentMap.fitBounds(bounds)
-        }
-      }
+      // Note: Map centering removed - user should control map view
+      // Previous behavior: auto-centered map on clicked polygon
     })
 
     listeners.push(mouseoverListener, mouseoutListener, clickListener)
