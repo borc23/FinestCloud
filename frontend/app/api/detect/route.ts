@@ -58,7 +58,3 @@ export async function POST(request: NextRequest) {
     }
   })
 }
-
-export async function OPTIONS(request: NextRequest) {
-  return handleOptionsRequest(['POST', 'OPTIONS'])
-}

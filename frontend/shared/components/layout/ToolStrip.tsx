@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './ToolStrip.module.css'
 
 declare global {
@@ -44,7 +45,7 @@ const ProfileButton = ({ onHover, onClick, isAuthenticated }: {
       className={styles.tool}
       aria-label="User Profile"
     >
-      <i className={`fas ${isAuthenticated ? 'fa-user-circle' : 'fa-user'}`}></i>
+      <Icon name={isAuthenticated ? 'user-circle' : 'user'} />
     </button>
   </div>
 )
@@ -67,7 +68,7 @@ const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
       aria-pressed={isActive}
       disabled={isImageMode}
     >
-      <i className="fas fa-search"></i>
+      <Icon name="search" />
     </button>
   </div>
 )
@@ -136,7 +137,7 @@ const MiddleIconStrip = ({
                   aria-pressed={activeTool === tool.id}
                   disabled={isDisabled}
                 >
-                  <i className={`fas fa-${getToolIcon(tool)}`}></i>
+                  <Icon name={getToolIcon(tool) as any} />
                 </button>
               </motion.div>
             )
@@ -342,7 +343,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
-            <i className="fas fa-search"></i>
+            <Icon name="search" />
           </motion.div>
 
           <motion.div
@@ -383,7 +384,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
                     onClick={() => handleSuggestionClick(prediction)}
                     role="option"
                   >
-                    <i className={`fas fa-map-marker-alt ${styles.suggestionIcon}`} aria-hidden="true" />
+                    <Icon name="map-marker-alt" className={styles.suggestionIcon} />
                     <span className={styles.suggestionText}>{prediction.text.toString()}</span>
                   </button>
                 ))}
@@ -399,7 +400,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             <button className={styles.tool} aria-label="Close Search">
-              <i className="fas fa-times"></i>
+              <Icon name="times" />
             </button>
           </motion.div>
         </>

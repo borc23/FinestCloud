@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './MapControls.module.css'
 
 interface MapControlsProps {
@@ -58,14 +59,14 @@ export default function MapControls({
         onClick={handleZoomIn}
         aria-label="Zoom in"
       >
-        <i className="fas fa-plus"></i>
+        <Icon name="plus" />
       </button>
       <button
         className={styles.zoomControl}
         onClick={handleZoomOut}
         aria-label="Zoom out"
       >
-        <i className="fas fa-minus"></i>
+        <Icon name="minus" />
       </button>
       {/* {hasPanels && hasGeotiffData && (
         <button
@@ -74,7 +75,7 @@ export default function MapControls({
           aria-label={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
           title={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
         >
-          <i className="fas fa-solar-panel"></i>
+          <Icon name="solar-panel" />
         </button>
       )} */}
       {hasPanels && hasGeotiffData && (
@@ -84,7 +85,7 @@ export default function MapControls({
           aria-label={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
           title={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
         >
-          <i className="fas fa-sun"></i>
+          <Icon name="sun" />
         </button>
       )}
       {hasPolygons && (
@@ -94,7 +95,7 @@ export default function MapControls({
           aria-label="Clear map"
           title="Clear map"
         >
-          <i className="fas fa-redo-alt"></i>
+          <Icon name="refresh" />
         </button>
       )}
     </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './ZoomableImage.module.css'
 
 interface ZoomableImageProps {
@@ -107,7 +108,7 @@ export default function ZoomableImage({ src, alt = 'Uploaded' }: ZoomableImagePr
           disabled={zoom >= maxZoom}
           aria-label="Zoom in"
         >
-          <i className="fas fa-plus"></i>
+          <Icon name="plus" />
         </button>
         <button
           className={styles.controlButton}
@@ -115,7 +116,7 @@ export default function ZoomableImage({ src, alt = 'Uploaded' }: ZoomableImagePr
           disabled={zoom === 1 && position.x === 0 && position.y === 0}
           aria-label="Reset zoom"
         >
-          <i className="fas fa-expand"></i>
+          <Icon name="expand" />
         </button>
         <button
           className={styles.controlButton}
@@ -123,7 +124,7 @@ export default function ZoomableImage({ src, alt = 'Uploaded' }: ZoomableImagePr
           disabled={zoom <= minZoom}
           aria-label="Zoom out"
         >
-          <i className="fas fa-minus"></i>
+          <Icon name="minus" />
         </button>
         <div className={styles.zoomLevel}>
           {Math.round(zoom * 100)}%

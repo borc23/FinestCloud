@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { signIn } from '@/features/auth/lib/authApi'
 import { createClient } from '@/shared/lib/supabase/client'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './AuthModal.module.css'
 
 interface LoginModalProps {
@@ -46,7 +47,7 @@ export default function LoginModal({
         <div className={styles.header}>
           <h2>Sign In</h2>
           <button className={styles.closeButton} onClick={onClose}>
-            <i className="fas fa-times"></i>
+            <Icon name="times" />
           </button>
         </div>
 

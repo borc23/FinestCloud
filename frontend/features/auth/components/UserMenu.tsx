@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './UserMenu.module.css'
 
 interface UserMenuProps {
@@ -69,10 +70,10 @@ export default function UserMenu({
         aria-label="User menu"
       >
         <div className={styles.avatar}>
-          <i className="fas fa-user"></i>
+          <Icon name="user" />
         </div>
         <span className={styles.email}>{user.email}</span>
-        <i className={`fas fa-chevron-down ${styles.chevron} ${isOpen ? styles.open : ''}`}></i>
+        <Icon name="chevron-down" className={`${styles.chevron} ${isOpen ? styles.open : ''}`} />
       </button>
 
       {isOpen && (
@@ -90,14 +91,14 @@ export default function UserMenu({
               setIsOpen(false)
             }}
           >
-            <i className="fas fa-user-circle"></i>
+            <Icon name="user-circle" />
             <span>Profile Settings</span>
           </button>
 
           <div className={styles.divider}></div>
 
           <button className={styles.menuItem} onClick={handleSignOut}>
-            <i className="fas fa-sign-out-alt"></i>
+            <Icon name="logout" />
             <span>Sign Out</span>
           </button>
         </div>

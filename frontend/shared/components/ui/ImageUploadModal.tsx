@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './ImageUploadModal.module.css'
 
 interface ImageUploadModalProps {
@@ -99,7 +100,7 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
                 onClick={onClose}
                 aria-label="Close"
               >
-                <i className="fas fa-times"></i>
+                <Icon name="times" />
               </button>
             </div>
 
@@ -126,7 +127,7 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
                 </div>
               ) : (
                 <>
-                  <i className={`fas fa-cloud-upload-alt ${styles.uploadIcon}`}></i>
+                  <Icon name="upload" className={styles.uploadIcon} />
                   <p className={styles.dropzoneText}>
                     Drag and drop an image here, or click to select
                   </p>

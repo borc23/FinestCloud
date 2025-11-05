@@ -26,6 +26,7 @@ import { usePanelContext } from '@/features/solar-panels/context/PanelContext'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { getDefaultLocation } from '@/features/auth/lib/profilesApi'
 import { getProject } from '@/features/projects/lib/projectsApi'
+import { Icon } from '@/shared/components/ui/Icon'
 import type { Coordinate } from '@/features/solar-panels/types/panel'
 
 declare global {
@@ -634,7 +635,7 @@ export default function MapContainer({
         <div className={styles.uploadPrompt}>
           <div className={styles.promptCard}>
             <div className={styles.promptIcon}>
-              <i className="fas fa-cloud-upload-alt"></i>
+              <Icon name="upload" />
             </div>
             <h3>Upload Satellite Image</h3>
             <p>Drag and drop an image or click to browse</p>
@@ -760,10 +761,10 @@ export default function MapContainer({
       {detectionError && (
         <div className={styles.errorNotification}>
           <div className={styles.errorCard}>
-            <i className="fas fa-exclamation-triangle"></i>
+            <Icon name="warning" />
             <span>{detectionError}</span>
             <button onClick={clearError} className={styles.errorClose}>
-              <i className="fas fa-times"></i>
+              <Icon name="times" />
             </button>
           </div>
         </div>
@@ -773,7 +774,7 @@ export default function MapContainer({
       {isDragging && (
         <div className={styles.dragOverlay}>
           <div className={styles.dragContent}>
-            <i className="fas fa-cloud-upload-alt"></i>
+            <Icon name="upload" />
             <h3>Drop image to upload</h3>
             <p>Release to start processing</p>
           </div>
@@ -788,13 +789,13 @@ export default function MapContainer({
               className="btn btn-ghost"
               onClick={() => setIsImageView(false)}
             >
-              <i className="fas fa-arrow-left"></i>
+              <Icon name="arrow-left" />
               Back to Map
             </button>
           </div>
           <div className={styles.imageContainer}>
             <div className={styles.imagePlaceholder}>
-              <i className="fas fa-image"></i>
+              <Icon name="image" />
               <p>Image will appear here</p>
             </div>
           </div>

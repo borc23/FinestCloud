@@ -8,6 +8,7 @@ import { createClient } from '@/shared/lib/supabase/client'
 import type { Project } from '@/features/auth/types/database'
 import { toast } from 'sonner'
 import ProjectCard from '@/features/projects/components/ProjectCard'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './ProfilePanel.module.css'
 
 declare global {
@@ -422,18 +423,18 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
           <div className={styles.header}>
             <h2>
-              <i className="fas fa-user-circle"></i>
+              <Icon name="user-circle" />
               {authView === 'login' ? 'Sign In' : 'Create Account'}
             </h2>
             <button className={styles.closeButton} onClick={onClose}>
-              <i className="fas fa-times"></i>
+              <Icon name="times" />
             </button>
           </div>
 
           <form onSubmit={authView === 'login' ? handleLogin : handleSignUp} className={styles.authForm}>
             {authError && (
               <div className={styles.error}>
-                <i className="fas fa-exclamation-circle"></i>
+                <Icon name="warning" />
                 <span>{authError}</span>
               </div>
             )}
@@ -542,11 +543,11 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2>
-            <i className="fas fa-user-circle"></i>
+            <Icon name="user-circle" />
             Account
           </h2>
           <button className={styles.closeButton} onClick={onClose}>
-            <i className="fas fa-times"></i>
+            <Icon name="times" />
           </button>
         </div>
 
@@ -556,14 +557,14 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
             className={`${styles.tab} ${activeTab === 'profile' ? styles.active : ''}`}
             onClick={() => setActiveTab('profile')}
           >
-            <i className="fas fa-user"></i>
+            <Icon name="user" />
             <span>Profile</span>
           </button>
           <button
             className={`${styles.tab} ${activeTab === 'projects' ? styles.active : ''}`}
             onClick={() => setActiveTab('projects')}
           >
-            <i className="fas fa-folder"></i>
+            <Icon name="folder" />
             <span>Projects</span>
           </button>
         </div>
@@ -579,14 +580,14 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
             <form onSubmit={handleSaveProfile} className={styles.form}>
               {error && (
                 <div className={styles.error}>
-                  <i className="fas fa-exclamation-circle"></i>
+                  <Icon name="warning" />
                   <span>{error}</span>
                 </div>
               )}
 
               {success && (
                 <div className={styles.success}>
-                  <i className="fas fa-check-circle"></i>
+                  <Icon name="check-circle" />
                   <span>Profile updated successfully!</span>
                 </div>
               )}
@@ -651,7 +652,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                   onClick={handleUseCurrentLocation}
                   disabled={saving}
                 >
-                  <i className="fas fa-location-arrow"></i>
+                  <Icon name="location-arrow" />
                   Use Current Location
                 </button>
               </div>
@@ -663,7 +664,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                   onClick={handleSignOut}
                   disabled={saving}
                 >
-                  <i className="fas fa-sign-out-alt"></i>
+                  <Icon name="logout" />
                   Sign Out
                 </button>
 
@@ -699,7 +700,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
               </div>
             ) : projects.length === 0 ? (
               <div className={styles.empty}>
-                <i className="fas fa-folder-open"></i>
+                <Icon name="folder-open" />
                 <h3>No projects yet</h3>
                 <p>Create your first solar panel design and save it to see it here.</p>
               </div>
@@ -738,7 +739,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
               className={styles.locationSuggestion}
               onClick={() => handleLocationSelect(prediction)}
             >
-              <i className="fas fa-map-marker-alt"></i>
+              <Icon name="map-marker-alt" />
               <span>{prediction.text.toString()}</span>
             </button>
           ))}

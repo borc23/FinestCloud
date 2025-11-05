@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { signUp } from '@/features/auth/lib/authApi'
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './AuthModal.module.css'
 
 interface SignUpModalProps {
@@ -64,7 +65,7 @@ export default function SignUpModal({
         <div className={styles.header}>
           <h2>Create Account</h2>
           <button className={styles.closeButton} onClick={onClose}>
-            <i className="fas fa-times"></i>
+            <Icon name="times" />
           </button>
         </div>
 

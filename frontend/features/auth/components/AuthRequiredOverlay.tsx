@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/shared/components/ui/Icon'
 import styles from './AuthRequiredOverlay.module.css'
 
 interface AuthRequiredOverlayProps {
@@ -11,12 +12,12 @@ export default function AuthRequiredOverlay({ onOpenProfile }: AuthRequiredOverl
     <div className={styles.overlay}>
       <div className={styles.content}>
         <div className={styles.iconContainer}>
-          <i className="fas fa-lock"></i>
+          <Icon name="lock" />
         </div>
         <h2>Log In Required</h2>
         <p>Please sign in to use the solar panel design application</p>
         <button className={styles.signInButton} onClick={onOpenProfile}>
-          <i className="fas fa-sign-in-alt"></i>
+          <Icon name="login" />
           Sign In
         </button>
       </div>

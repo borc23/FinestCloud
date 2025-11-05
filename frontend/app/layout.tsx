@@ -1,9 +1,16 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { Inter } from 'next/font/google'
 import '@/styles/globals.css'
 import { PanelProvider } from '@/features/solar-panels/context/PanelContext'
 import { AuthProvider } from '@/features/auth/context/AuthContext'
 import { Toaster } from 'sonner'
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'FinestCloud Solar',
@@ -19,21 +26,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <head>
-        {/* Inter Font - Modern Typography */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        {/* Font Awesome */}
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        />
-      </head>
+    <html lang="en" className={inter.className}>
       <body>
         <AuthProvider>
           <PanelProvider>
@@ -45,11 +38,6 @@ export default function RootLayout({
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places&loading=async`}
           strategy="afterInteractive"
-        />
-        {/* html2canvas for screenshots */}
-        <Script
-          src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"
-          strategy="lazyOnload"
         />
       </body>
     </html>

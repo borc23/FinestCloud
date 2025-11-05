@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import styles from './PanelSelector.module.css'
 import panelsConfig from '@/features/solar-panels/config/panels.json'
 import { usePanelContext } from '@/features/solar-panels/context/PanelContext'
+import { Icon } from '@/shared/components/ui/Icon'
 
 interface Panel {
   id: string
@@ -142,7 +143,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
           {/* Search Bar */}
           <div className={styles.searchContainer}>
             <div className={styles.searchBar}>
-              <i className="fas fa-search"></i>
+              <Icon name="search" />
               <input
                 type="text"
                 placeholder="Search by name or brand..."
@@ -155,7 +156,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
                   className={styles.clearSearch}
                   onClick={() => setSearchQuery('')}
                 >
-                  <i className="fas fa-times"></i>
+                  <Icon name="times" />
                 </button>
               )}
             </div>
@@ -163,7 +164,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
               className={`${styles.filterToggle} ${showFilters ? styles.active : ''}`}
               onClick={() => setShowFilters(!showFilters)}
             >
-              <i className="fas fa-filter"></i>
+              <Icon name="filter" />
             </button>
           </div>
 
@@ -290,7 +291,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
             ))
             ) : (
               <div className={styles.noResults}>
-                <i className="fas fa-search"></i>
+                <Icon name="search" />
                 <p>No panels found matching your criteria</p>
               </div>
             )}
