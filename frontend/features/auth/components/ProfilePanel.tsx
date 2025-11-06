@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { getProfile, updateProfile, setDefaultLocation } from '@/features/auth/lib/profilesApi'
-import { getProjects, deleteProject } from '@/features/projects/lib/projectsApi'
-import { createClient } from '@/shared/lib/supabase/client'
+import { getProfile, setDefaultLocation, updateProfile } from '@/features/auth/lib/profilesApi'
 import type { Project } from '@/features/auth/types/database'
-import { toast } from 'sonner'
 import ProjectCard from '@/features/projects/components/ProjectCard'
+import { deleteProject, getProjects } from '@/features/projects/lib/projectsApi'
 import { Icon } from '@/shared/components/ui/Icon'
+import { createClient } from '@/shared/lib/supabase/client'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import styles from './ProfilePanel.module.css'
 
 declare global {

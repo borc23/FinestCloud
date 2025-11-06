@@ -1,8 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
-import { User, Session, AuthError } from '@supabase/supabase-js'
-import { createClient } from '@/shared/lib/supabase/client' // Changed from { supabase }
+import { createClient } from '@/shared/lib/supabase/client';
+import { AuthError, Session, User } from '@supabase/supabase-js'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 interface AuthContextType {
   user: User | null
@@ -18,68 +18,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<AuthError | null>(null)
-  
-  const supabase = createClient() // Create client instance
+
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
+  if (!supabaseRef.current) {
+    supabaseRef.current = createClient()
+  }
+  const supabase = supabaseRef.current
 
   useEffect(() => {
-    let isMounted = true 
-
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
 
-        if (!isMounted) return
-
         if (error) {
-          console.error("Failed to get session:", error)
           setError(error)
-        } else {
-          setSession(session)
+          return
         }
+        setSession(session)
       } catch (err) {
-        if (!isMounted) return
-
-        console.error("Auth init error:", err)
         setError(err as AuthError)
       } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
+        setLoading(false)
       }
     }
 
     initializeAuth()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) return
-
-      try {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
         setSession(session)
         setError(null)
-      } catch (err) {
-        console.error("Auth state change error:", err)
       }
-    })
+    )
 
     return () => {
-      isMounted = false
       subscription.unsubscribe()
     }
-  }, [supabase]) // Add supabase to dependencies
+  }, [])
 
   const signOut = useCallback(async (): Promise<void> => {
     try {
       const { error } = await supabase.auth.signOut()
-      if (error) throw error
+      if (error) {
+        console.error('Sign out failed:', error)
+        setError(error)
+        return
+      }
       setSession(null)
       setError(null)
     } catch (err) {
       const authError = err as AuthError
       console.error('Sign out failed:', authError)
       setError(authError)
-      throw authError
     }
   }, [supabase]) // Add supabase to dependencies
 
