@@ -27,7 +27,6 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { getDefaultLocation } from '@/features/auth/lib/profilesApi'
 import { getProject } from '@/features/projects/lib/projectsApi'
 import { Icon } from '@/shared/components/ui/Icon'
-import type { Coordinate } from '@/features/solar-panels/types/panel'
 
 declare global {
   interface Window {

@@ -14,27 +14,13 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   const [isDrawingPolygon, setIsDrawingPolygon] = useState(false)
   const [polygonEditMode, setPolygonEditMode] = useState<'roof' | 'object'>('roof')
 
-  const deleteSelectedRef = useRef<() => void>(() => {})
-  const clearSelectionRef = useRef<() => void>(() => {})
+  // Legitimate refs for temporary UI tracking (don't need re-renders)
   const trailRef = useRef<google.maps.LatLng[]>([])
   const polylineRef = useRef<google.maps.Polyline | null>(null)
-  const allPolygonsRef = useRef<google.maps.Polygon[]>([])
-  const isDraggingRef = useRef(false)
-  const isCtrlPressedRef = useRef(false)
-  const justCompletedDragRef = useRef(false)
-  const selectedPolygonsRef = useRef(selectedPolygons)
 
-  useEffect(() => {
-    allPolygonsRef.current = allPolygons
-  }, [allPolygons])
-
-  useEffect(() => {
-    isCtrlPressedRef.current = isCtrlPressed
-  }, [isCtrlPressed])
-
-  useEffect(() => {
-    selectedPolygonsRef.current = selectedPolygons
-  }, [selectedPolygons])
+  // Convert to useState for proper React state management
+  const [isDragging, setIsDragging] = useState(false)
+  const [justCompletedDrag, setJustCompletedDrag] = useState(false)
 
   const toggleEditMode = useCallback(() => {
     setIsEditMode(prev => {
@@ -86,12 +72,6 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     })
   }, [onDeletePolygons])
 
-  // Update refs when callbacks change
-  useEffect(() => {
-    deleteSelectedRef.current = deleteSelected
-    clearSelectionRef.current = clearSelection
-  }, [deleteSelected, clearSelection])
-
   // Handle keyboard events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -102,9 +82,9 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault()
         e.stopPropagation()
-        deleteSelectedRef.current()
+        deleteSelected()
       } else if (e.key === 'Escape') {
-        clearSelectionRef.current()
+        clearSelection()
       }
     }
 
@@ -121,7 +101,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('keyup', handleKeyUp)
     }
-  }, [isEditMode])
+  }, [isEditMode, deleteSelected, clearSelection])
 
   useEffect(() => {
     if (!map || !isEditMode || isDrawingPolygon) {
@@ -130,7 +110,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         polylineRef.current.setMap(null)
         polylineRef.current = null
       }
-      isDraggingRef.current = false
+      setIsDragging(false)
       trailRef.current = []
       return
     }
@@ -145,9 +125,9 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const checkPolygonIntersection = (point: google.maps.LatLng) => {
       const newlySelected: google.maps.Polygon[] = []
 
-      allPolygonsRef.current.forEach((polygon) => {
+      allPolygons.forEach((polygon) => {
         // Skip if already selected
-        if (selectedPolygonsRef.current.has(polygon)) return
+        if (selectedPolygons.has(polygon)) return
 
         if (google.maps.geometry.poly.containsLocation(point, polygon)) {
           newlySelected.push(polygon)
@@ -172,7 +152,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     }
 
     const handleMouseMove = (e: google.maps.MapMouseEvent) => {
-      if (!isDraggingRef.current || !e.latLng || !polylineRef.current) return
+      if (!isDragging || !e.latLng || !polylineRef.current) return
 
       trailRef.current.push(e.latLng)
       if (trailRef.current.length > MAX_TRAIL_LENGTH) {
@@ -190,7 +170,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const onMouseDown = (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
 
-      isDraggingRef.current = true
+      setIsDragging(true)
       trailPointCount = 0
 
       // Disable map dragging during selection
@@ -199,13 +179,13 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       })
 
       // Add mousemove listeners to all polygons for intersection detection
-      allPolygonsRef.current.forEach((polygon) => {
+      allPolygons.forEach((polygon) => {
         const listener = polygon.addListener('mousemove', handleMouseMove)
         polygonListeners.push(listener)
       })
 
       // Clear previous selection if Ctrl is not pressed
-      if (!isCtrlPressedRef.current) {
+      if (!isCtrlPressed) {
         setSelectedPolygons(new Set())
       }
 
@@ -225,7 +205,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     }
 
     const onMouseUp = () => {
-      if (!isDraggingRef.current) return
+      if (!isDragging) return
 
       // Re-enable map dragging
       map.setOptions({
@@ -241,12 +221,12 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       trailRef.current = []
 
       // Reset drag state
-      isDraggingRef.current = false
+      setIsDragging(false)
 
       // Prevent accidental map click from clearing selection
-      justCompletedDragRef.current = true
+      setJustCompletedDrag(true)
       setTimeout(() => {
-        justCompletedDragRef.current = false
+        setJustCompletedDrag(false)
       }, 100)
     }
 
@@ -278,19 +258,19 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       })
 
       // Reset drag state
-      isDraggingRef.current = false
+      setIsDragging(false)
       trailRef.current = []
     }
-  }, [map, isEditMode, isDrawingPolygon])
+  }, [map, isEditMode, isDrawingPolygon, isDragging, allPolygons, selectedPolygons, isCtrlPressed])
 
   useSingleMapListener(
     isEditMode && !isDrawingPolygon ? map : null,
     'click',
     () => {
-      if (justCompletedDragRef.current) return
-      clearSelectionRef.current()
+      if (justCompletedDrag) return
+      clearSelection()
     },
-    []
+    [justCompletedDrag, clearSelection]
   )
 
   return useMemo(() => ({
