@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode, useCallback, useRef, useMemo } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback, useRef } from 'react'
 
 interface PanelData {
   readonly id: string
@@ -48,11 +48,11 @@ export function PanelProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const contextValue = useMemo(() => ({
+  const contextValue = {
     selectedPanel,
     setSelectedPanel: handleSetSelectedPanel,
     registerPanelChangeCallback
-  }), [selectedPanel, handleSetSelectedPanel, registerPanelChangeCallback])
+  }
 
   return (
     <PanelContext.Provider value={contextValue}>
