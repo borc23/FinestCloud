@@ -114,30 +114,68 @@ export function usePanelPlacement({
   }, [])
 
   /**
-   * Build spatial grid for fast collision detection
-   * Divides space into grid cells and stores panels by their location
+   * Calculate dynamic cell size based on latitude
+   * At higher latitudes, longitude degrees represent smaller distances
+   * cellSize ≈ 11 meters at all latitudes
    */
+  const getCellSize = useCallback((lat: number): { latSize: number; lngSize: number } => {
+    // Target cell size in meters
+    const TARGET_CELL_METERS = 11
+
+    // Latitude: 1 degree ≈ 111,320 meters (roughly constant)
+    const latSize = TARGET_CELL_METERS / 111320
+
+    // Longitude: varies with latitude
+    // At equator: 1 degree ≈ 111,320 meters
+    // At latitude φ: 1 degree ≈ 111,320 * cos(φ) meters
+    const latRad = (Math.abs(lat) * Math.PI) / 180
+    const lngMetersPerDegree = 111320 * Math.cos(latRad)
+    const lngSize = lngMetersPerDegree > 0 ? TARGET_CELL_METERS / lngMetersPerDegree : latSize
+
+    return { latSize, lngSize }
+  }, [])
+
+  /**
+   * Generate deterministic grid key using fixed precision
+   * Avoids floating point precision issues in string concatenation
+   */
+  const getGridKey = useCallback((lat: number, lng: number): string => {
+    // Use 8 decimal places for lat/lng (≈1.1mm precision)
+    // This ensures consistent key generation regardless of floating point errors
+    const latFixed = lat.toFixed(8)
+    const lngFixed = lng.toFixed(8)
+    return `${latFixed}|${lngFixed}`
+  }, [])
+
   const buildSpatialGrid = useCallback(() => {
     const grid = new Map<string, google.maps.Polygon[]>()
-    const cellSize = 0.0001 // ~11 meters at equator
 
     for (const panel of existingPanels) {
       const path = panel.getPath()
       if (!path) continue
 
-      // Get panel bounds
       const bounds = new google.maps.LatLngBounds()
       path.forEach(latLng => bounds.extend(latLng))
 
-      // Add panel to all cells it overlaps
-      const minLat = Math.floor(bounds.getSouthWest().lat() / cellSize)
-      const maxLat = Math.ceil(bounds.getNorthEast().lat() / cellSize)
-      const minLng = Math.floor(bounds.getSouthWest().lng() / cellSize)
-      const maxLng = Math.ceil(bounds.getNorthEast().lng() / cellSize)
+      const swLat = bounds.getSouthWest().lat()
+      const swLng = bounds.getSouthWest().lng()
+      const neLat = bounds.getNorthEast().lat()
+      const neLng = bounds.getNorthEast().lng()
 
-      for (let lat = minLat; lat <= maxLat; lat++) {
-        for (let lng = minLng; lng <= maxLng; lng++) {
-          const key = `${lat},${lng}`
+      const centerLat = (swLat + neLat) / 2
+      const { latSize, lngSize } = getCellSize(centerLat)
+
+      const minLatCell = Math.floor(swLat / latSize)
+      const maxLatCell = Math.ceil(neLat / latSize)
+      const minLngCell = Math.floor(swLng / lngSize)
+      const maxLngCell = Math.ceil(neLng / lngSize)
+
+      for (let latCell = minLatCell; latCell <= maxLatCell; latCell++) {
+        for (let lngCell = minLngCell; lngCell <= maxLngCell; lngCell++) {
+          const cellLat = latCell * latSize
+          const cellLng = lngCell * lngSize
+          const key = getGridKey(cellLat, cellLng)
+
           const existing = grid.get(key) || []
           existing.push(panel)
           grid.set(key, existing)
@@ -146,28 +184,34 @@ export function usePanelPlacement({
     }
 
     spatialGridRef.current = grid
-  }, [existingPanels])
+  }, [existingPanels, getCellSize, getGridKey])
 
   /**
-   * Get nearby panels using spatial grid
+   * Get nearby panels using spatial grid with latitude-corrected cell sizes
    */
   const getNearbyPanels = useCallback((coords: Coordinate[]): google.maps.Polygon[] => {
     if (spatialGridRef.current.size === 0) return existingPanels
 
-    const cellSize = 0.0001
     const nearbyPanels = new Set<google.maps.Polygon>()
 
     // Calculate center of test panel
     const centerLat = (coords[0].lat + coords[2].lat) / 2
     const centerLng = (coords[0].lng + coords[2].lng) / 2
 
-    // Check 9 cells around the panel (3x3 grid)
-    const centerCellLat = Math.floor(centerLat / cellSize)
-    const centerCellLng = Math.floor(centerLng / cellSize)
+    // Get latitude-corrected cell sizes
+    const { latSize, lngSize } = getCellSize(centerLat)
 
+    // Calculate cell indices
+    const centerCellLat = Math.floor(centerLat / latSize)
+    const centerCellLng = Math.floor(centerLng / lngSize)
+
+    // Check 9 cells around the panel (3x3 grid)
     for (let latOffset = -1; latOffset <= 1; latOffset++) {
       for (let lngOffset = -1; lngOffset <= 1; lngOffset++) {
-        const key = `${centerCellLat + latOffset},${centerCellLng + lngOffset}`
+        const cellLat = (centerCellLat + latOffset) * latSize
+        const cellLng = (centerCellLng + lngOffset) * lngSize
+        const key = getGridKey(cellLat, cellLng)
+
         const panels = spatialGridRef.current.get(key)
         if (panels) {
           panels.forEach(p => nearbyPanels.add(p))
@@ -176,26 +220,53 @@ export function usePanelPlacement({
     }
 
     return Array.from(nearbyPanels)
-  }, [existingPanels])
+  }, [existingPanels, getCellSize, getGridKey])
 
   /**
    * Check if panel position overlaps with existing panels
-   * Only checks if new panel's center is inside an existing panel
+   * Uses multiple test points for more robust collision detection
    * This allows edge-to-edge placement (touching panels are OK)
    */
   const checkCollision = useCallback((coords: Coordinate[]): boolean => {
     if (coords.length !== 4) return true
 
-    const testCenterLat = (coords[0].lat + coords[2].lat) / 2
-    const testCenterLng = (coords[0].lng + coords[2].lng) / 2
-    const testCenter = new google.maps.LatLng(testCenterLat, testCenterLng)
+    // Calculate center point
+    const centerLat = (coords[0].lat + coords[2].lat) / 2
+    const centerLng = (coords[0].lng + coords[2].lng) / 2
+
+    // Calculate additional test points at 25% and 75% along each axis
+    // This provides better detection for edge cases
+    const testPoints: google.maps.LatLng[] = [
+      // Center
+      new google.maps.LatLng(centerLat, centerLng),
+      // Quadrant centers (at 25% and 75% along each axis)
+      new google.maps.LatLng(
+        coords[0].lat + (centerLat - coords[0].lat) * 0.5,
+        coords[0].lng + (centerLng - coords[0].lng) * 0.5
+      ),
+      new google.maps.LatLng(
+        coords[0].lat + (centerLat - coords[0].lat) * 0.5,
+        coords[0].lng + (centerLng - coords[0].lng) * 1.5
+      ),
+      new google.maps.LatLng(
+        coords[0].lat + (centerLat - coords[0].lat) * 1.5,
+        coords[0].lng + (centerLng - coords[0].lng) * 0.5
+      ),
+      new google.maps.LatLng(
+        coords[0].lat + (centerLat - coords[0].lat) * 1.5,
+        coords[0].lng + (centerLng - coords[0].lng) * 1.5
+      )
+    ]
 
     // Only check nearby panels using spatial grid
     const nearbyPanels = getNearbyPanels(coords)
 
+    // Check if any test point is inside an existing panel
     for (const panel of nearbyPanels) {
-      if (google.maps.geometry.poly.containsLocation(testCenter, panel)) {
-        return true
+      for (const testPoint of testPoints) {
+        if (google.maps.geometry.poly.containsLocation(testPoint, panel)) {
+          return true
+        }
       }
     }
 
