@@ -18,9 +18,22 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
   const trailRef = useRef<google.maps.LatLng[]>([])
   const polylineRef = useRef<google.maps.Polyline | null>(null)
 
-  // Convert to useState for proper React state management
-  const [isDragging, setIsDragging] = useState(false)
+  // Use refs for drag state to avoid useEffect re-runs during interaction
+  const isDraggingRef = useRef(false)
   const [justCompletedDrag, setJustCompletedDrag] = useState(false)
+
+  // Refs for values that change during interaction
+  const selectedPolygonsRef = useRef(selectedPolygons)
+  const isCtrlPressedRef = useRef(isCtrlPressed)
+
+  // Keep refs in sync
+  useEffect(() => {
+    selectedPolygonsRef.current = selectedPolygons
+  }, [selectedPolygons])
+
+  useEffect(() => {
+    isCtrlPressedRef.current = isCtrlPressed
+  }, [isCtrlPressed])
 
   const toggleEditMode = useCallback(() => {
     setIsEditMode(prev => {
@@ -110,7 +123,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
         polylineRef.current.setMap(null)
         polylineRef.current = null
       }
-      setIsDragging(false)
+      isDraggingRef.current = false
       trailRef.current = []
       return
     }
@@ -127,7 +140,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
 
       allPolygons.forEach((polygon) => {
         // Skip if already selected
-        if (selectedPolygons.has(polygon)) return
+        if (selectedPolygonsRef.current.has(polygon)) return
 
         if (google.maps.geometry.poly.containsLocation(point, polygon)) {
           newlySelected.push(polygon)
@@ -152,7 +165,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     }
 
     const handleMouseMove = (e: google.maps.MapMouseEvent) => {
-      if (!isDragging || !e.latLng || !polylineRef.current) return
+      if (!isDraggingRef.current || !e.latLng || !polylineRef.current) return
 
       trailRef.current.push(e.latLng)
       if (trailRef.current.length > MAX_TRAIL_LENGTH) {
@@ -170,7 +183,13 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     const onMouseDown = (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
 
-      setIsDragging(true)
+      // KISS: Don't start drag-to-select if polygons are selected
+      // User expects to drag the selected polygons, not draw a selection trail
+      if (selectedPolygonsRef.current.size > 0) {
+        return
+      }
+
+      isDraggingRef.current = true
       trailPointCount = 0
 
       // Disable map dragging during selection
@@ -185,7 +204,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       })
 
       // Clear previous selection if Ctrl is not pressed
-      if (!isCtrlPressed) {
+      if (!isCtrlPressedRef.current) {
         setSelectedPolygons(new Set())
       }
 
@@ -205,7 +224,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
     }
 
     const onMouseUp = () => {
-      if (!isDragging) return
+      if (!isDraggingRef.current) return
 
       // Re-enable map dragging
       map.setOptions({
@@ -221,7 +240,7 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       trailRef.current = []
 
       // Reset drag state
-      setIsDragging(false)
+      isDraggingRef.current = false
 
       // Prevent accidental map click from clearing selection
       setJustCompletedDrag(true)
@@ -258,10 +277,10 @@ export function useEditMode({ map, onDeletePolygons, allPolygons = [] }: UseEdit
       })
 
       // Reset drag state
-      setIsDragging(false)
+      isDraggingRef.current = false
       trailRef.current = []
     }
-  }, [map, isEditMode, isDrawingPolygon, isDragging, allPolygons, selectedPolygons, isCtrlPressed])
+  }, [map, isEditMode, isDrawingPolygon, allPolygons])
 
   useSingleMapListener(
     isEditMode && !isDrawingPolygon ? map : null,

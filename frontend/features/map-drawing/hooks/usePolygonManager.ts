@@ -28,11 +28,16 @@ export function usePolygonManager({
 }: PolygonManagerProps) {
   const polygonListenersRef = useRef<Map<google.maps.Polygon, google.maps.MapsEventListener[]>>(new Map())
   const selectedPolygonsRef = useRef(selectedPolygons)
+  const isCtrlPressedRef = useRef(isCtrlPressed)
 
-  // Keep ref in sync without triggering re-renders
+  // Keep refs in sync without triggering re-renders
   useEffect(() => {
     selectedPolygonsRef.current = selectedPolygons
   }, [selectedPolygons])
+
+  useEffect(() => {
+    isCtrlPressedRef.current = isCtrlPressed
+  }, [isCtrlPressed])
 
   // Use the extracted panel grid drag hook for clean separation of concerns
   const { handleDragStart, handleDrag, handleDragEnd } = usePanelGridDrag({
@@ -100,7 +105,8 @@ export function usePolygonManager({
           return
         }
         e.stop?.()
-        onSelectPolygon(polygon, isCtrlPressed)
+        // Use ref to get current value instead of closure capture
+        onSelectPolygon(polygon, isCtrlPressedRef.current)
       })
     )
 
@@ -196,7 +202,7 @@ export function usePolygonManager({
     }
 
     polygonListenersRef.current.set(polygon, listeners)
-  }, [isEditMode, isDrawing, isCtrlPressed, onSelectPolygon, removePolygonListeners])
+  }, [isEditMode, isDrawing, onSelectPolygon, removePolygonListeners])
 
   const updateAllPolygons = useCallback((polygons: google.maps.Polygon[], isRoof: boolean) => {
     polygons.forEach(polygon => {

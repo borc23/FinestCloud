@@ -90,6 +90,10 @@ export async function generateAndAnimatePanels({
         totalPanels += roof.panels.length
 
         roof.panels.forEach((panel: Panel) => {
+          if (!panel.coords || !Array.isArray(panel.coords)) {
+          console.warn(`Panel ${roofIndex} has no valid coords`)
+          return
+        }
           const panelCoords = panel.coords || panel
           const path = Array.isArray(panelCoords)
             ? panelCoords.map((coord: Coordinate) => ({
