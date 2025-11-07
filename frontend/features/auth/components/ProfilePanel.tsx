@@ -133,6 +133,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         mapCenterLat: p.map_center_lat,
         mapCenterLng: p.map_center_lng,
         mapZoom: p.map_zoom,
+        annualFluxUrl: p.annual_flux_url,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })))
