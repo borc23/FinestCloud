@@ -5,12 +5,12 @@ import type { PanelGenerationRequest, Coordinate } from '@/features/solar-panels
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 
 export async function POST(request: NextRequest) {
-  return proxyToPythonBackend<PanelGenerationRequest, unknown>(request, {
+  return proxyToPythonBackend(request, {
     method: 'POST',
     backendUrl: `${PYTHON_BACKEND_URL}/api/generate_panels`,
     forwardCookies: true,
     logRequests: true,
-    transformRequest: (body: PanelGenerationRequest) => ({
+    transformRequest: (body: any) => ({
       roofs: body.roofPolygons.map((roofPoly: { coords: Coordinate[] }, index: number) => {
         const pitch = body.angles?.[index] !== undefined ? body.angles[index] : 0
         const azimuth = body.solarData?.[index]?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees || 180
