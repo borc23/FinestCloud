@@ -30,7 +30,7 @@ import { Icon } from '@/shared/components/ui/Icon'
 
 declare global {
   interface Window {
-    google: typeof google
+    google: any
     initMap: () => void
   }
 }

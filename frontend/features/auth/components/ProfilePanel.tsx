@@ -13,7 +13,7 @@ import styles from './ProfilePanel.module.css'
 
 declare global {
   interface Window {
-    google: typeof google
+    google: any
   }
 }
 
