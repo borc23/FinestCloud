@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.pytest_cache/
+.ruff_cache/
+
+# Frontend (not needed for backend)
+frontend/
+node_modules/
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+tests/
+sandbox/
+.coverage
+htmlcov/
+
+# Claude
+.claude/
+
+# Documentation
+*.md
+!README.md
+
+# Environment files (these should be set in Render)
+.env
+.env.*
+
+# Pre-commit
+.pre-commit-config.yaml
+
+# Misc
+.DS_Store
+*.log

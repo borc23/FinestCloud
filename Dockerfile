@@ -19,22 +19,23 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
-RUN pip3 install gunicorn
 
-# Copy project
+# Copy project files
 COPY . .
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /tmp/models /tmp/uploads /tmp/huggingface_cache && chmod 777 /tmp/models /tmp/uploads /tmp/huggingface_cache
+RUN mkdir -p /tmp/models /tmp/uploads /tmp/huggingface_cache && \
+    chmod 777 /tmp/models /tmp/uploads /tmp/huggingface_cache
 
 # Set environment variables
-ENV PORT=7860
-ENV FLASK_APP=run.py
-ENV FLASK_DEBUG=0
-ENV FLASK_ENV=production
-ENV CACHE_TYPE=SimpleCache
+ENV PYTHONUNBUFFERED=1
 ENV MODELS_DIR=/tmp/models
 ENV UPLOAD_FOLDER=/tmp/uploads
+ENV HF_HOME=/tmp/huggingface_cache
 
-# Use a different port - HF Spaces expects 7860
-CMD gunicorn run:app --bind 0.0.0.0:7860 --workers 1 --threads 8
+# Expose port (Render will provide PORT env variable)
+EXPOSE 8000
+
+# Run FastAPI with uvicorn
+# Render provides PORT env variable, defaulting to 8000 if not set
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
