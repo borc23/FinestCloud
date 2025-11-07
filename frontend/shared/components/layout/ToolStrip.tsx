@@ -7,7 +7,7 @@ import styles from './ToolStrip.module.css'
 
 declare global {
   interface Window {
-    google: any
+    google: typeof google
   }
 }
 
