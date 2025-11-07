@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   return proxyToPythonBackend(request, {
     method: 'POST',
     backendUrl: `${PYTHON_BACKEND_URL}/api/detect`,
-    transformRequest: (body) => {
+    transformRequest: (body: any) => {
       // Generate static map URL on the server side
       const { image: mapParams, bounds, conf, epsilon } = body
 
