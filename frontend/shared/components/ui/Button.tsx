@@ -38,6 +38,7 @@ export default function Button({
     <button
       className={classes}
       disabled={disabled || loading}
+      aria-busy={loading}
       {...props}
     >
       {loading && <span className="spinner" aria-hidden="true" />}

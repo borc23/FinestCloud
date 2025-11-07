@@ -275,9 +275,17 @@ function createErrorResponse(
 /**
  * Standard OPTIONS handler for CORS
  */
-export function handleOptionsRequest(allowedMethods: string[] = ['GET', 'POST', 'OPTIONS']): NextResponse {
-  const allowedOrigin = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'
+export function handleOptionsRequest(
+  allowedMethods: string[] = ['GET', 'POST', 'OPTIONS'], 
+  allowedOrigin?: string
+): NextResponse {
+  const origin = allowedOrigin || process.env.NEXT_PUBLIC_FRONTEND_URL;
 
+  if (!origin) {
+      console.error('CORS configuration missing');
+      return new NextResponse(null, { status: 500 });
+    }
+    
   return new NextResponse(null, {
     status: 200,
     headers: {
