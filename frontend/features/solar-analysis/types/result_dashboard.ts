@@ -3,7 +3,7 @@
  * Type definitions for Panel generation analytics
  */
 
-import type { Panel, Coordinate, ModuleSpecs } from './panel'
+import type { Panel, Coordinate, ModuleSpecs } from '@/features/solar-panels/types/panel'
 
 export interface RoofPanelsData {
   roof_id: number

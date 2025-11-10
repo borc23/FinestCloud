@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { PanelGenerationData } from '@/features/solar-panels/types/result_dashboard'
+import type { PanelGenerationData } from '@/features/solar-analysis/types/result_dashboard'
 
 interface AggregatedPanelData {
   totalPanels: number
