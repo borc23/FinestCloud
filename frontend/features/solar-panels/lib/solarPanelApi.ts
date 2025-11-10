@@ -40,6 +40,40 @@ export class SolarPanelApiService {
 
         if (!coverage.hasCoverage) {
           console.warn('Coverage warning:', coverage.message)
+          console.info('Skipping Solar API calls - using default values for manual input')
+
+          // Return success with default/mock data structure for unsupported locations
+          // This allows the user to proceed with manual inputs
+          const defaultResults = roofPolygons.map((polygon, index) => {
+            const coords = extractPolygonCoordinates(polygon)
+            const center = this.calculatePolygonCenter(coords)
+
+            return {
+              polygonIndex: index,
+              coords,
+              center,
+              solarData: {
+                // Provide minimal structure - actual values will come from manual input
+                solarPotential: {
+                  maxArrayPanelsCount: 0,
+                  maxArrayAreaMeters2: 0,
+                  solarPanels: {
+                    yearlyEnergyDcKwh: 0
+                  }
+                },
+                buildingInsights: {
+                  center: { latitude: center.lat, longitude: center.lng },
+                  imageryDate: { year: new Date().getFullYear(), month: 1, day: 1 }
+                }
+              }
+            }
+          })
+
+          return {
+            success: true,
+            data: defaultResults,
+            coverageWarning: coverage.message
+          }
         }
       }
 
