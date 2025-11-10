@@ -208,6 +208,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
         })
 
         const predictions = fetchedSuggestions
+        .filter((s): s is { placePrediction: google.maps.places.AutocompletePrediction } => s.placePrediction !== null)
         .map((suggestion) => suggestion.placePrediction)
         .slice(0, 5)
 
