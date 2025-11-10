@@ -183,7 +183,9 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
 
         const mapDiv = map.getDiv()
 
-        this.handler = (e: MouseEvent) => {
+        this.handler = (e: Event) => {
+          if (!(e instanceof MouseEvent)) return
+
           const projection = this.getProjection()
           if (!projection) return
 
