@@ -183,7 +183,7 @@ export function usePolygonManager({
       listeners.push(
         polygon.addListener('mouseover', () => {
           if (!selectedPolygonsRef.current.has(polygon)) {
-            const moduleType = extendedPolygon.moduleType || 'STANDARD'
+            const moduleType = (extendedPolygon.moduleType || 'STANDARD') as 'STANDARD' | 'PREMIUM' | 'COMPACT'
             const options = StyleConfig.getPanelOptions('hover', moduleType)
             polygon.setOptions(options)
           }
