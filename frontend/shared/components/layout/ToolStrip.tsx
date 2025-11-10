@@ -161,7 +161,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const [hoveredTool, setHoveredTool] = useState<string | null>(null)
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
+  const [suggestions, setSuggestions] = useState<google.maps.places.PlacePrediction[]>([])
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -208,11 +208,11 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
         })
 
         const predictions = fetchedSuggestions
-        .filter((s): s is { placePrediction: google.maps.places.AutocompletePrediction } => s.placePrediction !== null)
         .map((suggestion) => suggestion.placePrediction)
+        .filter((pred): pred is google.maps.places.PlacePrediction => pred !== null)
         .slice(0, 5)
 
-        setSuggestions(predictions as google.maps.places.AutocompletePrediction[])
+        setSuggestions(predictions)
       } catch (error) {
       }
     }, 100)
@@ -304,8 +304,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     }, 500)
   }
 
-  const handleSuggestionClick = (prediction: google.maps.places.AutocompletePrediction) => {
-    const description = prediction.text?.toString() || ''
+  const handleSuggestionClick = (prediction: google.maps.places.PlacePrediction) => {
+    const description = prediction.text.toString()
 
     setSuggestions([])
     searchLocation(description)
