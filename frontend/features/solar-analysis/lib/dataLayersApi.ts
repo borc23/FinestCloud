@@ -90,13 +90,18 @@ export class DataLayersApiService {
     })
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch data layers: ${response.statusText}`)
+      const errorText = await response.text()
+      throw new Error(`Failed to fetch data layers: ${response.status} - ${errorText}`)
     }
 
     const result: DataLayersApiResponse = await response.json()
 
     if (!result.success || !result.data) {
-      throw new Error(result.error || 'Failed to get data layers')
+      const errorMessage = result.error || 'Failed to get data layers'
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        throw new Error('Google Solar API does not have coverage for this location. Please try a different area (e.g., US, UK, or other supported regions).')
+      }
+      throw new Error(errorMessage)
     }
 
     return result.data

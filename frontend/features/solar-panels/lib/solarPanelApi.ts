@@ -33,7 +33,19 @@ export class SolarPanelApiService {
         const response = await fetch(apiUrl)
 
         if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`)
+          // Try to get error details
+          let errorMessage = `API request failed with status ${response.status}`
+          try {
+            const errorData = await response.json()
+            if (errorData.detail && errorData.detail.includes('Solar API error')) {
+              errorMessage = 'Google Solar API does not have coverage for this location. Please try a different area (e.g., US, UK, or other supported regions).'
+            } else if (errorData.detail) {
+              errorMessage = errorData.detail
+            }
+          } catch {
+            // Keep default error message
+          }
+          throw new Error(errorMessage)
         }
 
         const data = await response.json()
