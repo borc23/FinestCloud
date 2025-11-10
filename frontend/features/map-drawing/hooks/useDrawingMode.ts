@@ -168,7 +168,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
     const abortController = new AbortController()
 
     class EventOverlay extends google.maps.OverlayView {
-      private handler: ((e: MouseEvent) => void) | null = null
+      private handler: ((e: Event) => void) | null = null
       private aborted = false
 
       onAdd() {
