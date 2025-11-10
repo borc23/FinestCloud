@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { RoofModel, CoordinateModel } from '@/features/solar-panels/types/detection'
+import { RoofModel, CoordinateModel } from '@/features/solar-analysis/types/detection'
 import { StyleConfig } from '../../../shared/utils/styleConfig'
 
 interface UsePolygonsReturn {
