@@ -761,7 +761,7 @@ export default function MapContainer({
         <div className={styles.errorNotification}>
           <div className={styles.errorCard}>
             <Icon name="warning" />
-            <span>{detectionError}</span>
+            <span>{detectionError.message}</span>
             <button onClick={clearError} className={styles.errorClose}>
               <Icon name="times" />
             </button>
