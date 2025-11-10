@@ -179,7 +179,7 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
         }
 
         const panes = this.getPanes()
-        if (!panes) return
+        if (!panes || !map) return
 
         const mapDiv = map.getDiv()
 
