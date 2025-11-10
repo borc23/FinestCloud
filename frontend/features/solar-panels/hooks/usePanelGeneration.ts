@@ -5,8 +5,13 @@ import { setGridVectors, clearGridVectors } from '@/features/solar-panels/utils/
 import { usePanelContext } from '../context/PanelContext'
 import type { PanelGenerationResponse, SolarDataSegment, AngleConfirmData } from '@/features/solar-panels/types/panel'
 import type { GeoTIFFData } from '@/features/solar-analysis/utils/geotiffParser'
-import { parseGeoTIFFFromBuffer } from '@/features/solar-analysis/utils/geotiffParser'
 import { checkSolarApiCoverage } from '@/features/solar-analysis/utils/coverageCheck'
+
+// Dynamic import helper for geotiff parser to avoid SSR/hydration issues
+async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTIFFData> {
+  const { parseGeoTIFFFromBuffer: parser } = await import('@/features/solar-analysis/utils/geotiffParser')
+  return parser(buffer)
+}
 
 interface UsePanelGenerationProps {
   map: google.maps.Map | null
