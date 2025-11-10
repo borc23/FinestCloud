@@ -103,10 +103,27 @@ export function useDetection(): UseDetectionReturn {
       if (!response.ok) {
         const isServerError = response.status >= 500
         const isClientError = response.status >= 400 && response.status < 500
-        
+
+        // Try to get error details from response body
+        let errorMessage = `Detection request failed (${response.status})`
+        try {
+          const errorBody = await response.json()
+          if (errorBody.error) {
+            errorMessage = errorBody.error
+          }
+          if (errorBody.details) {
+            errorMessage += `: ${errorBody.details}`
+          }
+        } catch {
+          // If we can't parse JSON, use statusText
+          if (response.statusText) {
+            errorMessage = `Detection request failed: ${response.statusText}`
+          }
+        }
+
         throw createError(
           isServerError ? 'SERVER' : isClientError ? 'VALIDATION' : 'UNKNOWN',
-          `Detection request failed: ${response.statusText}`,
+          errorMessage,
           isServerError
         )
       }

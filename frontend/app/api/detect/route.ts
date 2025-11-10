@@ -5,8 +5,13 @@ const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
 export async function POST(request: NextRequest) {
+  console.log('[Detect API] Starting detection request')
+  console.log('[Detect API] PYTHON_BACKEND_URL:', PYTHON_BACKEND_URL)
+  console.log('[Detect API] GOOGLE_MAPS_API_KEY configured:', !!GOOGLE_MAPS_API_KEY)
+
   // Validate backend URL is configured
   if (!PYTHON_BACKEND_URL) {
+    console.error('[Detect API] PYTHON_BACKEND_URL not configured')
     return NextResponse.json(
       {
         success: false,
@@ -19,6 +24,7 @@ export async function POST(request: NextRequest) {
 
   // Validate API key is configured
   if (!GOOGLE_MAPS_API_KEY) {
+    console.error('[Detect API] GOOGLE_MAPS_API_KEY not configured')
     return NextResponse.json(
       {
         success: false,
@@ -30,8 +36,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Check backend health first
+  console.log('[Detect API] Checking backend health...')
   const isHealthy = await checkBackendHealth(PYTHON_BACKEND_URL)
+  console.log('[Detect API] Backend health check result:', isHealthy)
+
   if (!isHealthy) {
+    console.error('[Detect API] Backend health check failed')
     return NextResponse.json(
       {
         success: false,
