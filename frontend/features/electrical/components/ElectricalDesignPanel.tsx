@@ -66,7 +66,7 @@ export default function ElectricalDesignPanel({
             <div className={styles.warningIcon}>⚠️</div>
             <div className={styles.warningContent}>
               <div className={styles.warningTitle}>Design Considerations</div>
-              {design.warnings.map((warning, idx) => (
+              {design.warnings.map((warning: string, idx: number) => (
                 <p key={idx} className={styles.warningText}>{warning}</p>
               ))}
             </div>
