@@ -58,7 +58,7 @@ export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
       }
 
       // Validate request if validator provided
-      if (validateRequest) {
+      if (validateRequest && body) {
         const validation = validateRequest(body)
         if (!validation.valid) {
           return createErrorResponse(
@@ -70,7 +70,7 @@ export async function proxyToPythonBackend<TBody = unknown, TData = unknown>(
       }
 
       // Transform request if transformer provided
-      if (transformRequest) {
+      if (transformRequest && body) {
         body = transformRequest(body)
         if (logRequests) {
           console.debug('Transformed request:', JSON.stringify(body, null, 2))
@@ -289,7 +289,7 @@ export function handleOptionsRequest(
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Origin': allowedOrigin || '*',
       'Access-Control-Allow-Methods': allowedMethods.join(', '),
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Credentials': 'true',
