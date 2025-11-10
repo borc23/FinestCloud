@@ -5,6 +5,7 @@ import polylabel from 'polylabel'
 import Button from '@/shared/components/ui/Button'
 import styles from './RoofAnglePanel.module.css'
 import { extractPolygonCoordinates } from '@/features/map-drawing/utils/polygonUtils'
+import type { AngleConfirmData } from '@/features/solar-panels/types/panel'
 
 interface RoofSegment {
   polygonIndex: number
@@ -17,7 +18,7 @@ interface RoofAnglePanelProps {
   roofPolygons: google.maps.Polygon[]
   objectPolygons: google.maps.Polygon[]
   solarData: RoofSegment[] | null
-  onConfirm: (data: { angles: number[]; edgePadding: number; panelData?: any }) => void
+  onConfirm: (data: AngleConfirmData) => void
   onCancel: () => void
 }
 
