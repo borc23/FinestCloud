@@ -216,8 +216,8 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
         }
 
         // Manual cleanup as fallback (addEventListener with signal handles this automatically)
-        const mapDiv = map.getDiv()
-        if (this.handler) {
+        if (map && this.handler) {
+          const mapDiv = map.getDiv()
           try {
             // This may throw if already removed by AbortController
             mapDiv.removeEventListener(eventType, this.handler, { capture: true })
