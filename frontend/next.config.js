@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Ensure API routes are included in the build
+  output: 'standalone',
+
   transpilePackages: ['geotiff'],
+
   webpack: (config) => {
     // Handle node modules that need special treatment
     config.resolve.fallback = {
