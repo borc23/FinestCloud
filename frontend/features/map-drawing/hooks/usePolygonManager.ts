@@ -4,7 +4,6 @@ import { usePanelGridDrag, handleNonPanelDrag } from './usePanelGridDrag'
 
 interface ExtendedPolygon extends google.maps.Polygon {
   isPanelElement?: boolean
-  moduleType?: 'STANDARD' | 'PREMIUM' | string
 }
 
 interface PolygonManagerProps {
@@ -50,9 +49,8 @@ export function usePolygonManager({
     const isPanelElement = extendedPolygon.isPanelElement
 
     if (isPanelElement) {
-      const moduleType = (extendedPolygon.moduleType || 'STANDARD') as 'STANDARD' | 'PREMIUM' | 'COMPACT'
       const state = isSelected ? 'selected' : 'default'
-      const options = StyleConfig.getPanelOptions(state, moduleType)
+      const options = StyleConfig.getPanelOptions(state)
 
       polygon.setOptions({
         ...options,
@@ -183,8 +181,7 @@ export function usePolygonManager({
       listeners.push(
         polygon.addListener('mouseover', () => {
           if (!selectedPolygonsRef.current.has(polygon)) {
-            const moduleType = (extendedPolygon.moduleType || 'STANDARD') as 'STANDARD' | 'PREMIUM' | 'COMPACT'
-            const options = StyleConfig.getPanelOptions('hover', moduleType)
+            const options = StyleConfig.getPanelOptions('hover')
             polygon.setOptions(options)
           }
         })
@@ -193,8 +190,7 @@ export function usePolygonManager({
       listeners.push(
         polygon.addListener('mouseout', () => {
           if (!selectedPolygonsRef.current.has(polygon)) {
-            const moduleType = extendedPolygon.moduleType || 'STANDARD'
-            const options = StyleConfig.getPanelOptions('default', moduleType)
+            const options = StyleConfig.getPanelOptions('default')
             polygon.setOptions(options)
           }
         })

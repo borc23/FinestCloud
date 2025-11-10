@@ -83,7 +83,7 @@ export class StyleConfig {
     }
   }
 
-  static getPanelOptions(state: 'default' | 'selected' | 'hover' = 'default', moduleType: 'STANDARD' | 'PREMIUM' | 'COMPACT' = 'STANDARD'): google.maps.PolygonOptions {
+  static getPanelOptions(state: 'default' | 'selected' | 'hover' = 'default'): google.maps.PolygonOptions {
     let strokeOpacity = this.PANEL_STYLES.DEFAULT_STROKE_OPACITY
     let strokeWeight = this.PANEL_STYLES.DEFAULT_STROKE_WEIGHT
     let fillOpacity = this.PANEL_STYLES.DEFAULT_FILL_OPACITY
@@ -105,7 +105,7 @@ export class StyleConfig {
       strokeColor = this.COLORS.PANEL.STROKE_HIGHLIGHT
     }
 
-    const fillColor = this.COLORS.PANEL[moduleType] ?? this.COLORS.PANEL.STANDARD
+    const fillColor = this.COLORS.PANEL.STANDARD
 
     return {
       strokeColor,

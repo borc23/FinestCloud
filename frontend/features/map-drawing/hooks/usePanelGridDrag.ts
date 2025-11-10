@@ -11,7 +11,6 @@ import {
 
 interface ExtendedPolygon extends google.maps.Polygon {
   isPanelElement?: boolean
-  moduleType?: 'STANDARD' | 'PREMIUM' | string
 }
 
 interface UsePanelGridDragProps {

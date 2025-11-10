@@ -102,7 +102,7 @@ export async function generateAndAnimatePanels({
               }))
             : []
 
-          const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
+          const panelOptions = StyleConfig.getPanelOptions('default')
           allPanelData.push({
             path,
             options: panelOptions,
@@ -131,10 +131,9 @@ export async function generateAndAnimatePanels({
       ...options,
       clickable: true,
       isPanelElement: true,
-      moduleType: 'STANDARD',
       fillOpacity: 0,
       strokeOpacity: 0
-    } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
+    } as google.maps.PolygonOptions & { isPanelElement: boolean })
 
     // Store annual sunshine value on the polygon for later use (e.g., shade visualization)
     if (annualSunshineKwh !== undefined) {

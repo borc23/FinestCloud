@@ -340,7 +340,7 @@ export function usePanelPlacement({
     const path = coords.map(c => new google.maps.LatLng(c.lat, c.lng))
 
     if (!ghostPanelRef.current) {
-      const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
+      const panelOptions = StyleConfig.getPanelOptions('default')
       ghostPanelRef.current = new google.maps.Polygon({
         paths: path,
         map,
@@ -386,16 +386,15 @@ export function usePanelPlacement({
     }
 
     const path = coords.map(c => ({ lat: c.lat, lng: c.lng }))
-    const panelOptions = StyleConfig.getPanelOptions('default', 'STANDARD')
+    const panelOptions = StyleConfig.getPanelOptions('default')
 
     const panel = new google.maps.Polygon({
       paths: path,
       map,
       ...panelOptions,
       clickable: true,
-      isPanelElement: true,
-      moduleType: 'STANDARD'
-    } as google.maps.PolygonOptions & { isPanelElement: boolean; moduleType: string })
+      isPanelElement: true
+    } as google.maps.PolygonOptions & { isPanelElement: boolean })
 
     onPanelPlaced(panel, gridId)
     lastValidPositionRef.current = null
