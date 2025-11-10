@@ -161,9 +161,9 @@ class GridManager {
     if (!panels || panels.length === 0) return null
 
     const panel = panels[0]
-    const coords = ('coords' in panel) ? panel.coords : panel
+    const coords: LatLng[] | undefined = ('coords' in panel) ? panel.coords : (panel as any as LatLng[])
 
-    if (coords && coords.length >= 4) {
+    if (coords && Array.isArray(coords) && coords.length >= 4) {
       const p0: LatLng = { lat: coords[0].lat, lng: coords[0].lng }
       const p1: LatLng = { lat: coords[1].lat, lng: coords[1].lng }
       const p3: LatLng = { lat: coords[3].lat, lng: coords[3].lng }
@@ -282,7 +282,9 @@ class GridManager {
     // Limit cache size to prevent memory leaks
     if (this.snapCache.size > 1000) {
       const oldestKey = this.snapCache.keys().next().value
-      this.snapCache.delete(oldestKey)
+      if (oldestKey !== undefined) {
+        this.snapCache.delete(oldestKey)
+      }
     }
 
     return closestSnap
