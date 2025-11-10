@@ -13,6 +13,9 @@ import type {
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const GOOGLE_SOLAR_DATA_LAYERS_URL = 'https://solar.googleapis.com/v1/dataLayers:get'
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const body: DataLayersRequest = await request.json()

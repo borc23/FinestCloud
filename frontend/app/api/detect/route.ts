@@ -4,6 +4,9 @@ import { proxyToPythonBackend, handleOptionsRequest, checkBackendHealth } from '
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   console.log('[Detect API] Starting detection request')
   console.log('[Detect API] PYTHON_BACKEND_URL:', PYTHON_BACKEND_URL)
