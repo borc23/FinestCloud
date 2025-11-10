@@ -24,6 +24,12 @@ export interface SiteInfo {
   roofMaterial?: string // e.g., "Tile", "Metal", "Membrane"
   roofAge?: number // years
   roofCondition?: 'excellent' | 'good' | 'fair' | 'poor'
+  shadeAnalysis?: {
+    averageShadePercentage: number
+    estimatedAnnualLoss: number
+    estimatedFinancialLoss: number
+    recommendation: string
+  }
 }
 
 export interface SystemSpecifications {

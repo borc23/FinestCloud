@@ -801,8 +801,8 @@ function addElectricalDesign(
   yPos += 5
 
   const electrical = data.electricalDesign!
-  const stringConfig = electrical.stringConfiguration
-  const wireSizing = electrical.wireSizing
+  const stringConfig = electrical.stringConfig
+  const wireSizing = electrical.wiring
 
   const electricalInfo = [
     ['String Configuration', ''],
@@ -819,8 +819,8 @@ function addElectricalDesign(
     ['  AC Voltage Drop', `${wireSizing.acVoltageDrop.toFixed(2)}%`],
     ['', ''],
     ['Protection', ''],
-    ['  DC Breaker', `${electrical.dcBreaker.rating}A`],
-    ['  AC Breaker', `${electrical.acBreaker.rating}A`],
+    ['  DC Breaker', `${electrical.breakers.dcBreakerRating}A`],
+    ['  AC Breaker', `${electrical.breakers.acBreakerRating}A`],
   ]
 
   autoTable(doc, {
