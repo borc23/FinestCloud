@@ -200,10 +200,12 @@ export function useDrawingMode({ map, isEditMode, onPolygonComplete }: UseDrawin
         }
 
         // Use AbortController signal for automatic cleanup
-        mapDiv.addEventListener(eventType, this.handler, {
-          capture: true,
-          signal: abortController.signal
-        })
+        if (this.handler) {
+          mapDiv.addEventListener(eventType, this.handler as EventListener, {
+            capture: true,
+            signal: abortController.signal
+          })
+        }
       }
 
       onRemove() {
