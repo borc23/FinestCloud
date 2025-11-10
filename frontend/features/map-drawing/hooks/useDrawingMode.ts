@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { DrawingMode } from '@/features/solar-panels/types/drawing'
+import type { DrawingMode } from '@/features/map-drawing/types/drawing'
 
 const COLORS = {
   ROOF: '#34c759',
