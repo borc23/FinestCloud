@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { DetectionBounds, DetectionResponse, DetectionRequest } from '@/features/solar-panels/types/detection'
+import { DetectionBounds, DetectionResponse, DetectionRequest } from '@/features/solar-analysis/types/detection'
 
 interface DetectionError {
   code: 'NETWORK' | 'VALIDATION' | 'SERVER' | 'UNKNOWN'
