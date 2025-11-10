@@ -11,7 +11,7 @@ import type {
   BreakerSizing,
   ElectricalDesign,
   ElectricalInputs,
-} from '@/features/solar-panels/types/electrical'
+} from '@/features/electrical/types/electrical'
 
 /**
  * Standard panel specifications (common German market panels)
