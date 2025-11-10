@@ -145,7 +145,7 @@ export default function DataLayerOverlay({
       )
 
       // Create ImageData and put on canvas
-      const imageData = new ImageData(rgbaData, geotiffData.width, geotiffData.height)
+      const imageData = new ImageData(new Uint8ClampedArray(rgbaData.buffer), geotiffData.width, geotiffData.height)
       ctx.putImageData(imageData, 0, 0)
 
       // Apply 1 meter offset towards north BEFORE clipping
