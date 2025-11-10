@@ -132,7 +132,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
     onConfirm({
       angles: parsedAngles,
       edgePadding: padding,
-      _requestBody: requestBody
+      panelData: requestBody
     })
   }
 
