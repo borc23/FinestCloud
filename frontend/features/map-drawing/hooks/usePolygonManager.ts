@@ -50,7 +50,7 @@ export function usePolygonManager({
     const isPanelElement = extendedPolygon.isPanelElement
 
     if (isPanelElement) {
-      const moduleType = extendedPolygon.moduleType || 'STANDARD'
+      const moduleType = (extendedPolygon.moduleType || 'STANDARD') as 'STANDARD' | 'PREMIUM' | 'COMPACT'
       const state = isSelected ? 'selected' : 'default'
       const options = StyleConfig.getPanelOptions(state, moduleType)
 
