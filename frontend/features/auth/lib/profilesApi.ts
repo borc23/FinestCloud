@@ -25,7 +25,7 @@ export async function updateProfile(
   userId: string,
   updates: ProfileUpdate
 ): Promise<Profile | null> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data: existingProfile } = await supabase
     .from('profiles')
@@ -36,7 +36,7 @@ export async function updateProfile(
   if (existingProfile) {
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates as any)
+      .update(updates)
       .eq('id', userId)
       .select()
       .single()
