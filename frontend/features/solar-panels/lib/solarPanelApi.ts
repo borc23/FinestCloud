@@ -59,7 +59,22 @@ export class SolarPanelApiService {
                   maxArrayAreaMeters2: 0,
                   solarPanels: {
                     yearlyEnergyDcKwh: 0
-                  }
+                  },
+                  roofSegmentStats: [{
+                    pitchDegrees: 0,  // User will input manually
+                    azimuthDegrees: 180,  // Default south-facing
+                    stats: {
+                      areaMeters2: 0,
+                      sunshineQuantiles: [],
+                      groundAreaMeters2: 0
+                    },
+                    center: { latitude: center.lat, longitude: center.lng },
+                    boundingBox: {
+                      sw: { latitude: center.lat - 0.0001, longitude: center.lng - 0.0001 },
+                      ne: { latitude: center.lat + 0.0001, longitude: center.lng + 0.0001 }
+                    },
+                    planeHeightAtCenterMeters: 0
+                  }]
                 },
                 buildingInsights: {
                   center: { latitude: center.lat, longitude: center.lng },
