@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 
+// Mark this route as dynamic since it uses searchParams
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams

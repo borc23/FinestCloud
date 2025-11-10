@@ -4,6 +4,9 @@ import type { PanelGenerationRequest, Coordinate } from '@/features/solar-panels
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL
 
+// Mark this route as dynamic since GET handler uses searchParams
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   return proxyToPythonBackend(request, {
     method: 'POST',
