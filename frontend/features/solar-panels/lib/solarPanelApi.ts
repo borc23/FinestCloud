@@ -5,14 +5,23 @@
 
 import { extractPolygonCoordinates, type PolygonCoordinates } from '@/features/map-drawing/utils/polygonUtils'
 import type { SolarDataSegment } from '@/features/solar-panels/types/panel'
+import { checkSolarApiCoverage } from '@/features/solar-analysis/utils/coverageCheck'
 
 interface SolarApiResponse {
   success: boolean
   data?: SolarDataSegment[]
   error?: string
+  coverageWarning?: string
 }
 
 export class SolarPanelApiService {
+  /**
+   * Check if location has Solar API coverage
+   */
+  checkCoverage(lat: number, lng: number) {
+    return checkSolarApiCoverage(lat, lng)
+  }
+
   /**
    * Fetch solar data for each polygon from the backend
    * @param roofPolygons - Array of Google Maps polygons representing roofs
@@ -23,6 +32,17 @@ export class SolarPanelApiService {
     mapBounds: { center: { lat: number; lng: number } }
   ): Promise<SolarApiResponse> {
     try {
+      // Check coverage for the first polygon
+      if (roofPolygons.length > 0) {
+        const coords = extractPolygonCoordinates(roofPolygons[0])
+        const center = this.calculatePolygonCenter(coords)
+        const coverage = checkSolarApiCoverage(center.lat, center.lng)
+
+        if (!coverage.hasCoverage) {
+          console.warn('Coverage warning:', coverage.message)
+        }
+      }
+
       const polygonDataPromises = roofPolygons.map(async (polygon, index) => {
         // Get polygon center for the API call
         const coords = extractPolygonCoordinates(polygon)
