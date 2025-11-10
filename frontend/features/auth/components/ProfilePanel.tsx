@@ -45,7 +45,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
   const [defaultLat, setDefaultLat] = useState('')
   const [defaultLng, setDefaultLng] = useState('')
   const [locationSearch, setLocationSearch] = useState('')
-  const [locationSuggestions, setLocationSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
+  const [locationSuggestions, setLocationSuggestions] = useState<google.maps.places.PlacePrediction[]>([])
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0, width: 0 })
   const [profileLoading, setProfileLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -344,6 +344,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
 
         const predictions = fetchedSuggestions
           .map(suggestion => suggestion.placePrediction)
+          .filter((pred): pred is google.maps.places.PlacePrediction => pred !== null)
           .slice(0, 5)
 
         setLocationSuggestions(predictions)
