@@ -157,6 +157,12 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
               const topLeftLatLng = projection.fromContainerPixelToLatLng(topLeft)
               const bottomRightLatLng = projection.fromContainerPixelToLatLng(bottomRight)
 
+              if (!topLeftLatLng || !bottomRightLatLng) {
+                cleanup()
+                reject(new Error('Failed to convert pixel coordinates to LatLng'))
+                return
+              }
+
               const bounds = new google.maps.LatLngBounds()
               bounds.extend(topLeftLatLng)
               bounds.extend(bottomRightLatLng)
