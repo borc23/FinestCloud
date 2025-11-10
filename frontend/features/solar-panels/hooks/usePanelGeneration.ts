@@ -6,6 +6,7 @@ import { usePanelContext } from '../context/PanelContext'
 import type { PanelGenerationResponse, SolarDataSegment, AngleConfirmData } from '@/features/solar-panels/types/panel'
 import type { GeoTIFFData } from '@/features/solar-analysis/utils/geotiffParser'
 import { parseGeoTIFFFromBuffer } from '@/features/solar-analysis/utils/geotiffParser'
+import { checkSolarApiCoverage } from '@/features/solar-analysis/utils/coverageCheck'
 
 interface UsePanelGenerationProps {
   map: google.maps.Map | null
@@ -93,6 +94,14 @@ export function usePanelGeneration({
     const roofCenter = getRoofCenter()
     if (!roofCenter) {
       console.warn('No roof center available for GeoTIFF request')
+      return null
+    }
+
+    // Check coverage before attempting to load GeoTIFF
+    const coverage = checkSolarApiCoverage(roofCenter.lat, roofCenter.lng)
+    if (!coverage.hasCoverage) {
+      console.info('Skipping GeoTIFF load - location not supported by Solar API')
+      setState(prev => ({ ...prev, isLoadingGeotiff: false, geotiffData: null }))
       return null
     }
 
