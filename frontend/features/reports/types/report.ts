@@ -3,8 +3,8 @@
  * Type definitions for PDF report generation
  */
 
-import type { FinancialResults } from './financial'
-import type { ElectricalDesign } from './electrical'
+import type { FinancialResults } from '@/features/financial/types/financial'
+import type { ElectricalDesign } from '@/features/electrical/types/electrical'
 
 export interface CustomerInfo {
   name: string
