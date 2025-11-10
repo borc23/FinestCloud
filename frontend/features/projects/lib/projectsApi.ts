@@ -12,7 +12,7 @@ export async function createProject(
   userId: string,
   projectData: CreateProjectData
 ): Promise<string> {
-  const supabase = createClient()
+  const supabase = createClient() as any as any
 
   // 1. Create the project
   const { data: project, error: projectError } = await supabase
@@ -93,7 +93,7 @@ export async function createProject(
 }
 
 export async function getProjects(userId: string): Promise<Project[]> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data, error } = await supabase
     .from('projects')
@@ -106,7 +106,7 @@ export async function getProjects(userId: string): Promise<Project[]> {
 }
 
 export async function getProject(projectId: string): Promise<ProjectWithData | null> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   // Fetch project
   const { data: project, error: projectError } = await supabase
@@ -128,7 +128,7 @@ export async function getProject(projectId: string): Promise<ProjectWithData | n
   if (roofError) throw roofError
 
   // Fetch panel configurations for all roofs
-  const roofIds = (roofAnalyses || []).map((r) => r.id)
+  const roofIds = (roofAnalyses || []).map((r: any) => r.id)
   const { data: panelConfigs, error: panelConfigError } = await supabase
     .from('panel_configurations')
     .select('*')
@@ -158,7 +158,7 @@ export async function getProject(projectId: string): Promise<ProjectWithData | n
       createdAt: project.created_at,
       updatedAt: project.updated_at,
     },
-    roofAnalyses: (roofAnalyses || []).map((roof) => ({
+    roofAnalyses: (roofAnalyses || []).map((roof: any) => ({
       id: roof.id,
       projectId: roof.project_id,
       roofIndex: roof.roof_index,
@@ -171,13 +171,13 @@ export async function getProject(projectId: string): Promise<ProjectWithData | n
       shadeStats: roof.shade_stats as any,
       createdAt: roof.created_at,
     })),
-    objectPolygons: (objectPolygons || []).map((obj) => ({
+    objectPolygons: (objectPolygons || []).map((obj: any) => ({
       id: obj.id,
       projectId: obj.project_id,
       polygonCoords: obj.polygon_coords as Coordinate[],
       createdAt: obj.created_at,
     })),
-    panelConfigurations: (panelConfigs || []).map((config) => ({
+    panelConfigurations: (panelConfigs || []).map((config: any) => ({
       id: config.id,
       roofAnalysisId: config.roof_analysis_id,
       panelPositions: config.panel_positions as Coordinate[][],
@@ -192,7 +192,7 @@ export async function updateProject(
   projectId: string,
   updates: Partial<ProjectInsert>
 ): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { error } = await supabase
     .from('projects')
@@ -203,7 +203,7 @@ export async function updateProject(
 }
 
 export async function deleteProject(projectId: string): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   // Cascade delete is handled by the database
   const { error } = await supabase
@@ -219,7 +219,7 @@ export async function deleteProject(projectId: string): Promise<void> {
  * Can be restored later using restoreProject()
  */
 export async function softDeleteProject(projectId: string): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { error } = await supabase.rpc('soft_delete_project', {
     project_id: projectId,
@@ -232,7 +232,7 @@ export async function softDeleteProject(projectId: string): Promise<void> {
  * Restore a soft-deleted project (clears deleted_at timestamp)
  */
 export async function restoreProject(projectId: string): Promise<void> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { error } = await supabase.rpc('restore_project', {
     project_id: projectId,
@@ -245,7 +245,7 @@ export async function restoreProject(projectId: string): Promise<void> {
  * Get soft-deleted projects for the current user
  */
 export async function getDeletedProjects(userId: string): Promise<Project[]> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data, error } = await supabase
     .from('projects')
@@ -264,7 +264,7 @@ export async function getDeletedProjects(userId: string): Promise<Project[]> {
  * @returns Number of projects permanently deleted
  */
 export async function cleanupDeletedProjects(daysOld: number = 30): Promise<number> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data, error } = await supabase.rpc('cleanup_deleted_projects', {
     days_old: daysOld,
@@ -278,7 +278,7 @@ export async function cleanupDeletedProjects(daysOld: number = 30): Promise<numb
  * Get project statistics using the database view
  */
 export async function getProjectStats(userId: string): Promise<any[]> {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data, error } = await supabase
     .from('project_stats')
