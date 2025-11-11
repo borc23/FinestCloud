@@ -10,6 +10,7 @@ export function ContextualTooltip() {
   const { activeTooltip, hideTooltip, skipTutorial, nextStep } = useTutorial();
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [arrowPosition, setArrowPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
+  const [arrowOffset, setArrowOffset] = useState(0);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -33,33 +34,38 @@ export function ContextualTooltip() {
       let left = 0;
       let finalArrowPosition: 'top' | 'bottom' | 'left' | 'right' = preferredPosition;
 
+      const arrowGap = 27; // Gap between arrow tip and button
+
       switch (preferredPosition) {
         case 'bottom':
-          top = targetRect.bottom + 12; // 12px gap
+          top = targetRect.bottom + arrowGap;
           left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
           finalArrowPosition = 'top';
           break;
 
         case 'top':
-          top = targetRect.top - tooltipRect.height - 12;
+          top = targetRect.top - tooltipRect.height - arrowGap;
           left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
           finalArrowPosition = 'bottom';
           break;
 
         case 'right':
           top = targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2);
-          left = targetRect.right + 12;
+          left = targetRect.right + arrowGap;
           finalArrowPosition = 'left';
           break;
 
         case 'left':
           top = targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2);
-          left = targetRect.left - tooltipRect.width - 12;
+          left = targetRect.left - tooltipRect.width - arrowGap;
           finalArrowPosition = 'right';
           break;
       }
 
-      // Keep tooltip within viewport bounds
+      const buttonCenterX = targetRect.left + (targetRect.width / 2);
+      const tooltipCenterX = left + (tooltipRect.width / 2);
+      const calculatedArrowOffset = buttonCenterX - tooltipCenterX;
+
       const padding = 16;
       if (left < padding) left = padding;
       if (left + tooltipRect.width > window.innerWidth - padding) {
@@ -72,6 +78,7 @@ export function ContextualTooltip() {
 
       setPosition({ top, left });
       setArrowPosition(finalArrowPosition);
+      setArrowOffset(calculatedArrowOffset);
     };
 
     // Initial position calculation
@@ -172,7 +179,14 @@ export function ContextualTooltip() {
             </div>
 
             {/* Arrow */}
-            <div className={styles.arrow} />
+            <div
+              className={styles.arrow}
+              style={{
+                ...(arrowPosition === 'top' || arrowPosition === 'bottom'
+                  ? { left: `calc(50% + ${arrowOffset}px)` }
+                  : {})
+              }}
+            />
           </motion.div>
         </>
       )}
