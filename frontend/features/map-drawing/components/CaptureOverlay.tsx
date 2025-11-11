@@ -265,7 +265,7 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
         <Button
           variant="primary"
           onClick={handleDetect}
-          loading={isProcessing}
+          disabled={isProcessing}
           aria-label={isProcessing ? "Processing" : "Start Capture"}
         >
           Capture
