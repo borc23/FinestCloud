@@ -17,7 +17,7 @@ import { useModalState } from '@/shared/hooks/useModalState'
 import { useProjectState } from '@/shared/hooks/useProjectState'
 import { toast } from 'sonner'
 import { TutorialProvider } from '@/contexts/TutorialContext'
-import { ContextualTooltip } from '@/components/tutorial/ContextualTooltip'
+import { ContextualTooltip } from '@/features/tutorial/ContextualTooltip'
 
 const MapContainer = dynamic(() => import('@/features/map-drawing/components/MapContainer'), {
   ssr: false,
