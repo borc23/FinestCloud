@@ -14,6 +14,7 @@ import {
   DashboardSummaryProps,
   MetricItemProps
 } from '@/features/solar-analysis/types/result_dashboard'
+import { useTutorial } from '@/contexts/TutorialContext'
 
 export default function SolarResultsDashboard(props: SolarResultsDashboardProps & {
   onMinimizeChange?: (minimized: boolean) => void
@@ -21,6 +22,8 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
   isAuthenticated?: boolean
   minimizeRef?: React.MutableRefObject<(() => void) | null>
 }) {
+  const { showTooltip, markStepComplete } = useTutorial()
+
   // Extract and prepare all dashboard data
   const {
     panelData,
@@ -62,13 +65,33 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     }
   }, [props.minimizeRef, setIsMinimized])
 
+  // Show tutorial tooltip when results are available
+  useEffect(() => {
+    if (panelData && annualProduction && !isMinimized) {
+      setTimeout(() => {
+        showTooltip({
+          id: 'results_dashboard',
+          targetElement: '[data-tutorial="dashboard"]',
+          content: '🎉 Your solar system is ready! Explore metrics, financial analysis, and electrical design.',
+          position: 'left',
+          showNext: false,
+          showSkip: true,
+        })
+        markStepComplete('results')
+      }, 1000)
+    }
+  }, [panelData, annualProduction, isMinimized, showTooltip, markStepComplete])
+
   if (!panelData) {
     return null
   }
 
   return (
     <>
-      <div className={`${styles.dashboard} ${isMinimized ? styles.minimized : ''}`}>
+      <div
+        className={`${styles.dashboard} ${isMinimized ? styles.minimized : ''}`}
+        data-tutorial="dashboard"
+      >
         {isMinimized ? (
           <button
             className={styles.minimizedButton}

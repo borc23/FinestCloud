@@ -153,7 +153,7 @@ export default function DataLayerOverlay({
       }
 
       // Convert GeoTIFF data to RGBA
-      const rgbaData = geotiffToRGBA(
+      const rgbaData = await geotiffToRGBA(
         geotiffData.rasters[0],
         geotiffData.width,
         geotiffData.height,

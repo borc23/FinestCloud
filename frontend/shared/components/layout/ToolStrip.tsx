@@ -63,6 +63,7 @@ const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
     onClick={isImageMode ? undefined : onClick}
   >
     <button
+      id="search-button"
       className={`${styles.tool} ${isImageMode ? styles.inactive : ''}`}
       aria-label="Search"
       aria-pressed={isActive}
@@ -136,6 +137,7 @@ const MiddleIconStrip = ({
                   aria-label={getToolLabel(tool)}
                   aria-pressed={activeTool === tool.id}
                   disabled={isDisabled}
+                  data-tool={tool.id}
                 >
                   <Icon name={getToolIcon(tool) as any} />
                 </button>
@@ -356,6 +358,7 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
               <input
                 ref={searchInputRef}
+                id="search-input"
                 type="text"
                 className={styles.searchInput}
                 placeholder="Search..."

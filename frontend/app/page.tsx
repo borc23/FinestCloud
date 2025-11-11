@@ -16,6 +16,8 @@ import { useToolState } from '@/shared/hooks/useToolState'
 import { useModalState } from '@/shared/hooks/useModalState'
 import { useProjectState } from '@/shared/hooks/useProjectState'
 import { toast } from 'sonner'
+import { TutorialProvider } from '@/contexts/TutorialContext'
+import { ContextualTooltip } from '@/components/tutorial/ContextualTooltip'
 
 const MapContainer = dynamic(() => import('@/features/map-drawing/components/MapContainer'), {
   ssr: false,
@@ -103,9 +105,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="app-container">
-      <div className="app-layout">
-        <div className="main-content">
+    <TutorialProvider>
+      <div className="app-container">
+        <div className="app-layout">
+          <div className="main-content">
           {isImageMode && uploadedImage ? (
             <ZoomableImage src={uploadedImage} alt="Uploaded" />
           ) : (
@@ -208,6 +211,12 @@ export default function HomePage() {
           }
         }}
       />
+
+      {/* Tutorial Components */}
+      {user && (
+        <ContextualTooltip />
+      )}
     </div>
+    </TutorialProvider>
   )
 }

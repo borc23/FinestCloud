@@ -26,6 +26,7 @@ export default function DashboardActions({
         <button
           className={styles.saveButton}
           onClick={onSaveProject}
+          data-tutorial="save-button"
         >
           💾 Save Project
         </button>
@@ -39,6 +40,7 @@ export default function DashboardActions({
       <button
         className={styles.financialButton}
         onClick={onViewFinancials}
+        data-tutorial="financial-button"
       >
         💰 Financial Analysis
       </button>
