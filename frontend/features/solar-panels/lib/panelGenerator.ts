@@ -8,7 +8,20 @@ import type {
   SolarDataSegment
 } from '@/features/solar-panels/types/panel'
 import type { GeoTIFFData } from '@/features/solar-analysis/utils/geotiffParser'
-import { calculateCentroid, getValuesAtCoordinates } from '@/features/solar-analysis/utils/geotiffParser'
+
+// Dynamic import helpers to avoid SSR/hydration issues with geotiff
+async function calculateCentroid(coords: { lat: number; lng: number }[]): Promise<{ lat: number; lng: number }> {
+  const { calculateCentroid: calc } = await import('@/features/solar-analysis/utils/geotiffParser')
+  return calc(coords)
+}
+
+async function getValuesAtCoordinates(
+  geotiffData: GeoTIFFData,
+  coordinates: { lat: number; lng: number }[]
+): Promise<(number | null)[]> {
+  const { getValuesAtCoordinates: getter } = await import('@/features/solar-analysis/utils/geotiffParser')
+  return getter(geotiffData, coordinates)
+}
 
 interface PanelData {
   path: Coordinate[]

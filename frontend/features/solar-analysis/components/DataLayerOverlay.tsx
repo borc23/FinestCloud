@@ -6,7 +6,25 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { parseGeoTIFFFromBuffer, geotiffToRGBA, type GeoTIFFData } from '../utils/geotiffParser'
+import type { GeoTIFFData } from '../utils/geotiffParser'
+
+// Dynamic import helpers to avoid SSR/hydration issues with geotiff
+async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTIFFData> {
+  const { parseGeoTIFFFromBuffer: parser } = await import('../utils/geotiffParser')
+  return parser(buffer)
+}
+
+async function geotiffToRGBA(
+  data: Float32Array,
+  width: number,
+  height: number,
+  min: number,
+  max: number,
+  colorScale: 'viridis' | 'heat' | 'sunshine' = 'sunshine'
+): Promise<Uint8ClampedArray> {
+  const { geotiffToRGBA: converter } = await import('../utils/geotiffParser')
+  return converter(data, width, height, min, max, colorScale)
+}
 
 interface DataLayerOverlayProps {
   map: google.maps.Map | null
