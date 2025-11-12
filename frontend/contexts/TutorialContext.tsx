@@ -94,72 +94,15 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   // Initialize tutorial for first-time authenticated users
+  // DISABLED: Tutorial feature is currently turned off
   useEffect(() => {
-    if (user && dbShowTutorial && !tutorialState.tutorialCompleted) {
-      // Check if this is the first time the user has logged in
-      const hasSeenWelcome = tutorialState.hasSeenTooltips['welcome'];
-
-      if (!hasSeenWelcome) {
-        // Start tutorial after a 2-second delay
-        const timer = setTimeout(() => {
-          setTutorialState(prev => ({
-            ...prev,
-            tutorialActive: true,
-            hasSeenTooltips: {
-              ...prev.hasSeenTooltips,
-              welcome: true,
-            },
-          }));
-
-          // Show welcome tooltip by setting activeTooltip directly
-          setActiveTooltip({
-            id: 'welcome',
-            targetElement: '#search-button',
-            content: 'Welcome! Start by searching for the property you want to analyze.',
-            position: 'bottom',
-            showNext: true,
-            showSkip: true,
-          });
-        }, 2000);
-
-        return () => clearTimeout(timer);
-      }
-    }
+    // Tutorial is disabled globally - do nothing
+    return;
   }, [user, dbShowTutorial, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
 
   const showTooltip = useCallback((config: TooltipConfig) => {
-    // Don't show if database flag is false and this is an auto-tooltip
-    if (dbShowTutorial === false && !config.id.startsWith('manual_')) {
-      return;
-    }
-
-    // Don't show if tutorial is completed and this is an auto-tooltip
-    if (tutorialState.tutorialCompleted && !config.id.startsWith('manual_')) {
-      return;
-    }
-
-    // Don't show if already seen (unless it's a manual "show me" replay)
-    if (tutorialState.hasSeenTooltips[config.id] && !config.id.startsWith('manual_')) {
-      return;
-    }
-
-    setActiveTooltip(config);
-
-    // Mark as seen
-    setTutorialState(prev => ({
-      ...prev,
-      hasSeenTooltips: {
-        ...prev.hasSeenTooltips,
-        [config.id]: true,
-      },
-    }));
-
-    // Auto-dismiss after 10 seconds
-    const timer = setTimeout(() => {
-      setActiveTooltip(null);
-    }, 10000);
-
-    return () => clearTimeout(timer);
+    // DISABLED: Tutorial feature is globally disabled
+    return;
   }, [dbShowTutorial, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
 
   const hideTooltip = useCallback(() => {

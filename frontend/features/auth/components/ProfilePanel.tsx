@@ -702,7 +702,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                     />
                     <span>Enable tutorial tooltips</span>
                   </label>
-                  <small>Tutorial feature is currently disabled while we improve the experience.</small>
+                  <small>Tutorial feature is currently disabled.</small>
                 </div>
               </div>
 
