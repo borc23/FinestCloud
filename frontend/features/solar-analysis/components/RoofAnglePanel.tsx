@@ -41,7 +41,8 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
     const initialAngles = roofPolygons.map((_, index) => {
       const segment = solarData?.find(s => s.polygonIndex === index)
       const pitchDegrees = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.pitchDegrees
-      return pitchDegrees ? pitchDegrees.toFixed(1) : ''
+      // Only use API data if it's a valid non-zero value
+      return pitchDegrees && pitchDegrees > 0 ? pitchDegrees.toFixed(1) : ''
     })
     setAngles(initialAngles)
 
@@ -166,7 +167,9 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
           const apiAngle = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.pitchDegrees
           const azimuth = segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.azimuthDegrees
           const isLoading = solarData === null
-          const noDataAvailable = solarData !== null && !apiAngle
+          // Show "Enter manually" only when API data is unavailable or returns 0/null
+          const hasValidApiData = apiAngle && apiAngle > 0
+          const noDataAvailable = solarData !== null && !hasValidApiData
 
           return (
             <div key={index} className={styles.roofItem}>
@@ -175,7 +178,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
                 Pitch
                 {isLoading ? (
                   <small className={styles.hint}>Loading...</small>
-                ) : apiAngle ? (
+                ) : hasValidApiData ? (
                   <small className={styles.hint}>
                     Pitch: {apiAngle.toFixed(1)}°, Azimuth: {azimuth?.toFixed(0)}°
                   </small>
@@ -290,7 +293,7 @@ export default function RoofAnglePanel({ roofPolygons, objectPolygons, solarData
             disabled={!isGenerateEnabled}
             data-tutorial="generate-button"
           >
-            Generate Panels
+            Generate
           </Button>
         </div>
       </div>

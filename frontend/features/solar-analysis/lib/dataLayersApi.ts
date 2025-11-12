@@ -8,7 +8,6 @@ import type {
   DataLayersApiResponse,
   DataLayersRequest
 } from '@/features/solar-analysis/types/solar-api'
-import { checkSolarApiCoverage } from '@/features/solar-analysis/utils/coverageCheck'
 
 export class DataLayersApiService {
   private baseUrl = '/api/solar-data-layers'
@@ -71,18 +70,6 @@ export class DataLayersApiService {
     radiusMeters: number,
     requiredQuality: 'LOW' | 'MEDIUM' | 'HIGH'
   ): Promise<DataLayersResponse> {
-    // Check coverage before making API call
-    const coverage = checkSolarApiCoverage(latitude, longitude)
-
-    if (!coverage.hasCoverage) {
-      console.warn('Data Layers API: Coverage warning:', coverage.message)
-      console.info('Skipping Data Layers API call - location not supported')
-
-      // Return a minimal/empty data structure instead of making the API call
-      // This prevents 404 errors and allows the app to continue with manual inputs
-      throw new Error('Google Solar API does not have coverage for this location. GeoTIFF data layers will not be available. You can still use manual inputs for solar calculations.')
-    }
-
     const requestBody: DataLayersRequest = {
       location: {
         latitude,

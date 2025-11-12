@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { getProfile, setDefaultLocation, updateProfile } from '@/features/auth/lib/profilesApi'
+import { getProfile, setDefaultLocation, updateProfile, setShowTutorial } from '@/features/auth/lib/profilesApi'
 import type { Project } from '@/features/auth/types/database'
 import ProjectCard from '@/features/projects/components/ProjectCard'
 import { deleteProject, getProjects } from '@/features/projects/lib/projectsApi'
@@ -9,6 +9,7 @@ import { Icon } from '@/shared/components/ui/Icon'
 import { createClient } from '@/shared/lib/supabase/client'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useTutorial } from '@/contexts/TutorialContext'
 import styles from './ProfilePanel.module.css'
 
 declare global {
@@ -28,6 +29,7 @@ type AuthenticatedView = 'profile' | 'projects'
 
 export default function ProfilePanel({ isOpen, onClose, onLoadProject }: ProfilePanelProps) {
   const { user, signOut } = useAuth()
+  const { startTutorial } = useTutorial()
 
   // Auth state
   const [authView, setAuthView] = useState<AuthView>('login')
@@ -44,6 +46,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
   const [displayName, setDisplayName] = useState('')
   const [defaultLat, setDefaultLat] = useState('')
   const [defaultLng, setDefaultLng] = useState('')
+  const [showTutorialEnabled, setShowTutorialEnabled] = useState(false)
   const [locationSearch, setLocationSearch] = useState('')
   const [locationSuggestions, setLocationSuggestions] = useState<google.maps.places.PlacePrediction[]>([])
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0, width: 0 })
@@ -84,6 +87,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         const lng = profile.default_longitude
         setDefaultLat(lat?.toString() || '')
         setDefaultLng(lng?.toString() || '')
+        setShowTutorialEnabled(profile.show_tutorial)
 
         // If we have coordinates, reverse geocode to get location name
         if (lat && lng && window.google?.maps) {
@@ -203,6 +207,29 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
       setAuthError(err.message || 'Failed to sign up')
     } finally {
       setAuthLoading(false)
+    }
+  }
+
+  const handleTutorialToggle = async (enabled: boolean) => {
+    if (!user) return
+
+    try {
+      await setShowTutorial(user.id, enabled)
+      setShowTutorialEnabled(enabled)
+
+      // If enabling, start the tutorial
+      if (enabled) {
+        toast.success('Tutorial enabled! Starting tutorial...')
+        onClose()
+        setTimeout(() => {
+          startTutorial()
+        }, 500)
+      } else {
+        toast.success('Tutorial disabled')
+      }
+    } catch (err: any) {
+      console.error('Error updating tutorial preference:', err)
+      setError('Failed to update tutorial preference')
     }
   }
 
@@ -657,6 +684,26 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                   <Icon name="location-arrow" />
                   Use Current Location
                 </button>
+              </div>
+
+              <div className={styles.section}>
+                <h3>Tutorial</h3>
+                <p className={styles.description}>
+                  Show interactive tutorial when using the application
+                </p>
+
+                <div className={styles.field}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={(e) => handleTutorialToggle(e.target.checked)}
+                      disabled={true}
+                    />
+                    <span>Enable tutorial tooltips</span>
+                  </label>
+                  <small>Tutorial feature is currently disabled while we improve the experience.</small>
+                </div>
               </div>
 
               <div className={styles.actions}>

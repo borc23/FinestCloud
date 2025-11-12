@@ -5,7 +5,6 @@
 
 import { extractPolygonCoordinates, type PolygonCoordinates } from '@/features/map-drawing/utils/polygonUtils'
 import type { SolarDataSegment } from '@/features/solar-panels/types/panel'
-import { checkSolarApiCoverage } from '@/features/solar-analysis/utils/coverageCheck'
 
 interface SolarApiResponse {
   success: boolean
@@ -16,82 +15,13 @@ interface SolarApiResponse {
 
 export class SolarPanelApiService {
   /**
-   * Check if location has Solar API coverage
-   */
-  checkCoverage(lat: number, lng: number) {
-    return checkSolarApiCoverage(lat, lng)
-  }
-
-  /**
    * Fetch solar data for each polygon from the backend
    * @param roofPolygons - Array of Google Maps polygons representing roofs
-   * @param mapBounds - Map bounds containing center coordinates
    */
   async fetchSolarDataForPolygons(
-    roofPolygons: google.maps.Polygon[],
-    mapBounds: { center: { lat: number; lng: number } }
+    roofPolygons: google.maps.Polygon[]
   ): Promise<SolarApiResponse> {
     try {
-      // Check coverage for the first polygon
-      if (roofPolygons.length > 0) {
-        const coords = extractPolygonCoordinates(roofPolygons[0])
-        const center = this.calculatePolygonCenter(coords)
-        const coverage = checkSolarApiCoverage(center.lat, center.lng)
-
-        if (!coverage.hasCoverage) {
-          console.warn('Coverage warning:', coverage.message)
-          console.info('Skipping Solar API calls - using default values for manual input')
-
-          // Return success with default/mock data structure for unsupported locations
-          // This allows the user to proceed with manual inputs
-          const defaultResults = roofPolygons.map((polygon, index) => {
-            const coords = extractPolygonCoordinates(polygon)
-            const center = this.calculatePolygonCenter(coords)
-
-            return {
-              polygonIndex: index,
-              coords,
-              center,
-              solarData: {
-                // Provide minimal structure - actual values will come from manual input
-                solarPotential: {
-                  maxArrayPanelsCount: 0,
-                  maxArrayAreaMeters2: 0,
-                  solarPanels: {
-                    yearlyEnergyDcKwh: 0
-                  },
-                  roofSegmentStats: [{
-                    pitchDegrees: 0,  // User will input manually
-                    azimuthDegrees: 180,  // Default south-facing
-                    stats: {
-                      areaMeters2: 0,
-                      sunshineQuantiles: [],
-                      groundAreaMeters2: 0
-                    },
-                    center: { latitude: center.lat, longitude: center.lng },
-                    boundingBox: {
-                      sw: { latitude: center.lat - 0.0001, longitude: center.lng - 0.0001 },
-                      ne: { latitude: center.lat + 0.0001, longitude: center.lng + 0.0001 }
-                    },
-                    planeHeightAtCenterMeters: 0
-                  }]
-                },
-                buildingInsights: {
-                  center: { latitude: center.lat, longitude: center.lng },
-                  imageryDate: { year: new Date().getFullYear(), month: 1, day: 1 }
-                }
-              }
-            }
-          })
-
-          return {
-            success: true,
-            data: defaultResults,
-            coverageWarning: coverage.message
-          }
-        }
-      }
-
       const polygonDataPromises = roofPolygons.map(async (polygon, index) => {
         // Get polygon center for the API call
         const coords = extractPolygonCoordinates(polygon)
@@ -99,31 +29,38 @@ export class SolarPanelApiService {
 
         // Call the solar API proxy for this polygon via Next.js API route
         const apiUrl = `/api/generate_panels?latitude=${center.lat}&longitude=${center.lng}`
-        const response = await fetch(apiUrl)
 
-        if (!response.ok) {
-          // Try to get error details
-          let errorMessage = `API request failed with status ${response.status}`
-          try {
-            const errorData = await response.json()
-            if (errorData.detail && errorData.detail.includes('Solar API error')) {
-              errorMessage = 'Google Solar API does not have coverage for this location. Please try a different area (e.g., US, UK, or other supported regions).'
-            } else if (errorData.detail) {
-              errorMessage = errorData.detail
+        try {
+          const response = await fetch(apiUrl)
+
+          if (!response.ok) {
+            // If API fails, return minimal structure for manual input
+            console.warn(`Solar API not available for polygon ${index} at ${center.lat}, ${center.lng}`)
+            return {
+              polygonIndex: index,
+              coords,
+              center,
+              solarData: null // No data available - user will input manually
             }
-          } catch {
-            // Keep default error message
           }
-          throw new Error(errorMessage)
-        }
 
-        const data = await response.json()
+          const data = await response.json()
 
-        return {
-          polygonIndex: index,
-          coords,
-          center,
-          solarData: data
+          return {
+            polygonIndex: index,
+            coords,
+            center,
+            solarData: data
+          }
+        } catch (fetchError) {
+          // Network or parsing error - return minimal structure
+          console.warn(`Failed to fetch solar data for polygon ${index}:`, fetchError)
+          return {
+            polygonIndex: index,
+            coords,
+            center,
+            solarData: null
+          }
         }
       })
 

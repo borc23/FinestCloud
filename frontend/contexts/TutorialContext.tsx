@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { getProfile, setShowTutorial } from '@/features/auth/lib/profilesApi';
 
 interface TooltipConfig {
   id: string;
@@ -59,6 +60,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     tutorialCompleted: false,
   });
   const [activeTooltip, setActiveTooltip] = useState<TooltipConfig | null>(null);
+  const [dbShowTutorial, setDbShowTutorial] = useState<boolean | null>(null);
 
   // Load tutorial state from localStorage
   useEffect(() => {
@@ -78,9 +80,22 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tutorialState));
   }, [tutorialState]);
 
+  // Load show_tutorial flag from database
+  useEffect(() => {
+    if (user) {
+      getProfile(user.id).then(profile => {
+        if (profile) {
+          setDbShowTutorial(profile.show_tutorial);
+        }
+      });
+    } else {
+      setDbShowTutorial(null);
+    }
+  }, [user]);
+
   // Initialize tutorial for first-time authenticated users
   useEffect(() => {
-    if (user && !tutorialState.tutorialCompleted) {
+    if (user && dbShowTutorial && !tutorialState.tutorialCompleted) {
       // Check if this is the first time the user has logged in
       const hasSeenWelcome = tutorialState.hasSeenTooltips['welcome'];
 
@@ -110,9 +125,14 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         return () => clearTimeout(timer);
       }
     }
-  }, [user, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
+  }, [user, dbShowTutorial, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
 
   const showTooltip = useCallback((config: TooltipConfig) => {
+    // Don't show if database flag is false and this is an auto-tooltip
+    if (dbShowTutorial === false && !config.id.startsWith('manual_')) {
+      return;
+    }
+
     // Don't show if tutorial is completed and this is an auto-tooltip
     if (tutorialState.tutorialCompleted && !config.id.startsWith('manual_')) {
       return;
@@ -140,13 +160,13 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }, 10000);
 
     return () => clearTimeout(timer);
-  }, [tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
+  }, [dbShowTutorial, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
 
   const hideTooltip = useCallback(() => {
     setActiveTooltip(null);
   }, []);
 
-  const markStepComplete = useCallback((stepId: string) => {
+  const markStepComplete = useCallback(async (stepId: string) => {
     setTutorialState(prev => {
       const completedSteps = [...prev.completedSteps];
       if (!completedSteps.includes(stepId)) {
@@ -161,6 +181,15 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
       const tutorialCompleted = stepId === 'tutorial_complete' ||
                                 currentStep >= TUTORIAL_STEPS.length;
 
+      // Update database flag when tutorial is completed
+      if (tutorialCompleted && user) {
+        setShowTutorial(user.id, false).then(() => {
+          setDbShowTutorial(false);
+        }).catch(error => {
+          console.error('Failed to update tutorial preference:', error);
+        });
+      }
+
       return {
         ...prev,
         completedSteps,
@@ -169,9 +198,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         tutorialActive: !tutorialCompleted,
       };
     });
-  }, []);
+  }, [user]);
 
-  const startTutorial = useCallback(() => {
+  const startTutorial = useCallback(async () => {
     // Reset tutorial state and start from beginning
     setTutorialState({
       tutorialActive: true,
@@ -180,6 +209,16 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
       hasSeenTooltips: { manual_welcome: true },
       tutorialCompleted: false,
     });
+
+    // Update database flag to true
+    if (user) {
+      try {
+        await setShowTutorial(user.id, true);
+        setDbShowTutorial(true);
+      } catch (error) {
+        console.error('Failed to update tutorial preference:', error);
+      }
+    }
 
     // Show welcome tooltip
     setTimeout(() => {
@@ -192,16 +231,26 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         showSkip: true,
       });
     }, 300);
-  }, []);
+  }, [user]);
 
-  const skipTutorial = useCallback(() => {
+  const skipTutorial = useCallback(async () => {
     setTutorialState(prev => ({
       ...prev,
       tutorialActive: false,
       tutorialCompleted: true,
     }));
     setActiveTooltip(null);
-  }, []);
+
+    // Update database flag to false
+    if (user) {
+      try {
+        await setShowTutorial(user.id, false);
+        setDbShowTutorial(false);
+      } catch (error) {
+        console.error('Failed to update tutorial preference:', error);
+      }
+    }
+  }, [user]);
 
   const nextStep = useCallback(() => {
     hideTooltip();

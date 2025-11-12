@@ -13,7 +13,6 @@ import ShadeVisualizationOverlay from '@/features/solar-analysis/components/Shad
 import ShadeLegend from '@/features/solar-analysis/components/ShadeLegend'
 import DataLayerOverlay from '@/features/solar-analysis/components/DataLayerOverlay'
 import SunshineLayerControls from '@/features/solar-analysis/components/SunshineLayerControls'
-import { CoverageWarning } from '@/features/solar-analysis/components/CoverageWarning'
 import { useMapInitialization } from '@/features/map-drawing/hooks/useMapInitialization'
 import { useDetection } from '@/features/solar-analysis/hooks/useDetection'
 import { usePolygons } from '@/features/map-drawing/hooks/usePolygons'
@@ -28,7 +27,6 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { getDefaultLocation } from '@/features/auth/lib/profilesApi'
 import { getProject } from '@/features/projects/lib/projectsApi'
 import { Icon } from '@/shared/components/ui/Icon'
-import { checkSolarApiCoverage } from '@/features/solar-analysis/utils/coverageCheck'
 
 declare global {
   interface Window {
@@ -75,8 +73,6 @@ export default function MapContainer({
   const [showShadeVisualization, setShowShadeVisualization] = useState(false)
   const [showSunshineLayer, setShowSunshineLayer] = useState(false)
   const [hidePanelsInSunshineMode, setHidePanelsInSunshineMode] = useState(false)
-  const [showCoverageWarning, setShowCoverageWarning] = useState(false)
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null)
 
   // Ref to access dashboard minimize function
   const dashboardMinimizeRef = useRef<(() => void) | null>(null)
@@ -126,29 +122,6 @@ export default function MapContainer({
     }
   }, [map, defaultCenter])
 
-  // Track map center for coverage warning
-  useEffect(() => {
-    if (!map) return
-
-    const updateLocation = () => {
-      const center = map.getCenter()
-      if (center) {
-        setCurrentLocation({ lat: center.lat(), lng: center.lng() })
-      }
-    }
-
-    // Initial location
-    updateLocation()
-
-    // Listen for map center changes
-    const listener = map.addListener('center_changed', updateLocation)
-
-    return () => {
-      if (listener) {
-        google.maps.event.removeListener(listener)
-      }
-    }
-  }, [map])
 
   // Detection
   const { error: detectionError, detectRoofs, clearError } = useDetection()
@@ -578,16 +551,6 @@ export default function MapContainer({
         if (isPlacing) stopPlacement()
       }
     } else if (activeTool === 'panels') {
-      // Check coverage before starting panel generation
-      if (map && roofPolygons.length > 0) {
-        const center = map.getCenter()
-        if (center) {
-          const coverage = checkSolarApiCoverage(center.lat(), center.lng())
-          if (!coverage.hasCoverage) {
-            setShowCoverageWarning(true)
-          }
-        }
-      }
       startPanelGeneration()
       if (isEditMode) toggleEditMode()
       if (isDrawing) stopDrawing()
@@ -805,15 +768,6 @@ export default function MapContainer({
             </button>
           </div>
         </div>
-      )}
-
-      {/* Coverage Warning */}
-      {currentLocation && showCoverageWarning && (
-        <CoverageWarning
-          latitude={currentLocation.lat}
-          longitude={currentLocation.lng}
-          onClose={() => setShowCoverageWarning(false)}
-        />
       )}
 
       {/* Drag Overlay */}

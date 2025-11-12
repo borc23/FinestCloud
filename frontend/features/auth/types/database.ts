@@ -23,6 +23,7 @@ export interface Database {
           display_name: string | null
           default_latitude: number | null
           default_longitude: number | null
+          show_tutorial: boolean
           created_at: string
           updated_at: string
         }
@@ -32,6 +33,7 @@ export interface Database {
           display_name?: string | null
           default_latitude?: number | null
           default_longitude?: number | null
+          show_tutorial?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -41,6 +43,7 @@ export interface Database {
           display_name?: string | null
           default_latitude?: number | null
           default_longitude?: number | null
+          show_tutorial?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -181,6 +184,7 @@ export interface Profile {
   displayName: string | null
   defaultLatitude: number | null
   defaultLongitude: number | null
+  showTutorial: boolean
   createdAt: string
   updatedAt: string
 }
