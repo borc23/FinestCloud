@@ -47,22 +47,25 @@ interface PanelGenerationResult {
  * Enrich panel data with annual sunshine values from GeoTIFF
  * Modifies panelData in place
  */
-function enrichPanelsWithSunshine(
+async function enrichPanelsWithSunshine(
   panelData: PanelGenerationResponse,
   geotiffData: GeoTIFFData
-): void {
+): Promise<void> {
 
-  panelData.roofs?.forEach((roof: RoofPanelData) => {
-    if (!roof.panels || !Array.isArray(roof.panels)) return
+  // Process each roof sequentially to avoid race conditions
+  for (const roof of panelData.roofs || []) {
+    if (!roof.panels || !Array.isArray(roof.panels)) continue
 
     // Collect all panel centroids for batch query
-    const centroids = roof.panels.map((panel: Panel) => {
-      const coords = panel.coords || []
-      return calculateCentroid(coords)
-    })
+    const centroids = await Promise.all(
+      roof.panels.map((panel: Panel) => {
+        const coords = panel.coords || []
+        return calculateCentroid(coords)
+      })
+    )
 
     // Query all sunshine values at once (more efficient)
-    const sunshineValues = getValuesAtCoordinates(geotiffData, centroids)
+    const sunshineValues = await getValuesAtCoordinates(geotiffData, centroids)
 
     // Assign sunshine values to panels
     roof.panels.forEach((panel: Panel, index: number) => {
@@ -73,7 +76,7 @@ function enrichPanelsWithSunshine(
         console.warn(`Panel ${index} has no sunshine data (out of bounds or no-data)`)
       }
     })
-  })
+  }
 }
 
 /**
@@ -91,7 +94,7 @@ export async function generateAndAnimatePanels({
 }: GeneratePanelsParams): Promise<PanelGenerationResult> {
   // Enrich panels with sunshine data if available
   if (geotiffData) {
-    enrichPanelsWithSunshine(panelData, geotiffData)
+    await enrichPanelsWithSunshine(panelData, geotiffData)
   }
   const allPanelData: PanelData[] = []
   let totalPanels = 0
