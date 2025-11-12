@@ -242,14 +242,14 @@ export default function CaptureOverlay({ isVisible, onCapture, onToggle, map }: 
       // Mark capture step as complete after successful capture
       markStepComplete('capture')
 
-      // Show next tooltip pointing to Generate tool
+      // Show edit mode tooltip to explain editing capabilities
       setTimeout(() => {
         showTooltip({
-          id: 'after_capture',
-          targetElement: '[data-tool="panels"]',
-          content: 'Great! Now click Generate to configure and place solar panels.',
+          id: 'edit_mode',
+          targetElement: '[data-tool="polygon"]',
+          content: 'Now you can edit, move, or draw more polygons to refine areas our AI might have missed. Use the drawing tools to add or adjust roof sections.',
           position: 'right',
-          showNext: false,
+          showNext: true,
           showSkip: true,
         })
       }, 1500)

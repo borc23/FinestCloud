@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
 import { Icon } from '@/shared/components/ui/Icon'
+import { useTutorial } from '@/contexts/TutorialContext'
 import styles from './ToolStrip.module.css'
 
 declare global {
@@ -31,10 +32,12 @@ const mainToolsDefinition = [
 ] as const
 
 // Profile button component - static, no motion
-const ProfileButton = ({ onHover, onClick, isAuthenticated }: {
+const ProfileButton = ({ onHover, onClick, isAuthenticated, showTooltip, tooltipText }: {
   onHover: () => void
   onClick: () => void
   isAuthenticated: boolean
+  showTooltip: boolean
+  tooltipText: string
 }) => (
   <div
     className={styles.profileButton}
@@ -47,15 +50,28 @@ const ProfileButton = ({ onHover, onClick, isAuthenticated }: {
     >
       <Icon name={isAuthenticated ? 'user-circle' : 'user'} />
     </button>
+    {showTooltip && (
+      <motion.div
+        className={styles.tooltip}
+        initial={{ opacity: 0, y: 5, x: '-50%' }}
+        animate={{ opacity: 1, y: 0, x: '-50%' }}
+        exit={{ opacity: 0, y: 5, x: '-50%' }}
+        transition={{ duration: 0.2 }}
+      >
+        {tooltipText}
+      </motion.div>
+    )}
   </div>
 )
 
 // Search button component - static, no motion (inactive in image mode)
-const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
+const SearchButton = ({ isActive, onHover, onClick, isImageMode, showTooltip, tooltipText }: {
   isActive: boolean
   onHover: () => void
   onClick: () => void
   isImageMode?: boolean
+  showTooltip: boolean
+  tooltipText: string
 }) => (
   <div
     className={styles.searchButton}
@@ -71,6 +87,17 @@ const SearchButton = ({ isActive, onHover, onClick, isImageMode }: {
     >
       <Icon name="search" />
     </button>
+    {showTooltip && !isImageMode && (
+      <motion.div
+        className={styles.tooltip}
+        initial={{ opacity: 0, y: 5, x: '-50%' }}
+        animate={{ opacity: 1, y: 0, x: '-50%' }}
+        exit={{ opacity: 0, y: 5, x: '-50%' }}
+        transition={{ duration: 0.2 }}
+      >
+        {tooltipText}
+      </motion.div>
+    )}
   </div>
 )
 
@@ -82,7 +109,9 @@ const MiddleIconStrip = ({
   showPanelsTool,
   onHover,
   onClick,
-  isImageMode
+  isImageMode,
+  showTooltipFor,
+  getTooltipText
 }: {
   tools: readonly typeof mainToolsDefinition[number][]
   activeTool: string
@@ -91,6 +120,8 @@ const MiddleIconStrip = ({
   onHover: (toolId: string | null) => void
   onClick: (toolId: string) => void
   isImageMode?: boolean
+  showTooltipFor: string | null
+  getTooltipText: (toolId: string) => string
 }) => {
   const getActiveToolIndex = (targetTool: string | null = null): number => {
     const targetToolId = targetTool || activeTool
@@ -141,6 +172,17 @@ const MiddleIconStrip = ({
                 >
                   <Icon name={getToolIcon(tool) as any} />
                 </button>
+                {showTooltipFor === tool.id && !isDisabled && (
+                  <motion.div
+                    className={styles.tooltip}
+                    initial={{ opacity: 0, y: 5, x: '-50%' }}
+                    animate={{ opacity: 1, y: 0, x: '-50%' }}
+                    exit={{ opacity: 0, y: 5, x: '-50%' }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {getTooltipText(tool.id)}
+                  </motion.div>
+                )}
               </motion.div>
             )
           })}
@@ -164,11 +206,14 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<google.maps.places.PlacePrediction[]>([])
+  const [showTooltipFor, setShowTooltipFor] = useState<string | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const geocoder = useRef<google.maps.Geocoder | null>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const { showTooltip, markStepComplete } = useTutorial()
 
   const tools = useMemo(() =>
     mainToolsDefinition.filter(tool => {
@@ -227,11 +272,21 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
       hoverTimeoutRef.current = null
     }
 
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current)
+      tooltipTimeoutRef.current = null
+    }
+
     if (toolId) {
       setHoveredTool(toolId)
+      // Show tooltip after a short delay (iOS-style)
+      tooltipTimeoutRef.current = setTimeout(() => {
+        setShowTooltipFor(toolId)
+      }, 600)
     } else {
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredTool(null)
+        setShowTooltipFor(null)
       }, 100)
     }
   }, [])
@@ -240,8 +295,12 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
     }
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current)
+    }
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredTool(null)
+      setShowTooltipFor(null)
     }, 150)
   }, [])
 
@@ -261,6 +320,23 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
       if (!isImageMode) return
       // Upload button toggles between image and map mode
       onToggleMode?.()
+    } else if (toolId === 'panels') {
+      // Mark edit mode as complete when Generate tool is clicked
+      markStepComplete('edit_mode')
+
+      // Show tooltip about panel generation
+      setTimeout(() => {
+        showTooltip({
+          id: 'generate_panels',
+          targetElement: '[data-tool="panels"]',
+          content: 'Configure and place solar panels on the detected roof areas.',
+          position: 'right',
+          showNext: false,
+          showSkip: true,
+        })
+      }, 500)
+
+      onToolSelect(toolId)
     } else {
       onToolSelect(toolId)
     }
@@ -327,8 +403,25 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current)
       }
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current)
+      }
     }
   }, [])
+
+  const getTooltipText = (toolId: string): string => {
+    if (toolId === 'profile') {
+      return isAuthenticated ? 'Profile' : 'Sign In'
+    }
+    if (toolId === 'search') {
+      return 'Search Location'
+    }
+    if (toolId === 'upload') {
+      return isImageMode ? 'Switch to Map' : 'Upload Image'
+    }
+    const tool = tools.find(t => t.id === toolId)
+    return tool?.label || ''
+  }
 
   return (
     <div
@@ -415,6 +508,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             onHover={() => handleToolHover('profile')}
             onClick={() => handleToolClick('profile')}
             isAuthenticated={isAuthenticated}
+            showTooltip={showTooltipFor === 'profile'}
+            tooltipText={getTooltipText('profile')}
           />
 
           <MiddleIconStrip
@@ -425,6 +520,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             onHover={handleToolHover}
             onClick={handleToolClick}
             isImageMode={isImageMode}
+            showTooltipFor={showTooltipFor}
+            getTooltipText={getTooltipText}
           />
 
           <SearchButton
@@ -432,6 +529,8 @@ export default function ToolStrip({ activeTool, onToolSelect, onStatsToggle, sho
             onHover={() => handleToolHover('search')}
             onClick={() => handleToolClick('search')}
             isImageMode={isImageMode}
+            showTooltip={showTooltipFor === 'search'}
+            tooltipText={getTooltipText('search')}
           />
         </>
       )}

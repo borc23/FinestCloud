@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.15);
   z-index: 9998;
   pointer-events: none;
 }
@@ -13,12 +13,15 @@
 /* Main tooltip container */
 .tooltip {
   position: fixed;
-  max-width: 300px;
+  max-width: 320px;
   background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.07),
+    0 10px 20px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   z-index: 10000;
   pointer-events: auto;
 }
@@ -26,98 +29,115 @@
 /* Close button */
 .closeButton {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.05);
   border: none;
-  font-size: 18px;
-  color: #999999;
+  font-size: 20px;
+  color: #666666;
   cursor: pointer;
   padding: 4px 8px;
   line-height: 1;
-  transition: color 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 .closeButton:hover {
+  background: rgba(0, 0, 0, 0.1);
   color: #333333;
+  transform: rotate(90deg);
 }
 
 /* Content */
 .content {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #333333;
-  margin-bottom: 12px;
-  padding-right: 20px; /* Space for close button */
+  font-size: 15px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+  padding-right: 32px; /* Space for close button */
+  font-weight: 400;
 }
 
 /* Action buttons container */
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* Skip tutorial button */
 .skipButton {
   background: none;
   border: none;
-  color: #0066cc;
-  font-size: 12px;
+  color: #666666;
+  font-size: 13px;
   cursor: pointer;
-  padding: 4px 8px;
-  transition: opacity 0.2s ease;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .skipButton:hover {
-  opacity: 0.7;
-  text-decoration: underline;
+  background: rgba(0, 0, 0, 0.05);
+  color: #333333;
 }
 
 /* Next button */
 .nextButton {
-  background: #0066cc;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 8px;
+  padding: 10px 20px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .nextButton:hover {
-  background: #0052a3;
-  transform: scale(1.02);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .nextButton:active {
-  transform: scale(0.98);
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
 /* Got it button */
 .gotItButton {
-  background: #0066cc;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 8px;
+  padding: 10px 20px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .gotItButton:hover {
-  background: #0052a3;
-  transform: scale(1.02);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .gotItButton:active {
-  transform: scale(0.98);
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
 /* Arrow */
@@ -133,9 +153,9 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 0 10px 10px 10px;
+  border-width: 0 12px 12px 12px;
   border-color: transparent transparent #ffffff transparent;
-  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(0 -2px 3px rgba(0, 0, 0, 0.12));
 }
 
 /* Arrow pointing down (tooltip above target) */
@@ -143,9 +163,9 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 10px 10px 0 10px;
+  border-width: 12px 12px 0 12px;
   border-color: #ffffff transparent transparent transparent;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.12));
 }
 
 /* Arrow pointing left (tooltip to the right of target) */
@@ -153,9 +173,9 @@
   top: 50%;
   right: 100%;
   transform: translateY(-50%);
-  border-width: 10px 10px 10px 0;
+  border-width: 12px 12px 12px 0;
   border-color: transparent #ffffff transparent transparent;
-  filter: drop-shadow(-1px 0 1px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(-2px 0 3px rgba(0, 0, 0, 0.12));
 }
 
 /* Arrow pointing right (tooltip to the left of target) */
@@ -163,9 +183,9 @@
   top: 50%;
   left: 100%;
   transform: translateY(-50%);
-  border-width: 10px 0 10px 10px;
+  border-width: 12px 0 12px 12px;
   border-color: transparent transparent transparent #ffffff;
-  filter: drop-shadow(1px 0 1px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(2px 0 3px rgba(0, 0, 0, 0.12));
 }
 
 /* Responsive adjustments */

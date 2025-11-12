@@ -43,6 +43,7 @@ const TUTORIAL_STEPS = [
   'welcome',
   'search_location',
   'capture_roof',
+  'edit_mode',
   'generate_panels',
   'view_results',
   'tutorial_complete'
