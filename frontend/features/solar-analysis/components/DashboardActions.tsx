@@ -28,7 +28,7 @@ export default function DashboardActions({
           onClick={onSaveProject}
           data-tutorial="save-button"
         >
-          💾 Save Project
+          Save Project
         </button>
       )}
       <button
@@ -42,19 +42,19 @@ export default function DashboardActions({
         onClick={onViewFinancials}
         data-tutorial="financial-button"
       >
-        💰 Financial Analysis
+        Financial Analysis
       </button>
       <button
         className={styles.electricalButton}
         onClick={onViewElectrical}
       >
-        ⚡ Electrical Design
+        Electrical Design
       </button>
       <button
         className={styles.pdfButton}
         onClick={onGeneratePDF}
       >
-        📄 Download PDF Report
+        Download PDF Report
       </button>
     </div>
   )
