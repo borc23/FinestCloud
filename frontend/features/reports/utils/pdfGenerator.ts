@@ -645,46 +645,6 @@ function addSiteInfo(
 
   yPos = doc.lastAutoTable.finalY + 5
 
-  // Shade analysis if available
-  if (site.shadeAnalysis && site.shadeAnalysis.averageShadePercentage > 0) {
-    yPos += 3
-    doc.setFontSize(12)
-    doc.setTextColor(...primaryColor)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Shade Analysis', 20, yPos)
-
-    yPos += 5
-
-    const shadeInfo = [
-      ['Average Shade Impact', `${site.shadeAnalysis.averageShadePercentage.toFixed(1)}%`],
-      ['Estimated Annual Loss', `${site.shadeAnalysis.estimatedAnnualLoss.toLocaleString()} kWh`],
-      ['Financial Impact', `€${site.shadeAnalysis.estimatedFinancialLoss.toFixed(0)}/year`],
-      ['Recommendation', site.shadeAnalysis.recommendation],
-    ]
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [],
-      body: shadeInfo,
-      theme: 'striped',
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        textColor: textColor,
-      },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 60 },
-        1: { cellWidth: 'auto' },
-      },
-      alternateRowStyles: {
-        fillColor: lightGray,
-      },
-      margin: { left: 20, right: 20 },
-    })
-
-    yPos = doc.lastAutoTable.finalY
-  }
-
   return yPos + 5
 }
 

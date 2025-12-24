@@ -1,11 +1,9 @@
 // reportDataBuilder.ts
 import type { ReportData } from '@/features/reports/types/report'
-import type { ShadeImpact } from '@/features/solar-analysis/types/shade'
 import { generateMonthlyEstimate, generate25YearProjection } from '@/features/solar-analysis/utils/solarCalculations'
 
 interface BuildReportDataParams {
   location?: { lat: number; lng: number }
-  shadeImpact: ShadeImpact | null
   panelData: {
     totalPanels: number
     systemSize: number
@@ -20,8 +18,8 @@ interface BuildReportDataParams {
 }
 
 export function buildReportData(params: BuildReportDataParams): ReportData {
-  const { location, shadeImpact, panelData, annualProduction, systemCost, financials, pvwattsData } = params
-  
+  const { location, panelData, annualProduction, systemCost, financials, pvwattsData } = params
+
   return {
     customer: {
       name: 'Customer Name',
@@ -32,8 +30,7 @@ export function buildReportData(params: BuildReportDataParams): ReportData {
       address: location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'Installation Address',
       location: location,
       roofType: 'Pitched',
-      roofCondition: 'good',
-      shadeAnalysis: shadeImpact || undefined
+      roofCondition: 'good'
     },
     systemSpecs: {
       panelCount: panelData.totalPanels,

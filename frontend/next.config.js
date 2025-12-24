@@ -6,6 +6,20 @@ const nextConfig = {
   transpilePackages: ['geotiff'],
 
   webpack: (config, { isServer }) => {
+    // Disable webpack filesystem cache to work around Windows symlink issues
+    config.cache = false;
+
+    // Disable snapshot management to avoid readlink issues on Windows
+    config.snapshot = {
+      ...config.snapshot,
+      managedPaths: [],
+      immutablePaths: [],
+      buildDependencies: {
+        hash: true,
+        timestamp: true,
+      },
+    };
+
     // Handle node modules that need special treatment
     config.resolve.fallback = {
       ...config.resolve.fallback,

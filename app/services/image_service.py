@@ -123,7 +123,7 @@ class ImageService:
         bgr_image = cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
 
         # Save original image from URL
-        ImageService._save_image(bgr_image, prefix="original_url")
+        # ImageService._save_image(bgr_image, prefix="original_url")
 
         processed_image, transform = ImageService._resize_and_pad_image(bgr_image)
 

@@ -8,26 +8,22 @@ interface MapControlsProps {
   hasPolygons?: boolean
   hasPanels?: boolean
   hasGeotiffData?: boolean
-  shadeVisualizationEnabled?: boolean
   sunshineLayerEnabled?: boolean
   onClearAll?: () => void
-  onToggleShadeVisualization?: () => void
   onToggleSunshineLayer?: () => void
 }
 
 /**
  * Floating map zoom controls component
- * Provides + and - buttons for map zoom, shade visualization toggle, and clear all functionality
+ * Provides + and - buttons for map zoom, sunshine layer toggle, and clear all functionality
  */
 export default function MapControls({
   map,
   hasPolygons = false,
   hasPanels = false,
   hasGeotiffData = false,
-  shadeVisualizationEnabled = false,
   sunshineLayerEnabled = false,
   onClearAll,
-  onToggleShadeVisualization,
   onToggleSunshineLayer
 }: MapControlsProps) {
   if (!map) return null
@@ -68,16 +64,6 @@ export default function MapControls({
       >
         <Icon name="minus" />
       </button>
-      {/* {hasPanels && hasGeotiffData && (
-        <button
-          className={`${styles.shadeControl} ${shadeVisualizationEnabled ? styles.active : ''}`}
-          onClick={onToggleShadeVisualization}
-          aria-label={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
-          title={shadeVisualizationEnabled ? "Hide shade analysis" : "Show shade analysis"}
-        >
-          <Icon name="solar-panel" />
-        </button>
-      )} */}
       {hasPanels && hasGeotiffData && (
         <button
           className={`${styles.shadeControl} ${sunshineLayerEnabled ? styles.active : ''}`}

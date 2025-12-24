@@ -9,8 +9,6 @@ import PanelGenerationOverlay from '@/features/solar-analysis/components/PanelGe
 import RoofAnglePanel from '@/features/solar-analysis/components/RoofAnglePanel'
 import SolarResultsDashboard from '@/features/solar-analysis/components/SolarResultsDashboard'
 import GridSelector from '@/features/solar-panels/components/GridSelector'
-import ShadeVisualizationOverlay from '@/features/solar-analysis/components/ShadeVisualizationOverlay'
-import ShadeLegend from '@/features/solar-analysis/components/ShadeLegend'
 import DataLayerOverlay from '@/features/solar-analysis/components/DataLayerOverlay'
 import SunshineLayerControls from '@/features/solar-analysis/components/SunshineLayerControls'
 import { useMapInitialization } from '@/features/map-drawing/hooks/useMapInitialization'
@@ -70,21 +68,11 @@ export default function MapContainer({
   const [showCaptureOverlay, setShowCaptureOverlay] = useState(false)
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<'roof' | 'object' | 'panel'>('roof')
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(true)
-  const [showShadeVisualization, setShowShadeVisualization] = useState(false)
   const [showSunshineLayer, setShowSunshineLayer] = useState(false)
   const [hidePanelsInSunshineMode, setHidePanelsInSunshineMode] = useState(false)
 
   // Ref to access dashboard minimize function
   const dashboardMinimizeRef = useRef<(() => void) | null>(null)
-  const [shadeStats, setShadeStats] = useState<{
-    excellent: number
-    good: number
-    moderate: number
-    significant: number
-    high: number
-    total: number
-    averageShade: number
-  } | null>(null)
   const [defaultCenter, setDefaultCenter] = useState<{ lat: number; lng: number } | undefined>(undefined)
 
   const activeTab: 'edit' | 'draw' = activeTool === 'draw' ? 'draw' : 'edit'
@@ -458,7 +446,6 @@ export default function MapContainer({
 
     // Clear sunshine layer visualization
     setShowSunshineLayer(false)
-    setShowShadeVisualization(false)
 
     // Reset tool to default
     onToolChange?.('')
@@ -703,36 +690,12 @@ export default function MapContainer({
           minimizeRef={dashboardMinimizeRef}
           onMinimizeChange={(minimized) => {
             setIsDashboardMinimized(minimized)
-            // If opening (un-minimizing) the analytics dashboard, turn off shade visualization
-            if (!minimized) {
-              setShowShadeVisualization(false)
-            }
           }}
           currentPanelCount={allPanels.length}
           onSaveProject={onSaveProject}
           isAuthenticated={isAuthenticated}
         />
       )}
-
-      {/* Shade Visualization Overlay */}
-      {allPanels.length > 0 && map && (
-        <ShadeVisualizationOverlay
-          map={map}
-          panels={allPanels}
-          enabled={showShadeVisualization}
-          location={map.getCenter() ? {
-            lat: map.getCenter()!.lat(),
-            lng: map.getCenter()!.lng()
-          } : undefined}
-          onStatsUpdate={setShadeStats}
-        />
-      )}
-
-      {/* Shade Legend */}
-      <ShadeLegend
-        visible={showShadeVisualization && allPanels.length > 0}
-        panelStats={shadeStats ?? undefined}
-      />
 
       {/* Sunshine Layer Controls */}
       <SunshineLayerControls
@@ -817,17 +780,8 @@ export default function MapContainer({
         hasPolygons={roofPolygons.length > 0 || objectPolygons.length > 0 || panelData !== null}
         hasPanels={allPanels.length > 0}
         hasGeotiffData={geotiffData !== null && geotiffData !== undefined}
-        shadeVisualizationEnabled={showShadeVisualization}
         sunshineLayerEnabled={showSunshineLayer}
         onClearAll={handleReset}
-        onToggleShadeVisualization={() => {
-          const newState = !showShadeVisualization
-          setShowShadeVisualization(newState)
-          // If turning ON shade visualization, minimize the analytics dashboard
-          if (newState && dashboardMinimizeRef.current) {
-            dashboardMinimizeRef.current()
-          }
-        }}
         onToggleSunshineLayer={() => setShowSunshineLayer(!showSunshineLayer)}
       />
     </div>
