@@ -77,11 +77,16 @@ export async function removeMember(userId: string) {
 // Get invitations
 export async function getInvitations(orgId: string): Promise<Invitation[]> {
   const supabase = createClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('invitations')
     .select('*')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching invitations:', error)
+    throw error
+  }
 
   return data || []
 }
@@ -96,6 +101,8 @@ export async function createInvitation(orgId: string, email: string, role: UserR
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 7) // 7 days
 
+  console.log('Creating invitation:', { orgId, email, role, userId: user.id })
+
   const { data, error } = await supabase
     .from('invitations')
     .insert({
@@ -109,7 +116,10 @@ export async function createInvitation(orgId: string, email: string, role: UserR
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Error creating invitation:', error)
+    throw error
+  }
   return data
 }
 

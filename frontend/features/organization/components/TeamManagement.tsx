@@ -69,11 +69,18 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
     setError(null)
 
     try {
-      await createInvitation(organization.id, inviteEmail, inviteRole)
+      const invitation = await createInvitation(organization.id, inviteEmail, inviteRole)
+
+      // Generate invitation link
+      const invitationLink = `${window.location.origin}/accept-invitation?token=${invitation.token}`
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(invitationLink)
+
       setInviteEmail('')
       setInviteRole('designer')
       setShowInviteForm(false)
-      toast.success(`Invitation sent to ${inviteEmail}`)
+      toast.success(`Invitation created! Link copied to clipboard.`)
       await loadData()
     } catch (err: any) {
       setError('Failed to send invitation')

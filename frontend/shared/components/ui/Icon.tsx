@@ -32,6 +32,10 @@ import {
   faSquare,
   faPenToSquare,
   faMap,
+  faBuilding,
+  faUserPlus,
+  faUsers,
+  faEnvelope,
 } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
@@ -70,6 +74,10 @@ const iconMap: Record<string, IconDefinition> = {
   'vector-square': faSquare,
   'pen-to-square': faPenToSquare,
   map: faMap,
+  building: faBuilding,
+  'user-plus': faUserPlus,
+  users: faUsers,
+  envelope: faEnvelope,
 }
 
 interface IconProps {
