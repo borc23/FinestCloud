@@ -196,11 +196,11 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
 
         <div className={styles.field}>
           <label htmlFor="address">Address</label>
-          <textarea
+          <input
             id="address"
+            type="text"
             value={companyAddress}
             onChange={(e) => setCompanyAddress(e.target.value)}
-            rows={3}
             disabled={saving}
           />
         </div>

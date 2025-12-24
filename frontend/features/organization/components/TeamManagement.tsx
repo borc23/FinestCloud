@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Icon } from '@/shared/components/ui/Icon'
+import { toast } from 'sonner'
 import {
   getUserOrganization,
   getOrganizationMembers,
@@ -72,9 +73,11 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
       setInviteEmail('')
       setInviteRole('designer')
       setShowInviteForm(false)
+      toast.success(`Invitation sent to ${inviteEmail}`)
       await loadData()
     } catch (err: any) {
       setError('Failed to send invitation')
+      toast.error('Failed to send invitation')
     } finally {
       setInviting(false)
     }
@@ -85,18 +88,22 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
 
     try {
       await cancelInvitation(invitationId)
+      toast.success('Invitation cancelled')
       await loadData()
     } catch (err: any) {
       setError('Failed to cancel invitation')
+      toast.error('Failed to cancel invitation')
     }
   }
 
   const handleRoleChange = async (memberId: string, newRole: UserRole) => {
     try {
       await updateMemberRole(memberId, newRole)
+      toast.success('Role updated successfully')
       await loadData()
     } catch (err: any) {
       setError('Failed to update role')
+      toast.error('Failed to update role')
     }
   }
 
@@ -105,9 +112,11 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
 
     try {
       await removeMember(memberId)
+      toast.success('Member removed from organization')
       await loadData()
     } catch (err: any) {
       setError('Failed to remove member')
+      toast.error('Failed to remove member')
     }
   }
 
