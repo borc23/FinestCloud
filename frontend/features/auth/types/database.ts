@@ -24,6 +24,8 @@ export interface Database {
           default_latitude: number | null
           default_longitude: number | null
           show_tutorial: boolean
+          organization_id: string | null
+          role: 'owner' | 'admin' | 'designer' | 'viewer'
           created_at: string
           updated_at: string
         }
@@ -34,6 +36,8 @@ export interface Database {
           default_latitude?: number | null
           default_longitude?: number | null
           show_tutorial?: boolean
+          organization_id?: string | null
+          role?: 'owner' | 'admin' | 'designer' | 'viewer'
           created_at?: string
           updated_at?: string
         }
@@ -44,6 +48,8 @@ export interface Database {
           default_latitude?: number | null
           default_longitude?: number | null
           show_tutorial?: boolean
+          organization_id?: string | null
+          role?: 'owner' | 'admin' | 'designer' | 'viewer'
           created_at?: string
           updated_at?: string
         }
@@ -58,6 +64,7 @@ export interface Database {
           map_center_lng: number
           map_zoom: number
           annual_flux_url: string | null
+          organization_id: string | null
           created_at: string
           updated_at: string
         }
@@ -70,6 +77,7 @@ export interface Database {
           map_center_lng: number
           map_zoom?: number
           annual_flux_url?: string | null
+          organization_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -82,6 +90,7 @@ export interface Database {
           map_center_lng?: number
           map_zoom?: number
           annual_flux_url?: string | null
+          organization_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -185,6 +194,8 @@ export interface Profile {
   defaultLatitude: number | null
   defaultLongitude: number | null
   showTutorial: boolean
+  organizationId: string | null
+  role: 'owner' | 'admin' | 'designer' | 'viewer'
   createdAt: string
   updatedAt: string
 }
@@ -198,6 +209,7 @@ export interface Project {
   mapCenterLng: number
   mapZoom: number
   annualFluxUrl: string | null
+  organizationId: string | null
   createdAt: string
   updatedAt: string
 }

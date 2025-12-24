@@ -10,6 +10,9 @@ import { createClient } from '@/shared/lib/supabase/client'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useTutorial } from '@/contexts/TutorialContext'
+import OrganizationSettings from '@/features/organization/components/OrganizationSettings'
+import TeamManagement from '@/features/organization/components/TeamManagement'
+import type { UserRole } from '@/features/organization/types/organization'
 import styles from './ProfilePanel.module.css'
 
 declare global {
@@ -25,7 +28,7 @@ interface ProfilePanelProps {
 }
 
 type AuthView = 'login' | 'signup'
-type AuthenticatedView = 'profile' | 'projects'
+type AuthenticatedView = 'profile' | 'projects' | 'organization'
 
 export default function ProfilePanel({ isOpen, onClose, onLoadProject }: ProfilePanelProps) {
   const { user, signOut } = useAuth()
@@ -47,6 +50,8 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
   const [defaultLat, setDefaultLat] = useState('')
   const [defaultLng, setDefaultLng] = useState('')
   const [showTutorialEnabled, setShowTutorialEnabled] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole>('designer')
+  const [organizationSubTab, setOrganizationSubTab] = useState<'settings' | 'team'>('settings')
   const [locationSearch, setLocationSearch] = useState('')
   const [locationSuggestions, setLocationSuggestions] = useState<google.maps.places.PlacePrediction[]>([])
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0, width: 0 })
@@ -88,6 +93,17 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         setDefaultLat(lat?.toString() || '')
         setDefaultLng(lng?.toString() || '')
         setShowTutorialEnabled(profile.show_tutorial)
+
+        // Get user role from profile
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        if (data?.role) {
+          setUserRole(data.role as UserRole)
+        }
 
         // If we have coordinates, reverse geocode to get location name
         if (lat && lng && window.google?.maps) {
@@ -138,6 +154,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         mapCenterLng: p.map_center_lng,
         mapZoom: p.map_zoom,
         annualFluxUrl: p.annual_flux_url,
+        organizationId: p.organization_id,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })))
@@ -596,6 +613,13 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
             <Icon name="folder" />
             <span>Projects</span>
           </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'organization' ? styles.active : ''}`}
+            onClick={() => setActiveTab('organization')}
+          >
+            <Icon name="building" />
+            <span>Organization</span>
+          </button>
         </div>
 
         {/* Profile Tab */}
@@ -765,6 +789,32 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                   />
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Organization Tab */}
+        {activeTab === 'organization' && user && (
+          <div className={styles.organizationTab}>
+            <div className={styles.orgSubTabs}>
+              <button
+                className={`${styles.subTab} ${organizationSubTab === 'settings' ? styles.active : ''}`}
+                onClick={() => setOrganizationSubTab('settings')}
+              >
+                Settings
+              </button>
+              <button
+                className={`${styles.subTab} ${organizationSubTab === 'team' ? styles.active : ''}`}
+                onClick={() => setOrganizationSubTab('team')}
+              >
+                Team
+              </button>
+            </div>
+
+            {organizationSubTab === 'settings' ? (
+              <OrganizationSettings userId={user.id} />
+            ) : (
+              <TeamManagement userId={user.id} userRole={userRole} />
             )}
           </div>
         )}

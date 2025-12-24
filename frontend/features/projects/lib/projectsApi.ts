@@ -14,6 +14,13 @@ export async function createProject(
 ): Promise<string> {
   const supabase = createClient() as any as any
 
+  // Get user's organization_id
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', userId)
+    .single()
+
   // 1. Create the project
   const { data: project, error: projectError } = await supabase
     .from('projects')
@@ -25,6 +32,7 @@ export async function createProject(
       map_center_lng: projectData.mapCenter.lng,
       map_zoom: projectData.mapZoom,
       annual_flux_url: projectData.annualFluxUrl || null,
+      organization_id: profile?.organization_id || null,
     })
     .select()
     .single()
@@ -155,6 +163,7 @@ export async function getProject(projectId: string): Promise<ProjectWithData | n
       mapCenterLng: project.map_center_lng,
       mapZoom: project.map_zoom,
       annualFluxUrl: project.annual_flux_url,
+      organizationId: project.organization_id,
       createdAt: project.created_at,
       updatedAt: project.updated_at,
     },
