@@ -26,6 +26,46 @@ export async function getUserOrganization(userId: string): Promise<Organization 
   return data
 }
 
+// Create organization
+export async function createOrganization(userId: string, name: string) {
+  const supabase = createClient()
+
+  // Generate subdomain from organization name (lowercase, no spaces, alphanumeric only)
+  const subdomain = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 63) // Max subdomain length
+
+  // Create organization
+  const { data: org, error: orgError } = await supabase
+    .from('organizations')
+    .insert({
+      name,
+      subdomain,
+      tier: 'small',
+      max_users: 5,
+    })
+    .select()
+    .single()
+
+  if (orgError) throw orgError
+
+  // Update user's profile to be owner of this organization
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      organization_id: org.id,
+      role: 'owner',
+    })
+    .eq('id', userId)
+
+  if (profileError) throw profileError
+
+  return org
+}
+
 // Update organization
 export async function updateOrganization(orgId: string, updates: any) {
   const supabase = createClient()
@@ -74,7 +114,7 @@ export async function removeMember(userId: string) {
   if (error) throw error
 }
 
-// Get invitations
+// Get invitations for organization (sent by this org)
 export async function getInvitations(orgId: string): Promise<Invitation[]> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -89,6 +129,43 @@ export async function getInvitations(orgId: string): Promise<Invitation[]> {
   }
 
   return data || []
+}
+
+// Get invitations for current user (received invitations)
+export async function getMyInvitations(): Promise<Invitation[]> {
+  const supabase = createClient()
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) return []
+
+    // Get user's email from profiles table instead of auth.users
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.email) return []
+
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*, organizations(name)')
+      .eq('email', profile.email)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching my invitations:', error)
+      return [] // Return empty array instead of throwing
+    }
+
+    return data || []
+  } catch (err) {
+    console.error('Error in getMyInvitations:', err)
+    return [] // Return empty array on any error
+  }
 }
 
 // Create invitation

@@ -7,10 +7,13 @@ import {
   getUserOrganization,
   getOrganizationMembers,
   getInvitations,
+  getMyInvitations,
   createInvitation,
   cancelInvitation,
   updateMemberRole,
   removeMember,
+  acceptInvitation,
+  createOrganization,
 } from '../lib/organizationApi'
 import type { Organization, OrganizationMember, Invitation, UserRole } from '../types/organization'
 import styles from './TeamManagement.module.css'
@@ -24,6 +27,7 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [members, setMembers] = useState<OrganizationMember[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [myInvitations, setMyInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,6 +36,11 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<UserRole>('designer')
   const [inviting, setInviting] = useState(false)
+
+  // Create organization form
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [orgName, setOrgName] = useState('')
+  const [creating, setCreating] = useState(false)
 
   const canManageTeam = userRole === 'owner' || userRole === 'admin'
 
@@ -44,6 +53,10 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
     setError(null)
 
     try {
+      // Always load incoming invitations for the current user
+      const myInvitationsData = await getMyInvitations()
+      setMyInvitations(myInvitationsData)
+
       const org = await getUserOrganization(userId)
       if (org) {
         setOrganization(org)
@@ -55,7 +68,8 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
         setInvitations(invitationsData)
       }
     } catch (err: any) {
-      setError('Failed to load team data')
+      console.error('Error loading team data:', err)
+      setError(`Failed to load team data: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -69,18 +83,12 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
     setError(null)
 
     try {
-      const invitation = await createInvitation(organization.id, inviteEmail, inviteRole)
-
-      // Generate invitation link
-      const invitationLink = `${window.location.origin}/accept-invitation?token=${invitation.token}`
-
-      // Copy to clipboard
-      await navigator.clipboard.writeText(invitationLink)
+      await createInvitation(organization.id, inviteEmail, inviteRole)
 
       setInviteEmail('')
       setInviteRole('designer')
       setShowInviteForm(false)
-      toast.success(`Invitation created! Link copied to clipboard.`)
+      toast.success(`Invitation sent! The user will see it when they open their profile.`)
       await loadData()
     } catch (err: any) {
       setError('Failed to send invitation')
@@ -127,6 +135,55 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
     }
   }
 
+  const handleAcceptInvitation = async (token: string) => {
+    try {
+      await acceptInvitation(token, userId)
+      toast.success('Invitation accepted! You have joined the organization.')
+      await loadData()
+      // Reload the page to update the organization context
+      window.location.reload()
+    } catch (err: any) {
+      setError('Failed to accept invitation')
+      toast.error('Failed to accept invitation')
+    }
+  }
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    if (!confirm('Decline this invitation?')) return
+
+    try {
+      await cancelInvitation(invitationId)
+      toast.success('Invitation declined')
+      await loadData()
+    } catch (err: any) {
+      setError('Failed to decline invitation')
+      toast.error('Failed to decline invitation')
+    }
+  }
+
+  const handleCreateOrganization = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!orgName.trim()) return
+
+    setCreating(true)
+    setError(null)
+
+    try {
+      await createOrganization(userId, orgName)
+      toast.success('Organization created successfully!')
+      setOrgName('')
+      setShowCreateForm(false)
+      // Reload the page to update the organization context
+      window.location.reload()
+    } catch (err: any) {
+      console.error('Error creating organization:', err)
+      setError(`Failed to create organization: ${err.message}`)
+      toast.error(`Failed to create organization: ${err.message}`)
+    } finally {
+      setCreating(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className={styles.loading}>
@@ -138,10 +195,100 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
 
   if (!organization) {
     return (
-      <div className={styles.empty}>
-        <Icon name="users" />
-        <h3>No Organization</h3>
-        <p>You are not part of any organization yet.</p>
+      <div className={styles.container}>
+        {error && (
+          <div className={styles.error}>
+            <Icon name="warning" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Incoming Invitations - Show even without organization */}
+        {myInvitations.length > 0 && (
+          <div className={styles.incomingSection}>
+            <h3>Incoming Invitations</h3>
+            <p className={styles.incomingSectionSubtitle}>
+              You have been invited to join {myInvitations.length === 1 ? 'an organization' : 'organizations'}
+            </p>
+            <div className={styles.list}>
+              {myInvitations.map((invitation: any) => (
+                <div key={invitation.id} className={styles.incomingInvitationCard}>
+                  <div className={styles.invitationInfo}>
+                    <Icon name="building" />
+                    <div>
+                      <div className={styles.invitationOrgName}>
+                        {invitation.organizations?.name || 'Organization'}
+                      </div>
+                      <div className={styles.invitationDetails}>
+                        As {invitation.role} · Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.incomingActions}>
+                    <button
+                      onClick={() => handleAcceptInvitation(invitation.token)}
+                      className={styles.acceptButton}
+                    >
+                      <Icon name="check-circle" />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleDeclineInvitation(invitation.id)}
+                      className={styles.declineButton}
+                    >
+                      <Icon name="times" />
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No Organization - Create one */}
+        <div className={styles.empty}>
+          <Icon name="building" />
+          <h3>No Organization</h3>
+          <p>Create an organization to start collaborating with your team.</p>
+
+          {!showCreateForm ? (
+            <button
+              className={styles.createOrgButton}
+              onClick={() => setShowCreateForm(true)}
+            >
+              <Icon name="plus" />
+              Create Organization
+            </button>
+          ) : (
+            <form onSubmit={handleCreateOrganization} className={styles.createOrgForm}>
+              <input
+                type="text"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="Organization name"
+                required
+                disabled={creating}
+                autoFocus
+              />
+              <div className={styles.formActions}>
+                <button type="submit" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false)
+                    setOrgName('')
+                  }}
+                  disabled={creating}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     )
   }
@@ -152,6 +299,49 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
         <div className={styles.error}>
           <Icon name="warning" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Incoming Invitations - Show at top if user has any */}
+      {myInvitations.length > 0 && (
+        <div className={styles.incomingSection}>
+          <h3>Incoming Invitations</h3>
+          <p className={styles.incomingSectionSubtitle}>
+            You have been invited to join {myInvitations.length === 1 ? 'an organization' : 'organizations'}
+          </p>
+          <div className={styles.list}>
+            {myInvitations.map((invitation: any) => (
+              <div key={invitation.id} className={styles.incomingInvitationCard}>
+                <div className={styles.invitationInfo}>
+                  <Icon name="building" />
+                  <div>
+                    <div className={styles.invitationOrgName}>
+                      {invitation.organizations?.name || 'Organization'}
+                    </div>
+                    <div className={styles.invitationDetails}>
+                      As {invitation.role} · Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.incomingActions}>
+                  <button
+                    onClick={() => handleAcceptInvitation(invitation.token)}
+                    className={styles.acceptButton}
+                  >
+                    <Icon name="check-circle" />
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleDeclineInvitation(invitation.id)}
+                    className={styles.declineButton}
+                  >
+                    <Icon name="times" />
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
