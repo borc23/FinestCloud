@@ -184,6 +184,20 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
     }
   }
 
+  const handleLeaveOrganization = async () => {
+    if (!confirm('Are you sure you want to leave this organization? You will need to be re-invited to join again.')) return
+
+    try {
+      await removeMember(userId)
+      toast.success('You have left the organization')
+      // Reload the page to update the organization context
+      window.location.reload()
+    } catch (err: any) {
+      setError('Failed to leave organization')
+      toast.error('Failed to leave organization')
+    }
+  }
+
   if (loading) {
     return (
       <div className={styles.loading}>
@@ -351,15 +365,27 @@ export default function TeamManagement({ userId, userRole }: TeamManagementProps
           <h3>Team Members</h3>
           <p>{members.length} of {organization.max_users} members</p>
         </div>
-        {canManageTeam && (
-          <button
-            className={styles.inviteButton}
-            onClick={() => setShowInviteForm(!showInviteForm)}
-          >
-            <Icon name="user-plus" />
-            Invite Member
-          </button>
-        )}
+        <div className={styles.headerActions}>
+          {canManageTeam && (
+            <button
+              className={styles.inviteButton}
+              onClick={() => setShowInviteForm(!showInviteForm)}
+            >
+              <Icon name="user-plus" />
+              Invite Member
+            </button>
+          )}
+          {userRole !== 'owner' && (
+            <button
+              className={styles.leaveButton}
+              onClick={handleLeaveOrganization}
+              title="Leave organization"
+            >
+              <Icon name="sign-out-alt" />
+              Leave Organization
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Invite Form */}

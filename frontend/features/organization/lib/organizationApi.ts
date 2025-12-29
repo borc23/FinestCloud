@@ -121,6 +121,8 @@ export async function getInvitations(orgId: string): Promise<Invitation[]> {
     .from('invitations')
     .select('*')
     .eq('organization_id', orgId)
+    .eq('status', 'pending') // Only show pending invitations
+    .gt('expires_at', new Date().toISOString()) // Only show non-expired invitations
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -227,18 +229,21 @@ export async function getInvitationByToken(token: string) {
 export async function acceptInvitation(token: string, userId: string) {
   const supabase = createClient()
 
-  const { data: invitation } = await supabase
+  const { data: invitation, error: fetchError } = await supabase
     .from('invitations')
     .select('*')
     .eq('token', token)
     .single()
 
+  if (fetchError) throw fetchError
   if (!invitation) throw new Error('Invalid invitation')
   if (new Date(invitation.expires_at) < new Date()) throw new Error('Invitation expired')
   if (invitation.status === 'accepted') throw new Error('Already accepted')
 
+  console.log('Accepting invitation:', invitation)
+
   // Update profile
-  await supabase
+  const { error: profileError } = await supabase
     .from('profiles')
     .update({
       organization_id: invitation.organization_id,
@@ -246,11 +251,23 @@ export async function acceptInvitation(token: string, userId: string) {
     })
     .eq('id', userId)
 
+  if (profileError) {
+    console.error('Error updating profile:', profileError)
+    throw profileError
+  }
+
   // Mark as accepted
-  await supabase
+  const { error: inviteError } = await supabase
     .from('invitations')
     .update({ status: 'accepted' })
     .eq('id', invitation.id)
+
+  if (inviteError) {
+    console.error('Error updating invitation status:', inviteError)
+    throw inviteError
+  }
+
+  console.log('Invitation accepted successfully')
 }
 
 // Get activity log
