@@ -92,24 +92,47 @@ export async function generateAndAnimatePanels({
   onFirstPanelPlaced,
   geotiffData
 }: GeneratePanelsParams): Promise<PanelGenerationResult> {
+  console.log('\n=== generateAndAnimatePanels CALLED ===')
+  console.log('Received panelData:', panelData)
+  console.log('Map object:', map)
+  console.log('Has geotiffData:', !!geotiffData)
+
   // Enrich panels with sunshine data if available
   if (geotiffData) {
     await enrichPanelsWithSunshine(panelData, geotiffData)
+    console.log('Panels enriched with sunshine data')
   }
   const allPanelData: PanelData[] = []
   let totalPanels = 0
 
   // Collect all panel data first, tagging each with its roof's gridId and sunshine value
+  console.log('=== PANEL GENERATOR DEBUG ===')
+  console.log('panelData.roofs:', panelData.roofs)
+  console.log('panelData.roofs count:', panelData.roofs?.length || 0)
+
   if (panelData.roofs) {
     panelData.roofs.forEach((roof: RoofPanelData, roofIndex: number) => {
+      console.log(`\n--- Processing Roof ${roofIndex} in panelGenerator ---`)
+      console.log('Roof data:', roof)
+      console.log('Roof.panels:', roof.panels)
+      console.log('Roof.panels is array:', Array.isArray(roof.panels))
+      console.log('Roof.panels length:', roof.panels?.length || 0)
+
       if (roof.panels && Array.isArray(roof.panels)) {
         totalPanels += roof.panels.length
+        console.log(`Total panels so far: ${totalPanels}`)
 
-        roof.panels.forEach((panel: Panel) => {
+        roof.panels.forEach((panel: Panel, panelIndex: number) => {
+          console.log(`  Processing panel ${panelIndex}:`, panel)
+          console.log(`  Panel has coords:`, !!panel.coords)
+          console.log(`  Panel.coords is array:`, Array.isArray(panel.coords))
+          console.log(`  Panel.coords length:`, panel.coords?.length || 0)
+
           if (!panel.coords || !Array.isArray(panel.coords)) {
-          console.warn(`Panel ${roofIndex} has no valid coords`)
-          return
-        }
+            console.warn(`Panel ${roofIndex}-${panelIndex} has no valid coords - SKIPPING`)
+            return
+          }
+
           const panelCoords = panel.coords || panel
           const path = Array.isArray(panelCoords)
             ? panelCoords.map((coord: Coordinate) => ({
@@ -118,6 +141,8 @@ export async function generateAndAnimatePanels({
               }))
             : []
 
+          console.log(`  Panel ${panelIndex} path created with ${path.length} coordinates`)
+
           const panelOptions = StyleConfig.getPanelOptions('default')
           allPanelData.push({
             path,
@@ -125,10 +150,19 @@ export async function generateAndAnimatePanels({
             gridId: roofIndex,
             annualSunshineKwh: panel.annualSunshineKwh
           })
+          console.log(`  Panel ${panelIndex} added to allPanelData`)
         })
+      } else {
+        console.log(`Roof ${roofIndex} has no panels or panels is not an array`)
       }
     })
+  } else {
+    console.log('panelData.roofs is falsy')
   }
+
+  console.log(`\n=== PANEL COLLECTION COMPLETE ===`)
+  console.log(`Total panels collected: ${allPanelData.length}`)
+  console.log(`Total panels count: ${totalPanels}`)
 
   // Animate panels appearing one by one
   const newMarkers: google.maps.Polygon[] = []
@@ -168,8 +202,13 @@ export async function generateAndAnimatePanels({
 
     if (i === 0) {
       onFirstPanelPlaced?.()
+      console.log('First panel placed on map')
     }
   }
+
+  console.log(`\n=== PANEL RENDERING COMPLETE ===`)
+  console.log(`Total panels rendered to map: ${newMarkers.length}`)
+  console.log(`newMarkers sample (first 2):`, newMarkers.slice(0, 2))
 
   return { markers: newMarkers, totalPanels }
 }

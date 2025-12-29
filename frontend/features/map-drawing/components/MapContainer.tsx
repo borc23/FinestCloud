@@ -121,6 +121,8 @@ export default function MapContainer({
     renderPolygons,
     clearAllPolygons,
     togglePolygonVisibility,
+    toggleRoofPolygonsVisibility,
+    toggleObjectPolygonsVisibility,
     removeClickListener,
     removePolygons,
     hasRoofs
@@ -287,10 +289,22 @@ export default function MapContainer({
 
     const loadProject = async (projectId: string) => {
       try {
+        console.log('=== PROJECT LOADING DEBUG ===')
+        console.log('Loading project ID:', projectId)
+
         const projectWithData = await getProject(projectId)
         if (!projectWithData) {
           throw new Error('Project not found')
         }
+
+        console.log('Full projectWithData:', JSON.stringify(projectWithData, null, 2))
+        console.log('Project:', projectWithData.project)
+        console.log('Roof Analyses count:', projectWithData.roofAnalyses.length)
+        console.log('Roof Analyses data:', projectWithData.roofAnalyses)
+        console.log('Object Polygons count:', projectWithData.objectPolygons.length)
+        console.log('Object Polygons data:', projectWithData.objectPolygons)
+        console.log('Panel Configurations count:', projectWithData.panelConfigurations.length)
+        console.log('Panel Configurations data:', projectWithData.panelConfigurations)
 
         clearAllPolygons()
         clearPanels()
@@ -301,19 +315,31 @@ export default function MapContainer({
         })
         map.setZoom(projectWithData.project.mapZoom)
 
+        // Render roof polygons
         const roofCoords = projectWithData.roofAnalyses.map(roof => ({
           coords: roof.roofPolygon
         }))
+        console.log('Roof coords to render:', roofCoords.length, roofCoords)
         if (roofCoords.length > 0) {
           renderPolygons(roofCoords, true, false)
-          togglePolygonVisibility(false)
+          console.log('Roof polygons rendered, now hiding them')
+          // Hide roof outlines after rendering
+          toggleRoofPolygonsVisibility(false)
+        } else {
+          console.log('No roof coords to render')
         }
 
+        // Render object polygons
         const objectCoords = projectWithData.objectPolygons.map(obj => ({
           coords: obj.polygonCoords
         }))
+        console.log('Object coords to render:', objectCoords.length, objectCoords)
         if (objectCoords.length > 0) {
           renderPolygons(objectCoords, false, false)
+          console.log('Object polygons rendered and should be visible')
+          // Keep object polygons visible
+        } else {
+          console.log('No object polygons to render')
         }
 
         // Load GeoTIFF data if available
@@ -324,33 +350,103 @@ export default function MapContainer({
         setTimeout(() => {
           if (!window.google?.maps) return
 
+          console.log('=== PANEL DATA GENERATION DEBUG ===')
+
+          // Helper function to calculate panel center point
+          const calculatePanelCenter = (coords: { lat: number; lng: number }[]): { lat: number; lng: number } => {
+            if (!coords || coords.length === 0) return { lat: 0, lng: 0 }
+            const sum = coords.reduce((acc, coord) => ({
+              lat: acc.lat + coord.lat,
+              lng: acc.lng + coord.lng
+            }), { lat: 0, lng: 0 })
+            return {
+              lat: sum.lat / coords.length,
+              lng: sum.lng / coords.length
+            }
+          }
+
           const mockPanelData: any = {
             success: true,
-            roofs: projectWithData.roofAnalyses.map(roof => {
+            roofs: projectWithData.roofAnalyses.map((roof, index) => {
+              console.log(`\n--- Processing Roof ${index} (roofIndex: ${roof.roofIndex}) ---`)
+
               const config = projectWithData.panelConfigurations.find(c =>
                 projectWithData.roofAnalyses.find(r => r.id === c.roofAnalysisId)?.roofIndex === roof.roofIndex
               )
-              return {
+
+              console.log('Found config for roof:', config ? 'YES' : 'NO')
+              if (config) {
+                console.log('Config roofAnalysisId:', config.roofAnalysisId)
+                console.log('Config panelPositions (raw from DB):', config.panelPositions)
+                console.log('Config panelPositions count:', config.panelPositions?.length || 0)
+                console.log('Config moduleSpecs (raw from DB):', config.moduleSpecs)
+                console.log('Config moduleType:', config.moduleType)
+              }
+
+              // Transform panel positions from database format to Panel format
+              // Handle both formats: Coordinate[][] (2D array) OR Array<{coords: Coordinate[]}>
+              const panels = config?.panelPositions ? config.panelPositions.map((panelPos, pIndex) => {
+                // Check if panelPos is already a coordinate array or an object with coords property
+                const coords = Array.isArray(panelPos) ? panelPos : panelPos.coords
+                console.log(`  Panel ${pIndex} - coords:`, coords)
+                console.log(`  Panel ${pIndex} - coords type:`, Array.isArray(panelPos) ? 'Array (2D)' : 'Object with coords property')
+                const center = calculatePanelCenter(coords)
+                console.log(`  Panel ${pIndex} - calculated center:`, center)
+                return {
+                  coords: coords,
+                  lat: center.lat,
+                  lng: center.lng,
+                  annualSunshineKwh: Array.isArray(panelPos) ? undefined : panelPos.annualSunshineKwh
+                }
+              }) : []
+
+              console.log('Transformed panels count:', panels.length)
+              console.log('Transformed panels (first 2):', panels.slice(0, 2))
+
+              // Transform moduleSpecs - handle both old format (power) and new format (power_w)
+              const moduleSpecs = config?.moduleSpecs ? {
+                power_w: (config.moduleSpecs as any).power_w || (config.moduleSpecs as any).power || roof.panelWattage,
+                width_cm: (config.moduleSpecs as any).width_cm || (config.moduleSpecs as any).width || 100,
+                height_cm: (config.moduleSpecs as any).height_cm || (config.moduleSpecs as any).height || 170,
+                efficiency: config.moduleSpecs.efficiency || 0.2
+              } : { power_w: roof.panelWattage }
+
+              console.log('Transformed moduleSpecs:', moduleSpecs)
+
+              const roofData = {
                 roof_id: roof.roofIndex,
-                panels: config?.panelPositions || [],
+                panels: panels,
                 panel_count: roof.panelCount,
                 module_type: config?.moduleType || 'custom',
-                module_specs: config?.moduleSpecs || { power_w: roof.panelWattage },
+                module_specs: moduleSpecs,
                 coords: roof.roofPolygon,
                 azimuth: roof.azimuth,
                 pitch: roof.pitch
               }
+
+              console.log('Final roof data object:', roofData)
+              return roofData
             }),
             max_panels: projectWithData.roofAnalyses.reduce((sum, r) => sum + r.panelCount, 0),
             module: 'custom',
             electrical_system: null
           }
 
+          console.log('\n=== FINAL MOCK PANEL DATA ===')
+          console.log('mockPanelData:', JSON.stringify(mockPanelData, null, 2))
+
+          console.log('\n=== CALLING handleAngleConfirmHook ===')
+          console.log('Angles:', projectWithData.roofAnalyses.map(r => r.pitch))
+          console.log('EdgePadding:', 0.5)
+          console.log('PanelData passed to hook:', mockPanelData)
+
           handleAngleConfirmHook({
             angles: projectWithData.roofAnalyses.map(r => r.pitch),
             edgePadding: 0.5,
             panelData: mockPanelData
           })
+
+          console.log('handleAngleConfirmHook called - check for panel rendering')
         }, 300)
 
       } catch (error) {
@@ -360,7 +456,7 @@ export default function MapContainer({
     }
 
     onRegisterProjectLoader(loadProject)
-  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader, startPanelGeneration, loadGeotiffDataFromUrl, handleAngleConfirmHook, togglePolygonVisibility])
+  }, [map, clearAllPolygons, clearPanels, renderPolygons, onRegisterProjectLoader, startPanelGeneration, loadGeotiffDataFromUrl, handleAngleConfirmHook, toggleRoofPolygonsVisibility])
 
   // Panel placement
   const {

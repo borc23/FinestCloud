@@ -8,6 +8,8 @@ interface UsePolygonsReturn {
   renderPolygons: (polygonData: RoofModel[], isRoof: boolean, enableHover?: boolean) => void
   clearAllPolygons: () => void
   togglePolygonVisibility: (visible: boolean) => void
+  toggleRoofPolygonsVisibility: (visible: boolean) => void
+  toggleObjectPolygonsVisibility: (visible: boolean) => void
   removePolygonListeners: (polygon: google.maps.Polygon) => void
   removeClickListener: (polygon: google.maps.Polygon) => void
   removePolygons: (polygons: google.maps.Polygon[]) => void
@@ -156,6 +158,20 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     })
   }, [setPolygonGroupVisibility])
 
+  const toggleRoofPolygonsVisibility = useCallback((visible: boolean) => {
+    setRoofPolygons(prevRoof => {
+      setPolygonGroupVisibility(prevRoof, visible)
+      return prevRoof
+    })
+  }, [setPolygonGroupVisibility])
+
+  const toggleObjectPolygonsVisibility = useCallback((visible: boolean) => {
+    setObjectPolygons(prevObj => {
+      setPolygonGroupVisibility(prevObj, visible)
+      return prevObj
+    })
+  }, [setPolygonGroupVisibility])
+
   useEffect(() => {
     return () => {
       polygonListenersRef.current.forEach((listeners) => {
@@ -228,6 +244,8 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     renderPolygons,
     clearAllPolygons,
     togglePolygonVisibility,
+    toggleRoofPolygonsVisibility,
+    toggleObjectPolygonsVisibility,
     removePolygonListeners,
     removeClickListener,
     removePolygons,
