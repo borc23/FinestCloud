@@ -4,14 +4,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+from shapely import prepare
 from shapely.affinity import rotate as shapely_rotate
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, box
+from shapely.strtree import STRtree
 
 
 @dataclass
 class OptimizationMetrics:
-    """Metrics collected during optimization process"""
-
     total_time_seconds: float = 0.0
     generations_completed: int = 0
     early_stopped: bool = False
@@ -40,12 +40,12 @@ class PanelGeneticOptimizer:
         self.mutation_rate = mutation_rate
         self.elitism_count = elitism_count
         self.early_stop_threshold = early_stop_threshold
-        self.fitness_cache = {}
+        self.fitness_cache: Dict[Tuple, Tuple[int, List]] = {}
         self.previous_best_fitness = 0
         self.metrics = OptimizationMetrics()
 
-        self.fitness_history = []  # Track best fitness over generations
-        self.convergence_window = 5  # Window for convergence rate calculation
+        self.fitness_history: List[float] = []
+        self.convergence_window = 5
 
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
@@ -57,6 +57,26 @@ class PanelGeneticOptimizer:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
             self.logger.propagate = False
+
+    def _quantize_chromosome(
+        self, chromosome: Tuple[float, float, int, float, float, float]
+    ) -> Tuple[int, int, int, int, int, int]:
+        (
+            offset_x,
+            offset_y,
+            orientation,
+            spacing_x_mult,
+            spacing_y_mult,
+            stagger,
+        ) = chromosome
+        return (
+            int(offset_x * 2),  # 0.5cm precision -> integer
+            int(offset_y * 2),
+            orientation,
+            int(spacing_x_mult * 100),  # 0.01 precision -> integer
+            int(spacing_y_mult * 100),
+            int(stagger * 100),
+        )
 
     def optimize_panel_placement(
         self,
@@ -71,31 +91,14 @@ class PanelGeneticOptimizer:
         tune_parameters: bool = False,
         panel_orientation: str = "best",
     ) -> List[np.ndarray]:
-        """
-        Optimize panel placement using a genetic algorithm with dual orientation support.
-
-        Args:
-            roof_polygon: Roof polygon coordinates in cm (N x 2 array)
-            objects: List of obstacle objects in GPS coordinates
-            vertical_dims: (width, height) for vertical orientation with pitch adjustment
-            horizontal_dims: (width, height) for horizontal orientation with pitch adjustment
-            spacing_cm: Base spacing between panels in centimeters
-            angle: Orientation angle in radians
-            padding_cm: Padding in centimeters from the edge
-            gps_system: GPS coordinate system for converting objects
-            tune_parameters: Whether to tune GA parameters first
-
-        Returns:
-            List of optimally placed panels as arrays of corner coordinates in cm
-        """
         start_time = time.time()
         self.metrics = OptimizationMetrics()
 
-        global_best_solution = None
+        global_best_solution: Optional[List[np.ndarray]] = None
         global_best_fitness = 0
 
         # Convert objects from GPS to cm if gps_system is provided
-        object_polys = []
+        object_polys: List[Polygon] = []
         if gps_system:
             for obj in objects:
                 obj_coords = obj.get("coords", obj) if isinstance(obj, dict) else obj
@@ -118,7 +121,7 @@ class PanelGeneticOptimizer:
 
         self.fitness_cache = {}
         self.previous_best_fitness = 0
-        self.fitness_history = []  # Reset fitness history for new optimization
+        self.fitness_history = []
         stagnation_counter = 0
 
         try:
@@ -127,78 +130,61 @@ class PanelGeneticOptimizer:
             rotated_roof = shapely_rotate(
                 roof_poly, angle_degrees, origin=(center_x, center_y)
             )
+
+            prepare(rotated_roof)
+
             rotated_objects = [
                 shapely_rotate(obj, angle_degrees, origin=(center_x, center_y))
                 for obj in object_polys
             ]
 
+            # This changes obstacle intersection from O(n) to O(log n)
+            obstacle_tree: Optional[STRtree] = None
+            if rotated_objects:
+                obstacle_tree = STRtree(rotated_objects)
+
             # Get rotated bounds
             rot_min_x, rot_min_y, rot_max_x, rot_max_y = rotated_roof.bounds
+
+            angle_rad = np.radians(-angle_degrees)
+            cos_a, sin_a = np.cos(angle_rad), np.sin(angle_rad)
+            rotation_matrix = np.array([[cos_a, -sin_a], [sin_a, cos_a]])
+
+            # Store context for grid generation
+            grid_context = {
+                "rotated_roof": rotated_roof,
+                "obstacle_tree": obstacle_tree,
+                "rot_bounds": (rot_min_x, rot_min_y, rot_max_x, rot_max_y),
+                "rotation_matrix": rotation_matrix,
+                "center": (center_x, center_y),
+                "padding_cm": padding_cm,
+            }
 
             for _ in range(5):
                 population = self._initialize_population(spacing_cm, panel_orientation)
                 best_fitness = 0
 
-                for generation in range(self.generations):
-                    fitness_scores = []
-                    solutions = []
+                fitness_scores = np.zeros(self.population_size, dtype=np.int32)
 
-                    for chromosome in population:
-                        (
-                            offset_x,
-                            offset_y,
-                            orientation,
-                            spacing_x_mult,
-                            spacing_y_mult,
-                            stagger_offset,
-                        ) = chromosome
-                        cache_key = chromosome
+                for generation in range(self.generations):
+                    solutions: List[List[np.ndarray]] = []
+
+                    for i, chromosome in enumerate(population):
+                        cache_key = self._quantize_chromosome(chromosome)
 
                         if cache_key in self.fitness_cache:
                             fitness, panels = self.fitness_cache[cache_key]
                             self.metrics.cache_hits += 1
                         else:
                             try:
-                                # Select dimensions based on orientation
-                                is_vertical = orientation == 0
-                                if is_vertical:
-                                    # Vertical: panel aligned with longest edge (tall: narrow × tall)
-                                    panel_width_cm, panel_height_cm = vertical_dims
-                                    if generation == 0 and len(fitness_scores) == 0:
-                                        self.logger.info(
-                                            f"VERTICAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm | Offset: ({offset_x:.1f}, {offset_y:.1f})"
-                                        )
-                                else:
-                                    # Horizontal: panel perpendicular to longest edge (wide: wide × short)
-                                    # horizontal_dims already swapped and pitch-corrected in panel_service
-                                    panel_width_cm, panel_height_cm = horizontal_dims
-                                    if generation == 0 and len(fitness_scores) == 0:
-                                        self.logger.info(
-                                            f"HORIZONTAL: {panel_width_cm:.1f}cm × {panel_height_cm:.1f}cm | Offset: ({offset_x:.1f}, {offset_y:.1f})"
-                                        )
+                                is_vertical = chromosome[2] == 0
+                                dims = vertical_dims if is_vertical else horizontal_dims
 
-                                # Calculate variable spacing
-                                actual_spacing_x = spacing_cm * spacing_x_mult
-                                actual_spacing_y = spacing_cm * spacing_y_mult
-
-                                panels = self._generate_grid_cm(
-                                    rotated_roof=rotated_roof,
-                                    rotated_objects=rotated_objects,
-                                    panel_width_cm=panel_width_cm,
-                                    panel_height_cm=panel_height_cm,
-                                    spacing_x_cm=actual_spacing_x,
-                                    spacing_y_cm=actual_spacing_y,
-                                    padding_cm=padding_cm,
-                                    rot_min_x=rot_min_x,
-                                    rot_min_y=rot_min_y,
-                                    rot_max_x=rot_max_x,
-                                    rot_max_y=rot_max_y,
-                                    offset_x=offset_x,
-                                    offset_y=offset_y,
-                                    stagger_offset=stagger_offset,
-                                    angle_degrees=angle_degrees,
-                                    center_x=center_x,
-                                    center_y=center_y,
+                                panels = self._generate_grid_optimized(
+                                    chromosome=chromosome,
+                                    panel_dims=dims,
+                                    spacing_cm=spacing_cm,
+                                    context=grid_context,
                                 )
 
                                 fitness = len(panels)
@@ -209,28 +195,22 @@ class PanelGeneticOptimizer:
                                 fitness = 0
                                 panels = []
 
-                        fitness_scores.append(fitness)
+                        fitness_scores[i] = fitness
                         solutions.append(panels)
 
-                        # Update local best
                         if fitness > best_fitness:
                             best_fitness = fitness
 
-                        # Update global best
                         if fitness > global_best_fitness:
                             global_best_fitness = fitness
                             global_best_solution = panels
 
-                    # Track fitness history for convergence rate calculation
-                    current_max_fitness = max(fitness_scores) if fitness_scores else 0
+                    current_max_fitness = int(fitness_scores.max())
                     self.fitness_history.append(current_max_fitness)
 
                     # Early stopping check
                     if generation > 0:
-                        if (
-                            abs(current_max_fitness - self.previous_best_fitness)
-                            < 0.001
-                        ):
+                        if current_max_fitness == self.previous_best_fitness:
                             stagnation_counter += 1
                             if stagnation_counter >= self.early_stop_threshold:
                                 self.metrics.early_stopped = True
@@ -240,7 +220,7 @@ class PanelGeneticOptimizer:
 
                     self.previous_best_fitness = current_max_fitness
 
-                    population = self._create_new_population(
+                    population = self._create_new_population_optimized(
                         population, fitness_scores, spacing_cm, panel_orientation
                     )
 
@@ -260,79 +240,90 @@ class PanelGeneticOptimizer:
             self.metrics.total_time_seconds = time.time() - start_time
             return []
 
-    def _generate_grid_cm(
+    def _generate_grid_optimized(
         self,
-        rotated_roof,
-        rotated_objects: List,
-        panel_width_cm: float,
-        panel_height_cm: float,
-        spacing_x_cm: float,
-        spacing_y_cm: float,
-        padding_cm: float,
-        rot_min_x: float,
-        rot_min_y: float,
-        rot_max_x: float,
-        rot_max_y: float,
-        offset_x: float,
-        offset_y: float,
-        stagger_offset: float,
-        angle_degrees: float,
-        center_x: float,
-        center_y: float,
+        chromosome: Tuple[float, float, int, float, float, float],
+        panel_dims: Tuple[float, float],
+        spacing_cm: float,
+        context: dict,
     ) -> List[np.ndarray]:
-        """
-        Generate grid of panels with variable spacing and staggered/brick-pattern layouts.
+        (
+            offset_x,
+            offset_y,
+            _,
+            spacing_x_mult,
+            spacing_y_mult,
+            stagger_offset,
+        ) = chromosome
+        panel_width_cm, panel_height_cm = panel_dims
 
-        Args:
-            stagger_offset: Horizontal offset for alternating rows (0.0 to 1.0)
-                           0.0 = no stagger (regular grid)
-                           0.5 = half panel width offset (classic brick pattern)
-                           1.0 = full panel width offset
-        """
+        rotated_roof = context["rotated_roof"]
+        obstacle_tree: Optional[STRtree] = context["obstacle_tree"]
+        rot_min_x, rot_min_y, rot_max_x, rot_max_y = context["rot_bounds"]
+        rotation_matrix = context["rotation_matrix"]
+        center_x, center_y = context["center"]
+        padding_cm = context["padding_cm"]
 
-        panels = []
+        actual_spacing_x = spacing_cm * spacing_x_mult
+        actual_spacing_y = spacing_cm * spacing_y_mult
 
-        # Panel template based on dimensions
-        panel_template = np.array(
-            [
-                [0, 0],
-                [panel_width_cm, 0],
-                [panel_width_cm, panel_height_cm],
-                [0, panel_height_cm],
-            ]
-        )
+        step_x = panel_width_cm + actual_spacing_x
+        step_y = panel_height_cm + actual_spacing_y
 
-        step_x = panel_width_cm + spacing_x_cm
-        step_y = panel_height_cm + spacing_y_cm
-
-        # Calculate stagger displacement in cm
         stagger_displacement = panel_width_cm * stagger_offset
 
-        row_index = 0
-        y = rot_min_y + padding_cm + offset_y
-        while y + panel_height_cm + padding_cm <= rot_max_y:
-            # Alternate rows get staggered by the displacement
-            row_stagger = stagger_displacement if (row_index % 2 == 1) else 0.0
+        panels: List[np.ndarray] = []
 
-            x = rot_min_x + padding_cm + offset_x + row_stagger
-            while x + panel_width_cm + padding_cm <= rot_max_x:
-                panel = panel_template + [x, y]
-                panel_poly = Polygon(panel)
+        y_start = rot_min_y + padding_cm + offset_y
+        y_end = rot_max_y - padding_cm - panel_height_cm
+        x_start_base = rot_min_x + padding_cm + offset_x
+        x_end = rot_max_x - padding_cm - panel_width_cm
 
-                if rotated_roof.contains(panel_poly):
-                    overlaps = any(
-                        panel_poly.intersects(obj) for obj in rotated_objects
-                    )
-                    if not overlaps:
-                        # Rotate panel back to original coordinate system
-                        rotated_back = shapely_rotate(
-                            panel_poly, -angle_degrees, origin=(center_x, center_y)
-                        )
-                        panels.append(np.array(rotated_back.exterior.coords[:4]))
+        if y_start > y_end or x_start_base > x_end:
+            return panels
 
-                x += step_x
-            y += step_y
-            row_index += 1
+        # Generate all y positions
+        y_positions = np.arange(y_start, y_end + 0.001, step_y)
+
+        for row_idx, y in enumerate(y_positions):
+            row_stagger = stagger_displacement if (row_idx % 2 == 1) else 0.0
+            x_start = x_start_base + row_stagger
+
+            # Generate all x positions for this row
+            x_positions = np.arange(x_start, x_end + 0.001, step_x)
+
+            for x in x_positions:
+                # Create panel polygon using box (faster than manual Polygon)
+                panel_poly = box(x, y, x + panel_width_cm, y + panel_height_cm)
+
+                # Check containment (uses prepared geometry - much faster)
+                if not rotated_roof.contains(panel_poly):
+                    continue
+
+                if obstacle_tree is not None:
+                    # Query returns indices of potentially intersecting geometries
+                    potential_hits = obstacle_tree.query(panel_poly)
+                    if any(
+                        panel_poly.intersects(obstacle_tree.geometries[idx])
+                        for idx in potential_hits
+                    ):
+                        continue
+
+                corners = np.array(
+                    [
+                        [x, y],
+                        [x + panel_width_cm, y],
+                        [x + panel_width_cm, y + panel_height_cm],
+                        [x, y + panel_height_cm],
+                    ]
+                )
+
+                # Translate to origin, rotate, translate back
+                centered = corners - np.array([center_x, center_y])
+                rotated = centered @ rotation_matrix.T
+                final_corners = rotated + np.array([center_x, center_y])
+
+                panels.append(final_corners)
 
         return panels
 
@@ -341,242 +332,176 @@ class PanelGeneticOptimizer:
         spacing: float,
         panel_orientation: str = "best",
     ) -> List[Tuple[float, float, int, float, float, float]]:
-        """
-        Initialize a diverse population with enhanced chromosome structure.
-        Chromosome: (offset_x, offset_y, orientation, spacing_x_mult, spacing_y_mult, stagger_offset)
-        - offset_x, offset_y: grid offsets in increments of 0.5 cm only
-        - orientation: 0 = vertical, 1 = horizontal
-        - spacing_x_mult, spacing_y_mult: multipliers for spacing (0.5 to 2.0)
-        - stagger_offset: horizontal offset for alternating rows (0.0 to 1.0 = 0% to 100% of panel width)
-        """
+        """Initialize a diverse population with enhanced chromosome structure."""
         max_offset = max(50.0, spacing if spacing > 0 else 50.0)
-        population = []
+        population: List[Tuple[float, float, int, float, float, float]] = []
 
-        # Create diverse initial population
-        for _ in range(self.population_size):
-            # Generate offsets in 0.5 cm increments only
-            offset_x = np.round(np.random.uniform(0, max_offset) * 2) / 2
-            offset_y = np.round(np.random.uniform(0, max_offset) * 2) / 2
+        n = self.population_size
+        offsets = np.round(np.random.uniform(0, max_offset, (n, 2)) * 2) / 2
+        spacing_mults = np.random.uniform(0.5, 2.0, (n, 2))
 
-            # Set orientation based on user preference
-            if panel_orientation == "vertical":
-                orientation = 0
-            elif panel_orientation == "horizontal":
-                orientation = 1
-            else:  # "best" - try both orientations
-                orientation = np.random.choice([0, 1])
+        if panel_orientation == "vertical":
+            orientations = np.zeros(n, dtype=int)
+        elif panel_orientation == "horizontal":
+            orientations = np.ones(n, dtype=int)
+        else:
+            orientations = np.random.choice([0, 1], n)
 
-            spacing_x_mult = np.random.uniform(0.5, 2.0)
-            spacing_y_mult = np.random.uniform(0.5, 2.0)
-
-            # No stagger - pure grid only
-            stagger_offset = 0.0
-
+        for i in range(n):
             population.append(
                 (
-                    offset_x,
-                    offset_y,
-                    orientation,
-                    spacing_x_mult,
-                    spacing_y_mult,
-                    stagger_offset,
+                    offsets[i, 0],
+                    offsets[i, 1],
+                    int(orientations[i]),
+                    spacing_mults[i, 0],
+                    spacing_mults[i, 1],
+                    0.0,  # No stagger
                 )
             )
 
         return population
 
-    def _create_new_population(
+    def _create_new_population_optimized(
         self,
         population: List[Tuple[float, float, int, float, float, float]],
-        fitness_scores: List[int],
+        fitness_scores: np.ndarray,
         spacing: float,
         panel_orientation: str = "best",
     ) -> List[Tuple[float, float, int, float, float, float]]:
-        """Create a new population through selection, crossover, and mutation with self-adaptive mutation."""
-        new_population = []
+        new_population: List[Tuple[float, float, int, float, float, float]] = []
 
-        if self.elitism_count > 0 and fitness_scores:
-            elite_indices = np.argsort(fitness_scores)[-self.elitism_count :]
+        # Elitism with numpy argsort (more efficient for larger arrays)
+        if self.elitism_count > 0 and len(fitness_scores) > 0:
+            elite_indices = np.argpartition(fitness_scores, -self.elitism_count)[
+                -self.elitism_count :
+            ]
             for idx in elite_indices:
                 new_population.append(population[idx])
 
-        # Calculate population diversity and convergence rate
-        diversity_score = self._calculate_population_diversity(population)
+        # Pre-compute fitness ranks once (avoid repeated argsort)
+        fitness_ranks = np.zeros(len(fitness_scores))
+        if len(fitness_scores) > 1:
+            sorted_indices = np.argsort(fitness_scores)
+            fitness_ranks[sorted_indices] = np.arange(len(fitness_scores)) / (
+                len(fitness_scores) - 1
+            )
+
+        # Calculate diversity using sampling (already O(sample^2))
+        diversity_score = self._calculate_population_diversity_fast(population)
         convergence_rate = self._calculate_convergence_rate()
 
-        # Store metrics
         self.metrics.average_population_similarity = diversity_score
         self.metrics.convergence_rate = convergence_rate
 
-        # Self-adaptive mutation rate
-        # Low diversity (similar chromosomes) → Increase mutation
-        # Low convergence (stagnant) → Increase mutation
-        # High diversity + High convergence → Decrease mutation
-        diversity_factor = 1.0 - diversity_score  # Invert: low diversity = high factor
-        stagnation_factor = 1.0 - convergence_rate  # Low convergence = high factor
-
-        # Adaptive mutation: base rate * (1.0 + diversity_factor + stagnation_factor)
-        # Range: mutation_rate * 1.0 to mutation_rate * 3.0
-        adaptive_mutation_rate = self.mutation_rate * (
-            1.0 + diversity_factor + stagnation_factor
-        )
-        adaptive_mutation_rate = min(adaptive_mutation_rate, 0.5)  # Cap at 50%
-
-        self.logger.debug(
-            f"Adaptive mutation: rate={adaptive_mutation_rate:.3f}, "
-            f"diversity={diversity_score:.3f}, convergence={convergence_rate:.3f}"
+        diversity_factor = 1.0 - diversity_score
+        stagnation_factor = 1.0 - convergence_rate
+        adaptive_mutation_rate = min(
+            self.mutation_rate * (1.0 + diversity_factor + stagnation_factor), 0.5
         )
 
-        # Calculate fitness ranks for rank-based mutation strength
-        fitness_ranks = np.argsort(np.argsort(fitness_scores))  # 0 = worst, N-1 = best
+        num_needed = self.population_size - len(new_population)
+        num_pairs = (num_needed + 1) // 2
 
+        # Pre-generate all random numbers needed
+        tournament_indices = np.random.randint(
+            0, len(population), (num_pairs * 2, self.tournament_size)
+        )
+        crossover_randoms = np.random.random(num_pairs)
+
+        pair_idx = 0
         while len(new_population) < self.population_size:
-            parent1 = self._tournament_selection(population, fitness_scores)
-            parent2 = self._tournament_selection(population, fitness_scores)
+            # Tournament selection using pre-generated indices
+            idx1 = tournament_indices[pair_idx * 2]
+            idx2 = tournament_indices[pair_idx * 2 + 1]
 
-            if np.random.random() < self.crossover_rate:
+            tournament_fitness1 = fitness_scores[idx1]
+            tournament_fitness2 = fitness_scores[idx2]
+
+            parent1_idx = idx1[np.argmax(tournament_fitness1)]
+            parent2_idx = idx2[np.argmax(tournament_fitness2)]
+
+            parent1 = population[parent1_idx]
+            parent2 = population[parent2_idx]
+
+            if crossover_randoms[pair_idx] < self.crossover_rate:
                 child1, child2 = self._crossover(parent1, parent2, panel_orientation)
             else:
                 child1, child2 = parent1, parent2
-
-            # Find parent ranks for adaptive mutation strength
-            parent1_idx = population.index(parent1) if parent1 in population else 0
-            parent1_rank = fitness_ranks[parent1_idx] / max(
-                1, len(fitness_ranks) - 1
-            )  # Normalize 0-1
-
-            parent2_idx = population.index(parent2) if parent2 in population else 0
-            parent2_rank = fitness_ranks[parent2_idx] / max(1, len(fitness_ranks) - 1)
 
             child1 = self._mutate(
                 child1,
                 spacing,
                 mutation_rate=adaptive_mutation_rate,
                 panel_orientation=panel_orientation,
-                fitness_rank=parent1_rank,
+                fitness_rank=fitness_ranks[parent1_idx],
             )
             child2 = self._mutate(
                 child2,
                 spacing,
                 mutation_rate=adaptive_mutation_rate,
                 panel_orientation=panel_orientation,
-                fitness_rank=parent2_rank,
+                fitness_rank=fitness_ranks[parent2_idx],
             )
 
             new_population.append(child1)
             if len(new_population) < self.population_size:
                 new_population.append(child2)
 
+            pair_idx += 1
+
         return new_population
 
-    def _tournament_selection(
+    def _calculate_population_diversity_fast(
         self,
         population: List[Tuple[float, float, int, float, float, float]],
-        fitness_scores: List[int],
-    ) -> Tuple[float, float, int, float, float, float]:
-        """Select individual using tournament selection."""
-        if not population or not fitness_scores:
-            return (0.0, 0.0, 0, 1.0, 1.0, 0.0)
-
-        indices = np.random.choice(
-            len(population), min(self.tournament_size, len(population)), replace=False
-        )
-        tournament_fitness = [fitness_scores[i] for i in indices]
-        winner_idx = indices[np.argmax(tournament_fitness)]
-        return population[winner_idx]
-
-    def _calculate_chromosome_similarity(
-        self,
-        chromosome1: Tuple[float, float, int, float, float, float],
-        chromosome2: Tuple[float, float, int, float, float, float],
     ) -> float:
-        """
-        Calculate similarity between two chromosomes using Euclidean distance.
-        Returns normalized distance (0 = identical, 1 = very different).
-        """
-        # Normalize continuous values for fair distance calculation
-        # offset_x, offset_y typically 0-50
-        # spacing_x_mult, spacing_y_mult range 0.5-2.0
-        # orientation is 0 or 1
-        # stagger_offset range 0.0-1.0
-
-        x1, y1, o1, sx1, sy1, stagger1 = chromosome1
-        x2, y2, o2, sx2, sy2, stagger2 = chromosome2
-
-        # Euclidean distance with weighted components
-        offset_dist = (
-            np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) / 50.0
-        )  # Normalize by max offset
-        spacing_dist = (
-            np.sqrt((sx1 - sx2) ** 2 + (sy1 - sy2) ** 2) / 1.5
-        )  # Normalize by range
-        orientation_dist = abs(o1 - o2)  # Already 0 or 1
-        stagger_dist = abs(stagger1 - stagger2)  # Already normalized 0-1
-
-        # Combined distance (weighted average)
-        total_dist = (
-            0.3 * offset_dist
-            + 0.3 * spacing_dist
-            + 0.15 * orientation_dist
-            + 0.25 * stagger_dist
-        )
-
-        return min(total_dist, 1.0)  # Cap at 1.0
-
-    def _calculate_population_diversity(
-        self, population: List[Tuple[float, float, int, float, float, float]]
-    ) -> float:
-        """
-        Calculate average pairwise similarity in population.
-        Returns diversity score: 0 = all identical, 1 = highly diverse.
-        """
         if len(population) < 2:
             return 0.0
 
-        similarities = []
-        # Sample pairs to avoid O(n^2) for large populations
-        sample_size = min(len(population), 50)
-        sampled_pop = np.random.choice(len(population), sample_size, replace=False)
+        # Convert to numpy array for vectorized operations
+        pop_array = np.array(population)
 
-        for i in range(len(sampled_pop)):
-            for j in range(i + 1, len(sampled_pop)):
-                similarity = self._calculate_chromosome_similarity(
-                    population[sampled_pop[i]], population[sampled_pop[j]]
-                )
-                similarities.append(similarity)
+        normalized = np.zeros_like(pop_array)
+        normalized[:, 0] = pop_array[:, 0] / 50.0  # offset_x
+        normalized[:, 1] = pop_array[:, 1] / 50.0  # offset_y
+        normalized[:, 2] = pop_array[:, 2]  # orientation
+        normalized[:, 3] = (pop_array[:, 3] - 0.5) / 1.5  # spacing_x_mult
+        normalized[:, 4] = (pop_array[:, 4] - 0.5) / 1.5  # spacing_y_mult
+        normalized[:, 5] = pop_array[:, 5]  # stagger
 
-        avg_similarity = np.mean(similarities) if similarities else 0.0
-        return avg_similarity  # Higher = more diverse
+        # Calculate variance across population (measure of diversity)
+        variance = np.var(normalized, axis=0)
+
+        # Sum of variances gives diversity score
+        # Normalize to 0-1 range (max variance for uniform [0,1] is 0.25)
+        diversity = min(np.sum(variance) / 1.5, 1.0)
+
+        return diversity
 
     def _calculate_convergence_rate(self) -> float:
-        """
-        Calculate convergence rate based on fitness improvement over recent generations.
-        Returns: rate of improvement (0 = stagnant, 1 = rapid improvement).
-        """
+        """Calculate convergence rate based on fitness improvement."""
         if len(self.fitness_history) < 2:
-            return 0.5  # Default mid-range
+            return 0.5
 
-        # Look at recent history
         recent_history = self.fitness_history[-self.convergence_window :]
 
         if len(recent_history) < 2:
             return 0.5
 
-        # Calculate improvement rate
-        improvements = []
-        for i in range(1, len(recent_history)):
-            if recent_history[i - 1] > 0:
-                improvement = (
-                    recent_history[i] - recent_history[i - 1]
-                ) / recent_history[i - 1]
-                improvements.append(improvement)
+        # Vectorized improvement calculation
+        history_array = np.array(recent_history)
+        diffs = np.diff(history_array)
+        base = history_array[:-1]
 
-        avg_improvement = np.mean(improvements) if improvements else 0.0
+        # Avoid division by zero
+        valid_mask = base > 0
+        if not np.any(valid_mask):
+            return 0.0
 
-        # Normalize: 0.1 (10% improvement) = rapid, near 0 = stagnant
-        convergence_rate = max(0.0, min(1.0, abs(avg_improvement) * 10))
+        improvements = np.abs(diffs[valid_mask] / base[valid_mask])
+        avg_improvement = np.mean(improvements)
 
-        return convergence_rate
+        return min(avg_improvement * 10, 1.0)
 
     def _crossover(
         self,
@@ -587,13 +512,11 @@ class PanelGeneticOptimizer:
         Tuple[float, float, int, float, float, float],
         Tuple[float, float, int, float, float, float],
     ]:
-        """Perform crossover between two parents with enhanced chromosome structure."""
-        p1_x, p1_y, p1_orient, p1_sx, p1_sy, p1_stagger = parent1
-        p2_x, p2_y, p2_orient, p2_sx, p2_sy, p2_stagger = parent2
+        """Perform crossover between two parents."""
+        p1_x, p1_y, p1_orient, p1_sx, p1_sy, _ = parent1
+        p2_x, p2_y, p2_orient, p2_sx, p2_sy, _ = parent2
 
-        # Multi-point crossover
         if np.random.random() < 0.5:
-            # Swap orientation and spacing parameters (only if "best" mode)
             if panel_orientation == "best":
                 child1 = (p1_x, p1_y, p2_orient, p2_sx, p2_sy, 0.0)
                 child2 = (p2_x, p2_y, p1_orient, p1_sx, p1_sy, 0.0)
@@ -601,10 +524,8 @@ class PanelGeneticOptimizer:
                 child1 = (p1_x, p1_y, p1_orient, p2_sx, p2_sy, 0.0)
                 child2 = (p2_x, p2_y, p2_orient, p1_sx, p1_sy, 0.0)
         else:
-            # Blend crossover for continuous values
             alpha = np.random.random()
 
-            # Blend offsets and round to nearest 0.5 cm
             child1_x = np.round((alpha * p1_x + (1 - alpha) * p2_x) * 2) / 2
             child1_y = np.round((alpha * p1_y + (1 - alpha) * p2_y) * 2) / 2
             child2_x = np.round(((1 - alpha) * p1_x + alpha * p2_x) * 2) / 2
@@ -612,34 +533,18 @@ class PanelGeneticOptimizer:
 
             child1_sx = alpha * p1_sx + (1 - alpha) * p2_sx
             child1_sy = alpha * p1_sy + (1 - alpha) * p2_sy
+            child2_sx = (1 - alpha) * p1_sx + alpha * p2_sx
+            child2_sy = (1 - alpha) * p1_sy + alpha * p2_sy
 
-            # Only mix orientations in "best" mode
             if panel_orientation == "best":
-                child1_orient = np.random.choice([p1_orient, p2_orient])
-                child2_orient = np.random.choice([p1_orient, p2_orient])
+                child1_orient = p1_orient if np.random.random() < 0.5 else p2_orient
+                child2_orient = p1_orient if np.random.random() < 0.5 else p2_orient
             else:
                 child1_orient = p1_orient
                 child2_orient = p2_orient
 
-            child2_sx = (1 - alpha) * p1_sx + alpha * p2_sx
-            child2_sy = (1 - alpha) * p1_sy + alpha * p2_sy
-
-            child1 = (
-                child1_x,
-                child1_y,
-                child1_orient,
-                child1_sx,
-                child1_sy,
-                0.0,  # No stagger
-            )
-            child2 = (
-                child2_x,
-                child2_y,
-                child2_orient,
-                child2_sx,
-                child2_sy,
-                0.0,  # No stagger
-            )
+            child1 = (child1_x, child1_y, child1_orient, child1_sx, child1_sy, 0.0)
+            child2 = (child2_x, child2_y, child2_orient, child2_sx, child2_sy, 0.0)
 
         return child1, child2
 
@@ -651,94 +556,56 @@ class PanelGeneticOptimizer:
         panel_orientation: str = "best",
         fitness_rank: float = 0.5,
     ) -> Tuple[float, float, int, float, float, float]:
-        """
-        Mutate an individual with self-adaptive mutation strength.
-
-        Args:
-            individual: Chromosome to mutate
-            spacing: Grid spacing
-            mutation_rate: Base mutation rate (self-adaptive)
-            panel_orientation: Orientation mode
-            fitness_rank: Normalized fitness rank (0 = worst, 1 = best)
-
-        Returns:
-            Mutated chromosome
-        """
+        """Mutate an individual with self-adaptive mutation strength."""
         if mutation_rate is None:
             mutation_rate = self.mutation_rate
 
-        (
-            offset_x,
-            offset_y,
-            orientation,
-            spacing_x_mult,
-            spacing_y_mult,
-            stagger_offset,
-        ) = individual
+        offset_x, offset_y, orientation, spacing_x_mult, spacing_y_mult, _ = individual
 
-        # Rank-based mutation strength
-        # Low fitness individuals → Stronger mutations (more exploration)
-        # High fitness individuals → Weaker mutations (fine-tuning)
-        rank_factor = 1.0 - fitness_rank  # Invert: low rank = high factor
-        strength_multiplier = 1.0 + (2.0 * rank_factor)  # Range: 1.0 to 3.0
+        rank_factor = 1.0 - fitness_rank
+        strength_multiplier = 1.0 + (2.0 * rank_factor)
 
-        # Adaptive power law based on fitness rank
-        if fitness_rank < 0.3:  # Poor performers
-            power_law = np.random.choice([2, 3, 4], p=[0.5, 0.3, 0.2])
-        elif fitness_rank < 0.7:  # Mid-range
-            power_law = np.random.choice([1, 2, 3], p=[0.6, 0.3, 0.1])
-        else:  # Top performers
-            power_law = np.random.choice([1, 2], p=[0.8, 0.2])
+        # Simplified power law selection
+        if fitness_rank < 0.3:
+            power_law = np.random.choice([2, 3, 4])
+        elif fitness_rank < 0.7:
+            power_law = np.random.choice([1, 2, 3])
+        else:
+            power_law = np.random.choice([1, 2])
 
-        # Mutate offset_x in 0.5 cm increments only
-        if np.random.random() < mutation_rate:
-            # Generate mutation in 0.5 cm steps
+        max_offset = max(50.0, spacing if spacing > 0 else 50.0)
+
+        randoms = np.random.random(5)
+
+        if randoms[0] < mutation_rate:
             mutation_steps = np.random.randint(-power_law * 3, power_law * 4 + 1)
             mutation_strength = mutation_steps * 0.5 * strength_multiplier
-            max_offset = max(50.0, spacing if spacing > 0 else 50.0)
             offset_x = np.clip(offset_x + mutation_strength, 0, max_offset)
-            # Ensure it stays on 0.5 cm grid
             offset_x = np.round(offset_x * 2) / 2
 
-        # Mutate offset_y in 0.5 cm increments only
-        if np.random.random() < mutation_rate:
-            # Generate mutation in 0.5 cm steps
+        if randoms[1] < mutation_rate:
             mutation_steps = np.random.randint(-power_law * 3, power_law * 4 + 1)
             mutation_strength = mutation_steps * 0.5 * strength_multiplier
-            max_offset = max(50.0, spacing if spacing > 0 else 50.0)
             offset_y = np.clip(offset_y + mutation_strength, 0, max_offset)
-            # Ensure it stays on 0.5 cm grid
             offset_y = np.round(offset_y * 2) / 2
 
-        # Mutate orientation (flip with low probability) - only in "best" mode
-        if panel_orientation == "best" and np.random.random() < mutation_rate * 0.3:
+        if panel_orientation == "best" and randoms[2] < mutation_rate * 0.3:
             orientation = 1 - orientation
 
-        # Mutate spacing multipliers with rank-based strength
-        if np.random.random() < mutation_rate:
+        if randoms[3] < mutation_rate:
             spacing_delta = np.random.uniform(-0.3, 0.3) * strength_multiplier
             spacing_x_mult = np.clip(spacing_x_mult + spacing_delta, 0.5, 2.0)
 
-        if np.random.random() < mutation_rate:
+        if randoms[4] < mutation_rate:
             spacing_delta = np.random.uniform(-0.3, 0.3) * strength_multiplier
             spacing_y_mult = np.clip(spacing_y_mult + spacing_delta, 0.5, 2.0)
 
-        # No stagger mutation - keep grid aligned (stagger_offset remains 0.0)
-
-        return (
-            offset_x,
-            offset_y,
-            orientation,
-            spacing_x_mult,
-            spacing_y_mult,
-            0.0,  # stagger_offset always 0
-        )
+        return (offset_x, offset_y, orientation, spacing_x_mult, spacing_y_mult, 0.0)
 
     def _tune_genetic_parameters(self) -> None:
         """Tune genetic algorithm parameters for optimal performance."""
         self.logger.info("Starting genetic algorithm parameter tuning...")
 
-        # Set default optimized parameters
         self.population_size = 26
         self.generations = 12
         self.tournament_size = 4
