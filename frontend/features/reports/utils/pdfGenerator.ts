@@ -6,6 +6,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { ReportData, ReportOptions } from '@/features/reports/types/report'
+import { hexToRgb } from '@/shared/utils/colorUtils'
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
@@ -39,8 +40,10 @@ export function generateSolarReport(
   const doc = new jsPDF()
   let yPos = 20
 
-  // Colors
-  const primaryColor: [number, number, number] = [76, 175, 80] // Green
+  // Colors - Use organization branding if available
+  const primaryColor: [number, number, number] = data.organizationPrimaryColor
+    ? hexToRgb(data.organizationPrimaryColor)
+    : [76, 175, 80] // Fallback to green
   const textColor: [number, number, number] = [60, 60, 60] // Dark gray
   const lightGray: [number, number, number] = [240, 240, 240]
 
@@ -141,13 +144,53 @@ function addHeader(
   yPos: number,
   color: [number, number, number]
 ): number {
+  let currentY = yPos
+
+  // Company Logo (if available)
+  if (data.companyLogo) {
+    try {
+      // Add logo - assuming it's a base64 string or URL
+      // Note: For URLs, you'd need to fetch and convert to base64 first
+      doc.addImage(data.companyLogo, 'PNG', 20, currentY, 40, 20)
+    } catch (err) {
+      console.error('Failed to add logo to PDF:', err)
+    }
+  }
+
+  // Company Name (top right)
+  if (data.companyName) {
+    doc.setFontSize(12)
+    doc.setTextColor(100, 100, 100)
+    doc.setFont('helvetica', 'bold')
+    doc.text(data.companyName, 190, currentY + 5, { align: 'right' })
+
+    // Contact info below company name
+    let contactY = currentY + 10
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+
+    if (data.companyPhone) {
+      doc.text(data.companyPhone, 190, contactY, { align: 'right' })
+      contactY += 4
+    }
+    if (data.companyEmail) {
+      doc.text(data.companyEmail, 190, contactY, { align: 'right' })
+      contactY += 4
+    }
+    if (data.companyWebsite) {
+      doc.text(data.companyWebsite, 190, contactY, { align: 'right' })
+    }
+  }
+
+  currentY += 25
+
   // Title
   doc.setFontSize(24)
   doc.setTextColor(...color)
   doc.setFont('helvetica', 'bold')
-  doc.text('Solar Installation Proposal', 105, yPos, { align: 'center' })
+  doc.text('Solar Installation Proposal', 105, currentY, { align: 'center' })
 
-  yPos += 10
+  currentY += 10
 
   // Subtitle
   doc.setFontSize(12)
@@ -156,26 +199,26 @@ function addHeader(
   doc.text(
     `${data.systemSpecs.systemSize.toFixed(1)} kW System | ${data.systemSpecs.panelCount} Panels`,
     105,
-    yPos,
+    currentY,
     { align: 'center' }
   )
 
-  yPos += 5
+  currentY += 5
 
   // Date
   const dateStr = data.projectDate
     ? data.projectDate.toLocaleDateString('en-GB')
     : new Date().toLocaleDateString('en-GB')
   doc.setFontSize(10)
-  doc.text(`Generated: ${dateStr}`, 105, yPos, { align: 'center' })
+  doc.text(`Generated: ${dateStr}`, 105, currentY, { align: 'center' })
 
   // Horizontal line
-  yPos += 5
+  currentY += 5
   doc.setDrawColor(...color)
   doc.setLineWidth(0.5)
-  doc.line(20, yPos, 190, yPos)
+  doc.line(20, currentY, 190, currentY)
 
-  return yPos + 5
+  return currentY + 5
 }
 
 /**

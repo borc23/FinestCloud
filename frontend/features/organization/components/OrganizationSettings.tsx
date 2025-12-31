@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Icon } from '@/shared/components/ui/Icon'
 import { getUserOrganization, updateOrganization } from '../lib/organizationApi'
+import { uploadOrganizationLogo, deleteOrganizationLogo } from '../lib/logoUpload'
 import type { Organization } from '../types/organization'
 import styles from './OrganizationSettings.module.css'
 
@@ -16,6 +17,8 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Form fields
   const [name, setName] = useState('')
@@ -25,6 +28,7 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
   const [companyAddress, setCompanyAddress] = useState('')
   const [primaryColor, setPrimaryColor] = useState('#3B82F6')
   const [secondaryColor, setSecondaryColor] = useState('#1E40AF')
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     loadOrganization()
@@ -45,11 +49,74 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
         setCompanyAddress(org.company_address || '')
         setPrimaryColor(org.primary_color)
         setSecondaryColor(org.secondary_color)
+        setLogoUrl(org.logo_url || null)
       }
     } catch (err: any) {
       setError('Failed to load organization')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !organization) return
+
+    setUploadingLogo(true)
+    setError(null)
+
+    try {
+      // Delete old logo if exists
+      if (logoUrl) {
+        try {
+          await deleteOrganizationLogo(logoUrl, organization.id)
+        } catch (err) {
+          console.error('Failed to delete old logo:', err)
+          // Continue with upload even if deletion fails
+        }
+      }
+
+      // Upload new logo
+      const newLogoUrl = await uploadOrganizationLogo(file, organization.id)
+      setLogoUrl(newLogoUrl)
+
+      // Save logo URL to database
+      await updateOrganization(organization.id, {
+        logo_url: newLogoUrl,
+      })
+
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    if (!organization || !logoUrl) return
+
+    setUploadingLogo(true)
+    setError(null)
+
+    try {
+      await deleteOrganizationLogo(logoUrl, organization.id)
+      await updateOrganization(organization.id, {
+        logo_url: null,
+      })
+
+      setLogoUrl(null)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Failed to remove logo')
+    } finally {
+      setUploadingLogo(false)
     }
   }
 
@@ -208,6 +275,42 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
 
       <div className={styles.section}>
         <h3>Branding</h3>
+
+        <div className={styles.field}>
+          <label>Company Logo</label>
+          {logoUrl && (
+            <div className={styles.logoPreview}>
+              <img src={logoUrl} alt="Company logo" />
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                disabled={uploadingLogo}
+                className={styles.removeLogoButton}
+              >
+                <Icon name="trash" />
+                Remove
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+            onChange={handleLogoUpload}
+            disabled={uploadingLogo}
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingLogo}
+            className={styles.uploadButton}
+          >
+            <Icon name={uploadingLogo ? 'spinner' : 'upload'} />
+            {uploadingLogo ? 'Uploading...' : logoUrl ? 'Change Logo' : 'Upload Logo'}
+          </button>
+          <small>PNG, JPEG, or SVG. Max 5MB.</small>
+        </div>
 
         <div className={styles.colorRow}>
           <div className={styles.field}>

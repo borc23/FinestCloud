@@ -3,6 +3,7 @@ import { generateSolarReport, downloadPDF } from '@/features/reports/utils/pdfGe
 import { calculateFinancials, estimateSystemCost } from '@/features/financial/utils/financialCalculations'
 import { generateMonthlyEstimate, generate25YearProjection } from '@/features/solar-analysis/utils/solarCalculations'
 import { calculateGermanFeedInTariff } from '@/features/financial/utils/germanFeedInTariff'
+import { useOrganization } from '@/features/organization/hooks/useOrganization'
 import type { ReportData } from '@/features/reports/types/report'
 
 interface PanelData {
@@ -36,6 +37,7 @@ export function useSolarReportGenerator({
   costEstimate,
   capacityFactor
 }: UseSolarReportGeneratorProps) {
+  const { organization } = useOrganization()
 
   const handleGeneratePDF = useCallback(() => {
     if (!annualProduction) {
@@ -117,14 +119,22 @@ export function useSolarReportGenerator({
           installation: 5
         }
       },
-      companyName: 'Solar Solutions',
+      // Use organization branding if available
+      companyName: organization?.name || 'Solar Solutions',
+      companyLogo: organization?.logo_url || undefined,
+      companyEmail: organization?.company_email || undefined,
+      companyPhone: organization?.company_phone || undefined,
+      companyWebsite: organization?.company_website || undefined,
+      companyAddress: organization?.company_address || undefined,
+      organizationPrimaryColor: organization?.primary_color || undefined,
+      organizationSecondaryColor: organization?.secondary_color || undefined,
       projectDate: new Date(),
       proposalValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
     }
 
     const doc = generateSolarReport(reportData)
     downloadPDF(doc, `solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`)
-  }, [annualProduction, panelData, location, costEstimate, capacityFactor])
+  }, [annualProduction, panelData, location, costEstimate, capacityFactor, organization])
 
   return { handleGeneratePDF }
 }

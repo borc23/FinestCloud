@@ -157,6 +157,8 @@ export interface ReportData {
   companyPhone?: string
   companyEmail?: string
   companyWebsite?: string
+  organizationPrimaryColor?: string // hex color for branding
+  organizationSecondaryColor?: string // hex color for branding
   preparerName?: string
   projectDate?: Date
   proposalValidUntil?: Date

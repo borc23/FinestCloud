@@ -1,5 +1,6 @@
 // reportDataBuilder.ts
 import type { ReportData } from '@/features/reports/types/report'
+import type { Organization } from '@/features/organization/types/organization'
 import { generateMonthlyEstimate, generate25YearProjection } from '@/features/solar-analysis/utils/solarCalculations'
 
 interface BuildReportDataParams {
@@ -15,10 +16,11 @@ interface BuildReportDataParams {
   systemCost: number
   financials: any
   pvwattsData?: { capacity_factor: number }
+  organization?: Organization | null
 }
 
 export function buildReportData(params: BuildReportDataParams): ReportData {
-  const { location, panelData, annualProduction, systemCost, financials, pvwattsData } = params
+  const { location, panelData, annualProduction, systemCost, financials, pvwattsData, organization } = params
 
   return {
     customer: {
@@ -76,7 +78,15 @@ export function buildReportData(params: BuildReportDataParams): ReportData {
         installation: 5
       }
     },
-    companyName: 'Solar Solutions',
+    // Use organization branding if available
+    companyName: organization?.name || 'Solar Solutions',
+    companyLogo: organization?.logo_url || undefined,
+    companyEmail: organization?.company_email || undefined,
+    companyPhone: organization?.company_phone || undefined,
+    companyWebsite: organization?.company_website || undefined,
+    companyAddress: organization?.company_address || undefined,
+    organizationPrimaryColor: organization?.primary_color || undefined,
+    organizationSecondaryColor: organization?.secondary_color || undefined,
     projectDate: new Date(),
     proposalValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   }

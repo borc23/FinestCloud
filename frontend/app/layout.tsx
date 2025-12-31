@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import '@/styles/globals.css'
 import { PanelProvider } from '@/features/solar-panels/context/PanelContext'
 import { AuthProvider } from '@/features/auth/context/AuthContext'
+import { ThemeProvider } from '@/features/organization/components/ThemeProvider'
 import { Toaster } from 'sonner'
 
 const inter = Inter({
@@ -29,9 +30,11 @@ export default function RootLayout({
     <html lang="en" className={inter.className}>
       <body>
         <AuthProvider>
-          <PanelProvider>
-            {children}
-          </PanelProvider>
+          <ThemeProvider>
+            <PanelProvider>
+              {children}
+            </PanelProvider>
+          </ThemeProvider>
         </AuthProvider>
         <Toaster position="top-right" richColors />
         {/* Google Maps API */}
