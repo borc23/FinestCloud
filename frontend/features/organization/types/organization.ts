@@ -107,7 +107,7 @@ export interface OrganizationProjectStats {
 }
 
 // Database types (snake_case for API communication)
-export interface OrganizationRow {
+export type OrganizationRow = {
   id: string;
   name: string;
   subdomain: string;
@@ -129,9 +129,9 @@ export interface OrganizationRow {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface InvitationRow {
+export type InvitationRow = {
   id: string;
   organization_id: string;
   email: string;
@@ -141,9 +141,9 @@ export interface InvitationRow {
   status: InvitationStatus;
   expires_at: string;
   created_at: string;
-}
+};
 
-export interface ActivityLogRow {
+export type ActivityLogRow = {
   id: string;
   organization_id: string;
   user_id: string | null;
@@ -152,7 +152,7 @@ export interface ActivityLogRow {
   resource_id: string | null;
   metadata: Record<string, any> | null;
   created_at: string;
-}
+};
 
 // Forms and create/update types
 export interface CreateOrganizationData {

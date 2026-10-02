@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getUserOrganization } from "../lib/organizationApi";
-import type { Organization } from "../types/organization";
+import type { OrganizationRow } from "../types/organization";
 
 /**
  * Hook to get the current user's organization with caching
@@ -11,7 +11,9 @@ import type { Organization } from "../types/organization";
  */
 export function useOrganization() {
   const { user } = useAuth();
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organization, setOrganization] = useState<OrganizationRow | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -45,7 +47,7 @@ export function useOrganization() {
     loading,
     error,
     // Helper methods for common use cases
-    hasFeature: (feature: keyof Organization["features"]) =>
+    hasFeature: (feature: keyof OrganizationRow["features"]) =>
       organization?.features?.[feature] ?? false,
     isWhiteLabelEnabled: () => organization?.features?.white_label ?? false,
   };

@@ -1,6 +1,6 @@
 // reportDataBuilder.ts
 import type { ReportData } from "@/features/reports/types/report";
-import type { Organization } from "@/features/organization/types/organization";
+import type { OrganizationRow } from "@/features/organization/types/organization";
 import {
   generateMonthlyEstimate,
   generate25YearProjection,
@@ -19,7 +19,7 @@ interface BuildReportDataParams {
   systemCost: number;
   financials: any;
   pvwattsData?: { capacity_factor: number };
-  organization?: Organization | null;
+  organization?: OrganizationRow | null;
 }
 
 export function buildReportData(params: BuildReportDataParams): ReportData {

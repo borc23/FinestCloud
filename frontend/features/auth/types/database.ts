@@ -4,6 +4,11 @@
  */
 
 import type { Coordinate } from "@/features/solar-panels/types/panel";
+import type {
+  ActivityLogRow,
+  InvitationRow,
+  OrganizationRow,
+} from "@/features/organization/types/organization";
 
 export type Json =
   | string
@@ -53,6 +58,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       projects: {
         Row: {
@@ -94,6 +100,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       roof_analysis: {
         Row: {
@@ -135,6 +142,7 @@ export interface Database {
           shade_stats?: Json | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       object_polygons: {
         Row: {
@@ -155,6 +163,7 @@ export interface Database {
           polygon_coords?: Json;
           created_at?: string;
         };
+        Relationships: [];
       };
       panel_configurations: {
         Row: {
@@ -181,10 +190,54 @@ export interface Database {
           module_specs?: Json;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      organizations: {
+        Row: OrganizationRow;
+        Insert: Partial<OrganizationRow> &
+          Pick<OrganizationRow, "name" | "subdomain">;
+        Update: Partial<OrganizationRow>;
+        Relationships: [];
+      };
+      invitations: {
+        Row: InvitationRow;
+        Insert: Partial<InvitationRow> &
+          Pick<
+            InvitationRow,
+            | "organization_id"
+            | "email"
+            | "role"
+            | "invited_by"
+            | "token"
+            | "expires_at"
+          >;
+        Update: Partial<InvitationRow>;
+        Relationships: [
+          {
+            foreignKeyName: "invitations_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      activity_log: {
+        Row: ActivityLogRow;
+        Insert: Partial<ActivityLogRow> &
+          Pick<ActivityLogRow, "organization_id" | "action">;
+        Update: Partial<ActivityLogRow>;
+        Relationships: [];
       };
     };
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }
+
+export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 // Typed helper interfaces for application use
 export interface Profile {

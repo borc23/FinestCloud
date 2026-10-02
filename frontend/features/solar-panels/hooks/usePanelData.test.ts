@@ -10,23 +10,23 @@ describe("usePanelData", () => {
   });
 
   it("returns null for empty roofs array", () => {
-    const data: PanelGenerationData = { roofs: [] };
+    const data = { roofs: [] } as unknown as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
     expect(result.current).toBeNull();
   });
 
   // Test 2: Single roof
   it("calculates correctly for single roof", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 180,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     expect(result.current).toMatchObject({
@@ -41,22 +41,22 @@ describe("usePanelData", () => {
 
   // Test 3: Multiple roofs - South-facing (no circular issues)
   it("calculates correctly for multiple south-facing roofs", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 20,
           azimuth: 170,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
         {
           panel_count: 20,
           pitch: 40,
           azimuth: 190,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     expect(result.current).toMatchObject({
@@ -71,14 +71,14 @@ describe("usePanelData", () => {
 
   // Test 4: Missing pitch/azimuth (uses defaults)
   it("uses default values when pitch/azimuth are missing", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 5,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     expect(result.current?.avgPitch).toBe(20);
@@ -88,22 +88,22 @@ describe("usePanelData", () => {
 
   // Test 5: CRITICAL - Azimuth crossing 0° (North)
   it("correctly averages azimuths crossing North using circular mean", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 350,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 10,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     // Circular mean should be ~0° or ~360°
@@ -114,22 +114,22 @@ describe("usePanelData", () => {
 
   // Test 6: Azimuth edge case - Northeast/Northwest
   it("correctly averages Northeast (45°) and Northwest (315°)", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 45,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 315,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     // Circular mean should be North (0°/360°)
@@ -139,22 +139,22 @@ describe("usePanelData", () => {
 
   // Test 7: East/West should average to North, not South
   it("correctly averages East and West to North", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 90,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 270,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     // Circular mean of E and W should be N (0°) not S (180°)
@@ -164,22 +164,22 @@ describe("usePanelData", () => {
 
   // Test 8: Different panel wattages across roofs
   it("uses only first roof wattage (documented behavior)", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 180,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 180,
-          module_specs: { power: 500 },
+          module_specs: { power_w: 500 },
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     // Uses first roof's wattage only
@@ -189,7 +189,7 @@ describe("usePanelData", () => {
 
   // Test 9: Missing module_specs
   it("uses default wattage when module_specs missing", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
@@ -197,7 +197,7 @@ describe("usePanelData", () => {
           azimuth: 180,
         },
       ],
-    };
+    } as PanelGenerationData;
     const { result } = renderHook(() => usePanelData(data));
 
     expect(result.current?.panelWattage).toBe(400);
@@ -205,16 +205,16 @@ describe("usePanelData", () => {
 
   // Test 10: Memoization
   it("memoizes result when data unchanged", () => {
-    const data: PanelGenerationData = {
+    const data = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 180,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
 
     const { result, rerender } = renderHook(() => usePanelData(data));
     const firstResult = result.current;
@@ -225,26 +225,26 @@ describe("usePanelData", () => {
   });
 
   it("recalculates when data changes", () => {
-    const data1: PanelGenerationData = {
+    const data1 = {
       roofs: [
         {
           panel_count: 10,
           pitch: 30,
           azimuth: 180,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
-    const data2: PanelGenerationData = {
+    } as PanelGenerationData;
+    const data2 = {
       roofs: [
         {
           panel_count: 20,
           pitch: 30,
           azimuth: 180,
-          module_specs: { power: 400 },
+          module_specs: { power_w: 400 },
         },
       ],
-    };
+    } as PanelGenerationData;
 
     const { result, rerender } = renderHook(({ data }) => usePanelData(data), {
       initialProps: { data: data1 },
