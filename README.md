@@ -4,6 +4,15 @@ Solar panel detection and configuration API (FastAPI backend in `src/finestcloud
 
 ## Development
 
+API keys are read from the environment and never stored in the code. For local development:
+
+```bash
+cp .env.example .env                              # backend: GOOGLE_MAPS_API_KEY, NREL_API_KEY
+cp frontend/.env.example frontend/.env.local      # frontend
+```
+
+Both files are gitignored. In production, set the same variables in Render (backend) and Vercel (frontend).
+
 ```bash
 uv sync
 uv run pre-commit install

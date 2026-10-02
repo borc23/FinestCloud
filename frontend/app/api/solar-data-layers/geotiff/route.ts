@@ -31,11 +31,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Add API key to the URL if not already present
-    const urlObj = new URL(url);
-    if (!urlObj.searchParams.has("key")) {
-      urlObj.searchParams.set("key", GOOGLE_MAPS_API_KEY);
+    // Only proxy Google Solar GeoTIFF downloads: any other host would receive our API key
+    let urlObj: URL;
+    try {
+      urlObj = new URL(url);
+    } catch {
+      return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
     }
+    if (
+      urlObj.protocol !== "https:" ||
+      urlObj.hostname !== "solar.googleapis.com" ||
+      urlObj.pathname !== "/v1/geoTiff:get"
+    ) {
+      return NextResponse.json(
+        { error: "URL must be a Google Solar API GeoTIFF URL" },
+        { status: 400 },
+      );
+    }
+    urlObj.searchParams.set("key", GOOGLE_MAPS_API_KEY);
 
     // Fetch the GeoTIFF file
     const response = await fetch(urlObj.toString(), {

@@ -30,7 +30,7 @@ async def solar_api_proxy(
             "location.latitude": latitude,
             "location.longitude": longitude,
             "requiredQuality": "MEDIUM",
-            "key": settings.google_maps_api_key,
+            "key": settings.google_maps_api_key.get_secret_value(),
         }
 
         async with httpx.AsyncClient() as client:
