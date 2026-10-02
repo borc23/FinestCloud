@@ -55,7 +55,6 @@ class PVWattsService:
             Dictionary with production data or None if request fails
         """
         params = {
-            "api_key": self.api_key,
             "lat": latitude,
             "lon": longitude,
             "system_capacity": system_capacity,
@@ -70,7 +69,12 @@ class PVWattsService:
         }
 
         try:
-            response = requests.get(self.BASE_URL, params=params, timeout=10)
+            response = requests.get(
+                self.BASE_URL,
+                params=params,
+                headers={"X-Api-Key": self.api_key},
+                timeout=10,
+            )
 
             logger.debug(f"PVWatts API response status: {response.status_code}")
 

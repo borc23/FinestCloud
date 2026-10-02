@@ -55,7 +55,7 @@ class SystemCapacityRequest(BaseModel):
 def get_pvwatts_service() -> PVWattsService:
     """Dependency to get PVWatts service instance."""
     settings = get_settings()
-    return PVWattsService(api_key=settings.nrel_api_key)
+    return PVWattsService(api_key=settings.nrel_api_key.get_secret_value())
 
 
 @router.post("/calculate", response_model=PVWattsResponse)

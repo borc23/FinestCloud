@@ -3,7 +3,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -28,13 +28,13 @@ class Settings(BaseSettings):
     models_dir: str = Field(default="/tmp/models")
     max_content_length: int = Field(default=16 * 1024 * 1024)  # 16MB
 
-    # External API Keys
-    google_maps_api_key: str = Field(
-        default="AIzaSyDIQk97vo58fJ8xGE0ozHJKkv-nqoB1YU4",
-        description="Google Maps API key",
+    # External API Keys (required, set via environment or .env; never hardcode)
+    google_maps_api_key: SecretStr = Field(
+        ...,
+        description="Google Maps server API key (Solar API, Maps Static API)",
     )
-    nrel_api_key: str = Field(
-        default="A6hfJTMkiTt8U5jrmXbbKGqnRj5meT6TQrD5ROgu",
+    nrel_api_key: SecretStr = Field(
+        ...,
         description="NREL API key for PVWatts (Get free key at https://developer.nrel.gov/signup/)",
     )
 

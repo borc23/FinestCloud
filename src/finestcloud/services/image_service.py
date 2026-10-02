@@ -116,7 +116,11 @@ class ImageService:
 
     @staticmethod
     def load_image_from_url(image_url):
-        response = requests.get(image_url)
+        try:
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to download image ({type(e).__name__})") from None
         image_bytes = io.BytesIO(response.content)
         pil_image = Image.open(image_bytes)
         numpy_image = np.array(pil_image)
