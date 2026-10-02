@@ -3,16 +3,16 @@
  * Shows energy production, self-consumption, and grid feed-in visualization
  */
 
-import React from 'react'
-import styles from './FinancialCalculator.module.css'
-import type { FinancialResults } from '@/features/financial/types/financial'
+import React from "react";
+import styles from "./FinancialCalculator.module.css";
+import type { FinancialResults } from "@/features/financial/types/financial";
 
 interface EnergyOffsetDisplayProps {
-  results: FinancialResults
-  annualProduction: number
-  avgMonthlyBill: number
-  costPerKwh: number
-  selfConsumptionRate: number
+  results: FinancialResults;
+  annualProduction: number;
+  avgMonthlyBill: number;
+  costPerKwh: number;
+  selfConsumptionRate: number;
 }
 
 export default function EnergyOffsetDisplay({
@@ -20,7 +20,7 @@ export default function EnergyOffsetDisplay({
   annualProduction,
   avgMonthlyBill,
   costPerKwh,
-  selfConsumptionRate
+  selfConsumptionRate,
 }: EnergyOffsetDisplayProps) {
   return (
     <div className={styles.section}>
@@ -43,7 +43,9 @@ export default function EnergyOffsetDisplay({
               fill="none"
               stroke="#4caf50"
               strokeWidth="20"
-              strokeDasharray={`${(results.energyOffsetPercentage / 100) * 534.07} 534.07`}
+              strokeDasharray={`${
+                (results.energyOffsetPercentage / 100) * 534.07
+              } 534.07`}
               strokeLinecap="round"
               transform="rotate(-90 100 100)"
             />
@@ -72,7 +74,8 @@ export default function EnergyOffsetDisplay({
           <div className={styles.offsetItem}>
             <span className={styles.offsetLabel}>Annual Household Usage</span>
             <span className={styles.offsetValue}>
-              {Math.round((avgMonthlyBill * 12) / costPerKwh).toLocaleString()} kWh
+              {Math.round((avgMonthlyBill * 12) / costPerKwh).toLocaleString()}{" "}
+              kWh
             </span>
           </div>
           <div className={styles.offsetItem}>
@@ -84,17 +87,19 @@ export default function EnergyOffsetDisplay({
           <div className={styles.offsetItem}>
             <span className={styles.offsetLabel}>Self-Consumed</span>
             <span className={styles.offsetValue}>
-              {results.selfConsumptionAmount.toLocaleString()} kWh ({selfConsumptionRate}%)
+              {results.selfConsumptionAmount.toLocaleString()} kWh (
+              {selfConsumptionRate}%)
             </span>
           </div>
           <div className={styles.offsetItem}>
             <span className={styles.offsetLabel}>Grid Feed-in</span>
             <span className={styles.offsetValue}>
-              {results.gridFeedInAmount.toLocaleString()} kWh ({100 - selfConsumptionRate}%)
+              {results.gridFeedInAmount.toLocaleString()} kWh (
+              {100 - selfConsumptionRate}%)
             </span>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

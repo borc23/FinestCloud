@@ -1,80 +1,83 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { getInvitationByToken, acceptInvitation } from '@/features/organization/lib/organizationApi'
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './page.module.css'
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import {
+  getInvitationByToken,
+  acceptInvitation,
+} from "@/features/organization/lib/organizationApi";
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./page.module.css";
 
 export default function AcceptInvitationPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { user } = useAuth()
-  const token = searchParams.get('token')
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const token = searchParams.get("token");
 
-  const [loading, setLoading] = useState(true)
-  const [accepting, setAccepting] = useState(false)
-  const [invitation, setInvitation] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
+  const [invitation, setInvitation] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (token) {
-      loadInvitation()
+      loadInvitation();
     } else {
-      setError('No invitation token provided')
-      setLoading(false)
+      setError("No invitation token provided");
+      setLoading(false);
     }
-  }, [token])
+  }, [token]);
 
   const loadInvitation = async () => {
-    if (!token) return
+    if (!token) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const data = await getInvitationByToken(token)
+      const data = await getInvitationByToken(token);
       if (!data) {
-        setError('Invitation not found')
-      } else if (data.status === 'accepted') {
-        setError('This invitation has already been accepted')
-      } else if (data.status === 'cancelled') {
-        setError('This invitation has been cancelled')
+        setError("Invitation not found");
+      } else if (data.status === "accepted") {
+        setError("This invitation has already been accepted");
+      } else if (data.status === "cancelled") {
+        setError("This invitation has been cancelled");
       } else if (new Date(data.expires_at) < new Date()) {
-        setError('This invitation has expired')
+        setError("This invitation has expired");
       } else {
-        setInvitation(data)
+        setInvitation(data);
       }
     } catch (err: any) {
-      setError('Failed to load invitation')
+      setError("Failed to load invitation");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleAccept = async () => {
     if (!user || !token) {
-      setError('You must be logged in to accept an invitation')
-      return
+      setError("You must be logged in to accept an invitation");
+      return;
     }
 
-    setAccepting(true)
-    setError(null)
+    setAccepting(true);
+    setError(null);
 
     try {
-      await acceptInvitation(token, user.id)
-      setSuccess(true)
+      await acceptInvitation(token, user.id);
+      setSuccess(true);
       setTimeout(() => {
-        router.push('/')
-      }, 2000)
+        router.push("/");
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to accept invitation')
+      setError(err.message || "Failed to accept invitation");
     } finally {
-      setAccepting(false)
+      setAccepting(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -84,7 +87,7 @@ export default function AcceptInvitationPage() {
           <p>Loading invitation...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -96,12 +99,12 @@ export default function AcceptInvitationPage() {
           </div>
           <h1>Invitation Error</h1>
           <p className={styles.errorText}>{error}</p>
-          <button onClick={() => router.push('/')} className={styles.button}>
+          <button onClick={() => router.push("/")} className={styles.button}>
             Go to Home
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   if (success) {
@@ -116,7 +119,7 @@ export default function AcceptInvitationPage() {
           <p className={styles.redirectText}>Redirecting to home...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -129,21 +132,28 @@ export default function AcceptInvitationPage() {
         <p>You've been invited to join:</p>
 
         <div className={styles.orgInfo}>
-          <h2>{invitation?.organizations?.name || 'Organization'}</h2>
-          <div className={styles.roleBadge}>
-            Role: {invitation?.role}
-          </div>
+          <h2>{invitation?.organizations?.name || "Organization"}</h2>
+          <div className={styles.roleBadge}>Role: {invitation?.role}</div>
         </div>
 
         <div className={styles.details}>
-          <p>Invited to: <strong>{invitation?.email}</strong></p>
-          <p>Expires: <strong>{new Date(invitation?.expires_at).toLocaleDateString()}</strong></p>
+          <p>
+            Invited to: <strong>{invitation?.email}</strong>
+          </p>
+          <p>
+            Expires:{" "}
+            <strong>
+              {new Date(invitation?.expires_at).toLocaleDateString()}
+            </strong>
+          </p>
         </div>
 
         {!user ? (
           <div className={styles.actions}>
-            <p className={styles.loginPrompt}>Please sign in to accept this invitation</p>
-            <button onClick={() => router.push('/')} className={styles.button}>
+            <p className={styles.loginPrompt}>
+              Please sign in to accept this invitation
+            </p>
+            <button onClick={() => router.push("/")} className={styles.button}>
               Sign In
             </button>
           </div>
@@ -162,10 +172,10 @@ export default function AcceptInvitationPage() {
               className={styles.acceptButton}
               disabled={accepting}
             >
-              {accepting ? 'Accepting...' : 'Accept Invitation'}
+              {accepting ? "Accepting..." : "Accept Invitation"}
             </button>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push("/")}
               className={styles.declineButton}
               disabled={accepting}
             >
@@ -175,5 +185,5 @@ export default function AcceptInvitationPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react";
 
 interface UseMapInitializationOptions {
-  onMapReady?: (map: google.maps.Map) => void
-  defaultCenter?: { lat: number; lng: number }
+  onMapReady?: (map: google.maps.Map) => void;
+  defaultCenter?: { lat: number; lng: number };
 }
 
 /**
@@ -16,77 +16,80 @@ interface UseMapInitializationOptions {
  */
 export function useMapInitialization(
   mapRef: React.RefObject<HTMLDivElement>,
-  options: UseMapInitializationOptions = {}
+  options: UseMapInitializationOptions = {},
 ) {
-  const { onMapReady, defaultCenter } = options
-  const [map, setMap] = useState<google.maps.Map | null>(null)
+  const { onMapReady, defaultCenter } = options;
+  const [map, setMap] = useState<google.maps.Map | null>(null);
 
   useEffect(() => {
-    let checkInterval: NodeJS.Timeout | null = null
-    let timeoutId: NodeJS.Timeout | null = null
+    let checkInterval: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     const initializeMap = () => {
       if (mapRef.current && window.google?.maps?.Map) {
         // Use user's default location or fall back to San Francisco
-        const center = defaultCenter || { lat: 37.7749, lng: -122.4194 }
+        const center = defaultCenter || { lat: 37.7749, lng: -122.4194 };
 
         const mapOptions: google.maps.MapOptions = {
           center,
           zoom: 20,
           tilt: 0,
-          mapTypeId: 'satellite',
+          mapTypeId: "satellite",
           rotateControl: false,
           tiltInteractionEnabled: false,
           disableDefaultUI: true,
           zoomControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          gestureHandling: 'greedy',
+          gestureHandling: "greedy",
           styles: [
             {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
             },
             {
-              featureType: 'road',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
-            }
-          ]
-        }
+              featureType: "road",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        };
 
-        const googleMap = new window.google.maps.Map(mapRef.current, mapOptions)
-        setMap(googleMap)
-        onMapReady?.(googleMap)
+        const googleMap = new window.google.maps.Map(
+          mapRef.current,
+          mapOptions,
+        );
+        setMap(googleMap);
+        onMapReady?.(googleMap);
       }
-    }
+    };
 
     // Try immediate initialization if API is already loaded
     if (window.google?.maps?.Map) {
-      initializeMap()
+      initializeMap();
     } else {
       // Poll for API availability
       checkInterval = setInterval(() => {
         if (window.google?.maps?.Map) {
-          if (checkInterval) clearInterval(checkInterval)
-          if (timeoutId) clearTimeout(timeoutId)
-          initializeMap()
+          if (checkInterval) clearInterval(checkInterval);
+          if (timeoutId) clearTimeout(timeoutId);
+          initializeMap();
         }
-      }, 100)
+      }, 100);
 
       // Timeout after 10 seconds
       timeoutId = setTimeout(() => {
-        if (checkInterval) clearInterval(checkInterval)
-        console.error('Google Maps API failed to load within 10 seconds')
-      }, 10000)
+        if (checkInterval) clearInterval(checkInterval);
+        console.error("Google Maps API failed to load within 10 seconds");
+      }, 10000);
     }
 
     return () => {
-      if (checkInterval) clearInterval(checkInterval)
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [mapRef, onMapReady, defaultCenter])
+      if (checkInterval) clearInterval(checkInterval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [mapRef, onMapReady, defaultCenter]);
 
-  return map
+  return map;
 }

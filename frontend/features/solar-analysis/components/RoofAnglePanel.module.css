@@ -126,7 +126,6 @@
   }
 }
 
-
 .roofItem label {
   display: block;
   font-size: 15px;
@@ -203,7 +202,6 @@
   }
 }
 
-
 .inputGroup input {
   flex: 1;
   width: 12px;
@@ -241,7 +239,7 @@
   pointer-events: auto;
 }
 
-.inputGroup input[type=number] {
+.inputGroup input[type="number"] {
   -moz-appearance: textfield;
 }
 
@@ -471,7 +469,6 @@
     border-radius: 24px;
   }
 }
-
 
 .orientationOption:active {
   transform: scale(0.96);

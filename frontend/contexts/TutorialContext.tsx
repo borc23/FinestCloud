@@ -1,14 +1,21 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { getProfile, setShowTutorial } from '@/features/auth/lib/profilesApi';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { getProfile, setShowTutorial } from "@/features/auth/lib/profilesApi";
 
 interface TooltipConfig {
   id: string;
   targetElement?: string; // CSS selector or element ID
   content: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: "top" | "bottom" | "left" | "right";
   showNext?: boolean;
   showSkip?: boolean;
   onNext?: () => void;
@@ -35,19 +42,21 @@ interface TutorialContextValue {
   hasSeenTooltip: (id: string) => boolean;
 }
 
-const TutorialContext = createContext<TutorialContextValue | undefined>(undefined);
+const TutorialContext = createContext<TutorialContextValue | undefined>(
+  undefined,
+);
 
-const STORAGE_KEY = 'finestcloud_tutorial_state';
+const STORAGE_KEY = "finestcloud_tutorial_state";
 
 // Tutorial step sequence for first-time users
 const TUTORIAL_STEPS = [
-  'welcome',
-  'search_location',
-  'capture_roof',
-  'edit_mode',
-  'generate_panels',
-  'view_results',
-  'tutorial_complete'
+  "welcome",
+  "search_location",
+  "capture_roof",
+  "edit_mode",
+  "generate_panels",
+  "view_results",
+  "tutorial_complete",
 ];
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
@@ -59,7 +68,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     hasSeenTooltips: {},
     tutorialCompleted: false,
   });
-  const [activeTooltip, setActiveTooltip] = useState<TooltipConfig | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<TooltipConfig | null>(
+    null,
+  );
   const [dbShowTutorial, setDbShowTutorial] = useState<boolean | null>(null);
 
   // Load tutorial state from localStorage
@@ -70,7 +81,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(savedState);
         setTutorialState(parsed);
       } catch (error) {
-        console.error('Failed to parse tutorial state:', error);
+        console.error("Failed to parse tutorial state:", error);
       }
     }
   }, []);
@@ -83,7 +94,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   // Load show_tutorial flag from database
   useEffect(() => {
     if (user) {
-      getProfile(user.id).then(profile => {
+      getProfile(user.id).then((profile) => {
         if (profile) {
           setDbShowTutorial(profile.show_tutorial);
         }
@@ -98,50 +109,68 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Tutorial is disabled globally - do nothing
     return;
-  }, [user, dbShowTutorial, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
+  }, [
+    user,
+    dbShowTutorial,
+    tutorialState.tutorialCompleted,
+    tutorialState.hasSeenTooltips,
+  ]);
 
-  const showTooltip = useCallback((config: TooltipConfig) => {
-    // DISABLED: Tutorial feature is globally disabled
-    return;
-  }, [dbShowTutorial, tutorialState.tutorialCompleted, tutorialState.hasSeenTooltips]);
+  const showTooltip = useCallback(
+    (config: TooltipConfig) => {
+      // DISABLED: Tutorial feature is globally disabled
+      return;
+    },
+    [
+      dbShowTutorial,
+      tutorialState.tutorialCompleted,
+      tutorialState.hasSeenTooltips,
+    ],
+  );
 
   const hideTooltip = useCallback(() => {
     setActiveTooltip(null);
   }, []);
 
-  const markStepComplete = useCallback(async (stepId: string) => {
-    setTutorialState(prev => {
-      const completedSteps = [...prev.completedSteps];
-      if (!completedSteps.includes(stepId)) {
-        completedSteps.push(stepId);
-      }
+  const markStepComplete = useCallback(
+    async (stepId: string) => {
+      setTutorialState((prev) => {
+        const completedSteps = [...prev.completedSteps];
+        if (!completedSteps.includes(stepId)) {
+          completedSteps.push(stepId);
+        }
 
-      // Advance to next step if this is part of the main tutorial flow
-      const stepIndex = TUTORIAL_STEPS.indexOf(stepId);
-      const currentStep = stepIndex >= 0 ? stepIndex + 1 : prev.currentStep;
+        // Advance to next step if this is part of the main tutorial flow
+        const stepIndex = TUTORIAL_STEPS.indexOf(stepId);
+        const currentStep = stepIndex >= 0 ? stepIndex + 1 : prev.currentStep;
 
-      // Check if tutorial is complete
-      const tutorialCompleted = stepId === 'tutorial_complete' ||
-                                currentStep >= TUTORIAL_STEPS.length;
+        // Check if tutorial is complete
+        const tutorialCompleted =
+          stepId === "tutorial_complete" ||
+          currentStep >= TUTORIAL_STEPS.length;
 
-      // Update database flag when tutorial is completed
-      if (tutorialCompleted && user) {
-        setShowTutorial(user.id, false).then(() => {
-          setDbShowTutorial(false);
-        }).catch(error => {
-          console.error('Failed to update tutorial preference:', error);
-        });
-      }
+        // Update database flag when tutorial is completed
+        if (tutorialCompleted && user) {
+          setShowTutorial(user.id, false)
+            .then(() => {
+              setDbShowTutorial(false);
+            })
+            .catch((error) => {
+              console.error("Failed to update tutorial preference:", error);
+            });
+        }
 
-      return {
-        ...prev,
-        completedSteps,
-        currentStep,
-        tutorialCompleted,
-        tutorialActive: !tutorialCompleted,
-      };
-    });
-  }, [user]);
+        return {
+          ...prev,
+          completedSteps,
+          currentStep,
+          tutorialCompleted,
+          tutorialActive: !tutorialCompleted,
+        };
+      });
+    },
+    [user],
+  );
 
   const startTutorial = useCallback(async () => {
     // Reset tutorial state and start from beginning
@@ -159,17 +188,18 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         await setShowTutorial(user.id, true);
         setDbShowTutorial(true);
       } catch (error) {
-        console.error('Failed to update tutorial preference:', error);
+        console.error("Failed to update tutorial preference:", error);
       }
     }
 
     // Show welcome tooltip
     setTimeout(() => {
       setActiveTooltip({
-        id: 'manual_welcome',
-        targetElement: '#search-button',
-        content: 'Welcome! Start by searching for the property you want to analyze.',
-        position: 'bottom',
+        id: "manual_welcome",
+        targetElement: "#search-button",
+        content:
+          "Welcome! Start by searching for the property you want to analyze.",
+        position: "bottom",
         showNext: true,
         showSkip: true,
       });
@@ -177,7 +207,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const skipTutorial = useCallback(async () => {
-    setTutorialState(prev => ({
+    setTutorialState((prev) => ({
       ...prev,
       tutorialActive: false,
       tutorialCompleted: true,
@@ -190,7 +220,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         await setShowTutorial(user.id, false);
         setDbShowTutorial(false);
       } catch (error) {
-        console.error('Failed to update tutorial preference:', error);
+        console.error("Failed to update tutorial preference:", error);
       }
     }
   }, [user]);
@@ -204,9 +234,12 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }
   }, [activeTooltip, hideTooltip]);
 
-  const hasSeenTooltip = useCallback((id: string) => {
-    return tutorialState.hasSeenTooltips[id] === true;
-  }, [tutorialState.hasSeenTooltips]);
+  const hasSeenTooltip = useCallback(
+    (id: string) => {
+      return tutorialState.hasSeenTooltips[id] === true;
+    },
+    [tutorialState.hasSeenTooltips],
+  );
 
   const value: TutorialContextValue = {
     tutorialState,
@@ -230,7 +263,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 export function useTutorial() {
   const context = useContext(TutorialContext);
   if (context === undefined) {
-    throw new Error('useTutorial must be used within a TutorialProvider');
+    throw new Error("useTutorial must be used within a TutorialProvider");
   }
   return context;
 }

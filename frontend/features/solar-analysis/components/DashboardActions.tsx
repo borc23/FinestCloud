@@ -1,12 +1,12 @@
-import styles from './SolarResultsDashboard.module.css'
+import styles from "./SolarResultsDashboard.module.css";
 
 interface DashboardActionsProps {
-  isAuthenticated?: boolean
-  onSaveProject?: () => void
-  onViewMonthly: () => void
-  onViewFinancials: () => void
-  onViewElectrical: () => void
-  onGeneratePDF: () => void
+  isAuthenticated?: boolean;
+  onSaveProject?: () => void;
+  onViewMonthly: () => void;
+  onViewFinancials: () => void;
+  onViewElectrical: () => void;
+  onGeneratePDF: () => void;
 }
 
 /**
@@ -18,7 +18,7 @@ export default function DashboardActions({
   onViewMonthly,
   onViewFinancials,
   onViewElectrical,
-  onGeneratePDF
+  onGeneratePDF,
 }: DashboardActionsProps) {
   return (
     <div className={styles.monthlyButtonContainer}>
@@ -31,10 +31,7 @@ export default function DashboardActions({
           Save Project
         </button>
       )}
-      <button
-        className={styles.monthlyButton}
-        onClick={onViewMonthly}
-      >
+      <button className={styles.monthlyButton} onClick={onViewMonthly}>
         View Monthly Breakdown
       </button>
       <button
@@ -44,18 +41,12 @@ export default function DashboardActions({
       >
         Financial Analysis
       </button>
-      <button
-        className={styles.electricalButton}
-        onClick={onViewElectrical}
-      >
+      <button className={styles.electricalButton} onClick={onViewElectrical}>
         Electrical Design
       </button>
-      <button
-        className={styles.pdfButton}
-        onClick={onGeneratePDF}
-      >
+      <button className={styles.pdfButton} onClick={onGeneratePDF}>
         Download PDF Report
       </button>
     </div>
-  )
+  );
 }

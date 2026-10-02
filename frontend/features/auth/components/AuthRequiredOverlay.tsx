@@ -1,13 +1,15 @@
-'use client'
+"use client";
 
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './AuthRequiredOverlay.module.css'
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./AuthRequiredOverlay.module.css";
 
 interface AuthRequiredOverlayProps {
-  onOpenProfile: () => void
+  onOpenProfile: () => void;
 }
 
-export default function AuthRequiredOverlay({ onOpenProfile }: AuthRequiredOverlayProps) {
+export default function AuthRequiredOverlay({
+  onOpenProfile,
+}: AuthRequiredOverlayProps) {
   return (
     <div className={styles.overlay}>
       <div className={styles.content}>
@@ -22,5 +24,5 @@ export default function AuthRequiredOverlay({ onOpenProfile }: AuthRequiredOverl
         </button>
       </div>
     </div>
-  )
+  );
 }

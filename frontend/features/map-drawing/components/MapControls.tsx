@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './MapControls.module.css'
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./MapControls.module.css";
 
 interface MapControlsProps {
-  map: google.maps.Map | null
-  hasPolygons?: boolean
-  hasPanels?: boolean
-  hasGeotiffData?: boolean
-  sunshineLayerEnabled?: boolean
-  onClearAll?: () => void
-  onToggleSunshineLayer?: () => void
+  map: google.maps.Map | null;
+  hasPolygons?: boolean;
+  hasPanels?: boolean;
+  hasGeotiffData?: boolean;
+  sunshineLayerEnabled?: boolean;
+  onClearAll?: () => void;
+  onToggleSunshineLayer?: () => void;
 }
 
 /**
@@ -24,29 +24,31 @@ export default function MapControls({
   hasGeotiffData = false,
   sunshineLayerEnabled = false,
   onClearAll,
-  onToggleSunshineLayer
+  onToggleSunshineLayer,
 }: MapControlsProps) {
-  if (!map) return null
+  if (!map) return null;
 
   const handleZoomIn = () => {
-    const currentZoom = map.getZoom()
+    const currentZoom = map.getZoom();
     if (currentZoom !== undefined) {
-      map.setZoom(currentZoom + 1)
+      map.setZoom(currentZoom + 1);
     }
-  }
+  };
 
   const handleZoomOut = () => {
-    const currentZoom = map.getZoom()
+    const currentZoom = map.getZoom();
     if (currentZoom !== undefined) {
-      map.setZoom(currentZoom - 1)
+      map.setZoom(currentZoom - 1);
     }
-  }
+  };
 
   const handleClearAll = () => {
-    if (window.confirm('Clear all polygons and reset map? This cannot be undone.')) {
-      onClearAll?.()
+    if (
+      window.confirm("Clear all polygons and reset map? This cannot be undone.")
+    ) {
+      onClearAll?.();
     }
-  }
+  };
 
   return (
     <div className={styles.mapControls}>
@@ -66,10 +68,20 @@ export default function MapControls({
       </button>
       {hasPanels && hasGeotiffData && (
         <button
-          className={`${styles.shadeControl} ${sunshineLayerEnabled ? styles.active : ''}`}
+          className={`${styles.shadeControl} ${
+            sunshineLayerEnabled ? styles.active : ""
+          }`}
           onClick={onToggleSunshineLayer}
-          aria-label={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
-          title={sunshineLayerEnabled ? "Hide annual sunshine" : "Show annual sunshine"}
+          aria-label={
+            sunshineLayerEnabled
+              ? "Hide annual sunshine"
+              : "Show annual sunshine"
+          }
+          title={
+            sunshineLayerEnabled
+              ? "Hide annual sunshine"
+              : "Show annual sunshine"
+          }
         >
           <Icon name="sun" />
         </button>
@@ -85,5 +97,5 @@ export default function MapControls({
         </button>
       )}
     </div>
-  )
+  );
 }

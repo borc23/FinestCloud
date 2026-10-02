@@ -3,22 +3,22 @@
  * Toggle controls that appear when sunshine layer is active
  */
 
-'use client'
+"use client";
 
-import styles from './SunshineLayerControls.module.css'
+import styles from "./SunshineLayerControls.module.css";
 
 interface SunshineLayerControlsProps {
-  visible: boolean
-  hidePanels: boolean
-  onToggleHidePanels: (hide: boolean) => void
+  visible: boolean;
+  hidePanels: boolean;
+  onToggleHidePanels: (hide: boolean) => void;
 }
 
 export default function SunshineLayerControls({
   visible,
   hidePanels,
-  onToggleHidePanels
+  onToggleHidePanels,
 }: SunshineLayerControlsProps) {
-  if (!visible) return null
+  if (!visible) return null;
 
   return (
     <div className={styles.sunshineControls}>
@@ -38,5 +38,5 @@ export default function SunshineLayerControls({
         </label>
       </div>
     </div>
-  )
+  );
 }

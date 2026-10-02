@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Ensure API routes are included in the build
-  output: 'standalone',
+  output: "standalone",
 
-  transpilePackages: ['geotiff'],
+  transpilePackages: ["geotiff"],
 
   webpack: (config, { isServer }) => {
     // Disable webpack filesystem cache to work around Windows symlink issues
@@ -31,7 +31,7 @@ const nextConfig = {
       https: false,
       url: false,
       buffer: false,
-    }
+    };
 
     // Ensure proper module resolution for geotiff dependencies
     if (!isServer) {
@@ -39,17 +39,17 @@ const nextConfig = {
         ...config.resolve.alias,
         // Ensure stream-browserify is used instead of stream polyfill
         stream: false,
-      }
+      };
     }
 
     // Prevent build errors from circular dependencies in geotiff
     config.module = {
       ...config.module,
       exprContextCritical: false,
-    }
+    };
 
-    return config
+    return config;
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

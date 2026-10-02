@@ -1,58 +1,58 @@
-import { createClient } from '../../../shared/lib/supabase/client'
-import type { Database } from '@/features/auth/types/database'
+import { createClient } from "../../../shared/lib/supabase/client";
+import type { Database } from "@/features/auth/types/database";
 
-type Profile = Database['public']['Tables']['profiles']['Row']
-type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const supabase = createClient()
+  const supabase = createClient();
 
   const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
 
   if (error) {
-    console.error('Error fetching profile:', error)
-    return null
+    console.error("Error fetching profile:", error);
+    return null;
   }
 
-  return data
+  return data;
 }
 
 export async function updateProfile(
   userId: string,
-  updates: ProfileUpdate
+  updates: ProfileUpdate,
 ): Promise<Profile | null> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
   const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('email')
-    .eq('id', userId)
-    .maybeSingle()
+    .from("profiles")
+    .select("email")
+    .eq("id", userId)
+    .maybeSingle();
 
   if (existingProfile) {
     const { data, error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update(updates)
-      .eq('id', userId)
+      .eq("id", userId)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.error('Error updating profile:', error)
-      throw error
+      console.error("Error updating profile:", error);
+      throw error;
     }
 
-    return data
+    return data;
   } else {
-    const { data: userData } = await supabase.auth.getUser()
-    const email = userData.user?.email
+    const { data: userData } = await supabase.auth.getUser();
+    const email = userData.user?.email;
 
     if (!email) {
-      throw new Error('User email not found')
+      throw new Error("User email not found");
     }
 
     const insertData = {
@@ -61,39 +61,40 @@ export async function updateProfile(
       display_name: updates.display_name,
       default_latitude: updates.default_latitude,
       default_longitude: updates.default_longitude,
-      show_tutorial: updates.show_tutorial !== undefined ? updates.show_tutorial : true
-    }
+      show_tutorial:
+        updates.show_tutorial !== undefined ? updates.show_tutorial : true,
+    };
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .insert(insertData as any)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.error('Error creating profile:', error)
-      throw error
+      console.error("Error creating profile:", error);
+      throw error;
     }
 
-    return data
+    return data;
   }
 }
 
 export async function setDefaultLocation(
   userId: string,
   latitude: number,
-  longitude: number
+  longitude: number,
 ): Promise<void> {
   await updateProfile(userId, {
     default_latitude: latitude,
     default_longitude: longitude,
-  })
+  });
 }
 
 export async function getDefaultLocation(
-  userId: string
+  userId: string,
 ): Promise<{ lat: number; lng: number } | null> {
-  const profile = await getProfile(userId)
+  const profile = await getProfile(userId);
 
   if (
     profile &&
@@ -103,17 +104,17 @@ export async function getDefaultLocation(
     return {
       lat: profile.default_latitude,
       lng: profile.default_longitude,
-    }
+    };
   }
 
-  return null
+  return null;
 }
 
 export async function setShowTutorial(
   userId: string,
-  showTutorial: boolean
+  showTutorial: boolean,
 ): Promise<void> {
   await updateProfile(userId, {
     show_tutorial: showTutorial,
-  })
+  });
 }

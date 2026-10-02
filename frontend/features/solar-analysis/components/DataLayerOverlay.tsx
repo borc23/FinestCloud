@@ -3,15 +3,19 @@
  * Renders GeoTIFF data layers (like annual sunshine) as an overlay on Google Maps
  */
 
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import type { GeoTIFFData } from '../utils/geotiffParser'
+import { useEffect, useRef, useState } from "react";
+import type { GeoTIFFData } from "../utils/geotiffParser";
 
 // Dynamic import helpers to avoid SSR/hydration issues with geotiff
-async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTIFFData> {
-  const { parseGeoTIFFFromBuffer: parser } = await import('../utils/geotiffParser')
-  return parser(buffer)
+async function parseGeoTIFFFromBuffer(
+  buffer: ArrayBuffer,
+): Promise<GeoTIFFData> {
+  const { parseGeoTIFFFromBuffer: parser } = await import(
+    "../utils/geotiffParser"
+  );
+  return parser(buffer);
 }
 
 async function geotiffToRGBA(
@@ -20,106 +24,110 @@ async function geotiffToRGBA(
   height: number,
   min: number,
   max: number,
-  colorScale: 'viridis' | 'heat' | 'sunshine' = 'sunshine'
+  colorScale: "viridis" | "heat" | "sunshine" = "sunshine",
 ): Promise<Uint8ClampedArray> {
-  const { geotiffToRGBA: converter } = await import('../utils/geotiffParser')
-  return converter(data, width, height, min, max, colorScale)
+  const { geotiffToRGBA: converter } = await import("../utils/geotiffParser");
+  return converter(data, width, height, min, max, colorScale);
 }
 
 interface DataLayerOverlayProps {
-  map: google.maps.Map | null
-  geotiffUrl?: string | null
-  geotiffData?: GeoTIFFData | null // Optional: pre-loaded GeoTIFF data (overrides geotiffUrl)
-  visible: boolean
-  colorScale?: 'viridis' | 'heat' | 'sunshine'
-  opacity?: number
-  clipToPolygons?: google.maps.Polygon[] // Optional: clip overlay to these polygons
+  map: google.maps.Map | null;
+  geotiffUrl?: string | null;
+  geotiffData?: GeoTIFFData | null; // Optional: pre-loaded GeoTIFF data (overrides geotiffUrl)
+  visible: boolean;
+  colorScale?: "viridis" | "heat" | "sunshine";
+  opacity?: number;
+  clipToPolygons?: google.maps.Polygon[]; // Optional: clip overlay to these polygons
 }
 
 /**
  * Custom overlay class that extends Google Maps OverlayView
  */
 class GeoTIFFOverlay extends google.maps.OverlayView {
-  private bounds: google.maps.LatLngBounds
-  private canvas: HTMLCanvasElement
-  private div: HTMLDivElement | null = null
-  private visible: boolean
-  private opacity: number
+  private bounds: google.maps.LatLngBounds;
+  private canvas: HTMLCanvasElement;
+  private div: HTMLDivElement | null = null;
+  private visible: boolean;
+  private opacity: number;
 
   constructor(
     bounds: google.maps.LatLngBounds,
     canvas: HTMLCanvasElement,
     map: google.maps.Map,
     visible: boolean = true,
-    opacity: number = 1.0
+    opacity: number = 1.0,
   ) {
-    super()
-    this.bounds = bounds
-    this.canvas = canvas
-    this.visible = visible
-    this.opacity = opacity
-    this.setMap(map)
+    super();
+    this.bounds = bounds;
+    this.canvas = canvas;
+    this.visible = visible;
+    this.opacity = opacity;
+    this.setMap(map);
   }
 
   onAdd() {
-    const div = document.createElement('div')
-    div.style.borderStyle = 'none'
-    div.style.borderWidth = '0px'
-    div.style.position = 'absolute'
-    div.style.opacity = this.opacity.toString()
+    const div = document.createElement("div");
+    div.style.borderStyle = "none";
+    div.style.borderWidth = "0px";
+    div.style.position = "absolute";
+    div.style.opacity = this.opacity.toString();
 
     // Add canvas to div
-    div.appendChild(this.canvas)
-    this.div = div
+    div.appendChild(this.canvas);
+    this.div = div;
 
     // Add to overlay layer
-    const panes = this.getPanes()
+    const panes = this.getPanes();
     if (panes) {
-      panes.overlayLayer.appendChild(div)
+      panes.overlayLayer.appendChild(div);
     }
   }
 
   draw() {
-    if (!this.div) return
+    if (!this.div) return;
 
-    const overlayProjection = this.getProjection()
-    if (!overlayProjection) return
+    const overlayProjection = this.getProjection();
+    if (!overlayProjection) return;
 
     // Get pixel coordinates of bounds
-    const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())
-    const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())
+    const sw = overlayProjection.fromLatLngToDivPixel(
+      this.bounds.getSouthWest(),
+    );
+    const ne = overlayProjection.fromLatLngToDivPixel(
+      this.bounds.getNorthEast(),
+    );
 
-    if (!sw || !ne) return
+    if (!sw || !ne) return;
 
     // Position the div
-    this.div.style.left = sw.x + 'px'
-    this.div.style.top = ne.y + 'px'
-    this.div.style.width = (ne.x - sw.x) + 'px'
-    this.div.style.height = (sw.y - ne.y) + 'px'
+    this.div.style.left = sw.x + "px";
+    this.div.style.top = ne.y + "px";
+    this.div.style.width = ne.x - sw.x + "px";
+    this.div.style.height = sw.y - ne.y + "px";
 
     // Update canvas size to match
-    this.canvas.style.width = '100%'
-    this.canvas.style.height = '100%'
+    this.canvas.style.width = "100%";
+    this.canvas.style.height = "100%";
   }
 
   onRemove() {
     if (this.div && this.div.parentNode) {
-      this.div.parentNode.removeChild(this.div)
-      this.div = null
+      this.div.parentNode.removeChild(this.div);
+      this.div = null;
     }
   }
 
   setVisible(visible: boolean) {
-    this.visible = visible
+    this.visible = visible;
     if (this.div) {
-      this.div.style.display = visible ? 'block' : 'none'
+      this.div.style.display = visible ? "block" : "none";
     }
   }
 
   setOpacity(opacity: number) {
-    this.opacity = opacity
+    this.opacity = opacity;
     if (this.div) {
-      this.div.style.opacity = opacity.toString()
+      this.div.style.opacity = opacity.toString();
     }
   }
 }
@@ -129,27 +137,27 @@ export default function DataLayerOverlay({
   geotiffUrl,
   geotiffData: preloadedGeotiffData,
   visible,
-  colorScale = 'sunshine',
+  colorScale = "sunshine",
   opacity = 0.6,
-  clipToPolygons
+  clipToPolygons,
 }: DataLayerOverlayProps) {
-  const overlayRef = useRef<GeoTIFFOverlay | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const overlayRef = useRef<GeoTIFFOverlay | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Render GeoTIFF overlay from data
   const renderOverlay = async (geotiffData: GeoTIFFData) => {
-    if (!map) return
+    if (!map) return;
 
     try {
       // Create canvas and render data
-      const canvas = document.createElement('canvas')
-      canvas.width = geotiffData.width
-      canvas.height = geotiffData.height
+      const canvas = document.createElement("canvas");
+      canvas.width = geotiffData.width;
+      canvas.height = geotiffData.height;
 
-      const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
-        throw new Error('Failed to get canvas context')
+        throw new Error("Failed to get canvas context");
       }
 
       // Convert GeoTIFF data to RGBA
@@ -159,180 +167,205 @@ export default function DataLayerOverlay({
         geotiffData.height,
         geotiffData.min,
         geotiffData.max,
-        colorScale
-      )
+        colorScale,
+      );
 
       // Create ImageData and put on canvas
       // Copy to ensure we have a regular ArrayBuffer (not SharedArrayBuffer)
-      const clampedArray = new Uint8ClampedArray(rgbaData)
-      const imageData = new ImageData(clampedArray, geotiffData.width, geotiffData.height)
-      ctx.putImageData(imageData, 0, 0)
+      const clampedArray = new Uint8ClampedArray(rgbaData);
+      const imageData = new ImageData(
+        clampedArray,
+        geotiffData.width,
+        geotiffData.height,
+      );
+      ctx.putImageData(imageData, 0, 0);
 
       // Apply 1 meter offset towards north BEFORE clipping
       // 1 meter latitude offset ≈ 0.000009 degrees
-      const OFFSET_METERS = 1
-      const LATITUDE_OFFSET = OFFSET_METERS * 0.000009
+      const OFFSET_METERS = 1;
+      const LATITUDE_OFFSET = OFFSET_METERS * 0.000009;
 
       // Calculate offset bounds that will be used for both clipping and final overlay placement
       const offsetBounds = {
         north: geotiffData.bounds.north + LATITUDE_OFFSET,
         south: geotiffData.bounds.south + LATITUDE_OFFSET,
         east: geotiffData.bounds.east,
-        west: geotiffData.bounds.west
-      }
+        west: geotiffData.bounds.west,
+      };
 
       // Apply polygon clipping if provided (using offset bounds for coordinate conversion)
       if (clipToPolygons && clipToPolygons.length > 0) {
         // Create a second canvas for clipping
-        const clippedCanvas = document.createElement('canvas')
-        clippedCanvas.width = geotiffData.width
-        clippedCanvas.height = geotiffData.height
-        const clippedCtx = clippedCanvas.getContext('2d')
+        const clippedCanvas = document.createElement("canvas");
+        clippedCanvas.width = geotiffData.width;
+        clippedCanvas.height = geotiffData.height;
+        const clippedCtx = clippedCanvas.getContext("2d");
 
         if (clippedCtx) {
           // Create clipping path from polygons
-          clippedCtx.beginPath()
+          clippedCtx.beginPath();
 
-          clipToPolygons.forEach(polygon => {
-            const path = polygon.getPath()
+          clipToPolygons.forEach((polygon) => {
+            const path = polygon.getPath();
             for (let i = 0; i < path.getLength(); i++) {
-              const point = path.getAt(i)
-              const lat = point.lat()
-              const lng = point.lng()
+              const point = path.getAt(i);
+              const lat = point.lat();
+              const lng = point.lng();
 
               // Convert lat/lng to canvas pixel coordinates using OFFSET bounds
-              const x = ((lng - offsetBounds.west) / (offsetBounds.east - offsetBounds.west)) * geotiffData.width
-              const y = ((offsetBounds.north - lat) / (offsetBounds.north - offsetBounds.south)) * geotiffData.height
+              const x =
+                ((lng - offsetBounds.west) /
+                  (offsetBounds.east - offsetBounds.west)) *
+                geotiffData.width;
+              const y =
+                ((offsetBounds.north - lat) /
+                  (offsetBounds.north - offsetBounds.south)) *
+                geotiffData.height;
 
               if (i === 0) {
-                clippedCtx.moveTo(x, y)
+                clippedCtx.moveTo(x, y);
               } else {
-                clippedCtx.lineTo(x, y)
+                clippedCtx.lineTo(x, y);
               }
             }
-            clippedCtx.closePath()
-          })
+            clippedCtx.closePath();
+          });
 
           // Clip and draw the original canvas
-          clippedCtx.clip()
-          clippedCtx.drawImage(canvas, 0, 0)
+          clippedCtx.clip();
+          clippedCtx.drawImage(canvas, 0, 0);
 
           // Use the clipped canvas instead
-          ctx.clearRect(0, 0, canvas.width, canvas.height)
-          ctx.drawImage(clippedCanvas, 0, 0)
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(clippedCanvas, 0, 0);
         }
       }
 
       // Create bounds with the offset applied
       const bounds = new google.maps.LatLngBounds(
         new google.maps.LatLng(offsetBounds.south, offsetBounds.west),
-        new google.maps.LatLng(offsetBounds.north, offsetBounds.east)
-      )
+        new google.maps.LatLng(offsetBounds.north, offsetBounds.east),
+      );
 
       // Remove existing overlay
       if (overlayRef.current) {
-        overlayRef.current.setMap(null)
+        overlayRef.current.setMap(null);
       }
 
       // Create new overlay
-      const overlay = new GeoTIFFOverlay(bounds, canvas, map, visible, opacity)
-      overlayRef.current = overlay
+      const overlay = new GeoTIFFOverlay(bounds, canvas, map, visible, opacity);
+      overlayRef.current = overlay;
 
-      setIsLoading(false)
-
+      setIsLoading(false);
     } catch (err) {
-      console.error('Error rendering GeoTIFF:', err)
-      setError(err instanceof Error ? err.message : 'Failed to render data layer')
-      setIsLoading(false)
+      console.error("Error rendering GeoTIFF:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to render data layer",
+      );
+      setIsLoading(false);
     }
-  }
+  };
 
   // Load and render GeoTIFF when data changes and visible is true
   useEffect(() => {
     if (!map || !visible) {
       // Clean up existing overlay if not visible
       if (overlayRef.current) {
-        overlayRef.current.setMap(null)
-        overlayRef.current = null
+        overlayRef.current.setMap(null);
+        overlayRef.current = null;
       }
-      return
+      return;
     }
 
     // Prefer preloaded data over fetching from URL
     if (preloadedGeotiffData) {
-      renderOverlay(preloadedGeotiffData)
-      return
+      renderOverlay(preloadedGeotiffData);
+      return;
     }
 
     if (!geotiffUrl) {
       // No data or URL provided, clean up
       if (overlayRef.current) {
-        overlayRef.current.setMap(null)
-        overlayRef.current = null
+        overlayRef.current.setMap(null);
+        overlayRef.current = null;
       }
-      return
+      return;
     }
 
     // Fetch from URL if no preloaded data
-    let isMounted = true
+    let isMounted = true;
 
     const loadGeoTIFF = async () => {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
         // Use proxy endpoint to fetch GeoTIFF with authentication
-        const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(geotiffUrl)}`
+        const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(
+          geotiffUrl,
+        )}`;
 
         // Fetch the GeoTIFF as array buffer
-        const response = await fetch(proxyUrl)
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
-          const errorText = await response.text()
-          console.error('Proxy error response:', errorText)
-          throw new Error(`Failed to fetch GeoTIFF: ${response.status} ${response.statusText}`)
+          const errorText = await response.text();
+          console.error("Proxy error response:", errorText);
+          throw new Error(
+            `Failed to fetch GeoTIFF: ${response.status} ${response.statusText}`,
+          );
         }
 
-        const arrayBuffer = await response.arrayBuffer()
+        const arrayBuffer = await response.arrayBuffer();
 
         // Parse GeoTIFF from array buffer
-        const geotiffData: GeoTIFFData = await parseGeoTIFFFromBuffer(arrayBuffer)
+        const geotiffData: GeoTIFFData =
+          await parseGeoTIFFFromBuffer(arrayBuffer);
 
-        if (!isMounted) return
+        if (!isMounted) return;
 
-        await renderOverlay(geotiffData)
-
+        await renderOverlay(geotiffData);
       } catch (err) {
-        console.error('Error loading GeoTIFF:', err)
+        console.error("Error loading GeoTIFF:", err);
         if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load data layer')
-          setIsLoading(false)
+          setError(
+            err instanceof Error ? err.message : "Failed to load data layer",
+          );
+          setIsLoading(false);
         }
       }
-    }
+    };
 
-    loadGeoTIFF()
+    loadGeoTIFF();
 
     return () => {
-      isMounted = false
+      isMounted = false;
       if (overlayRef.current) {
-        overlayRef.current.setMap(null)
-        overlayRef.current = null
+        overlayRef.current.setMap(null);
+        overlayRef.current = null;
       }
-    }
-  }, [map, geotiffUrl, preloadedGeotiffData, visible, colorScale, opacity, clipToPolygons])
+    };
+  }, [
+    map,
+    geotiffUrl,
+    preloadedGeotiffData,
+    visible,
+    colorScale,
+    opacity,
+    clipToPolygons,
+  ]);
 
   // Note: Visibility is now handled in the main useEffect above
   // This separate effect is no longer needed but kept for backwards compatibility
   useEffect(() => {
     if (overlayRef.current) {
-      overlayRef.current.setVisible(visible)
+      overlayRef.current.setVisible(visible);
     }
-  }, [visible])
+  }, [visible]);
 
   if (error) {
-    console.error('Data layer error:', error)
+    console.error("Data layer error:", error);
   }
 
   // This component doesn't render anything visible - it's a map overlay
-  return null
+  return null;
 }

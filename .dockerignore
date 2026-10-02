@@ -49,3 +49,16 @@ htmlcov/
 # Misc
 .DS_Store
 *.log
+
+# Build / data artifacts
+.venv/
+.cache/
+dist/
+build/
+data/
+*.parquet
+*.csv
+*.ipynb
+.envrc
+.tmp
+.dockerignore

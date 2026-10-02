@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './UserMenu.module.css'
+import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./UserMenu.module.css";
 
 interface UserMenuProps {
-  onOpenProfile?: () => void
-  onOpenLogin: () => void
-  onOpenSignUp: () => void
+  onOpenProfile?: () => void;
+  onOpenLogin: () => void;
+  onOpenSignUp: () => void;
 }
 
 export default function UserMenu({
@@ -16,37 +16,37 @@ export default function UserMenu({
   onOpenLogin,
   onOpenSignUp,
 }: UserMenuProps) {
-  const { user, loading, signOut } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const { user, loading, signOut } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   const handleSignOut = async () => {
-    await signOut()
-    setIsOpen(false)
-  }
+    await signOut();
+    setIsOpen(false);
+  };
 
   if (loading) {
     return (
       <div className={styles.container}>
         <div className={styles.skeleton}></div>
       </div>
-    )
+    );
   }
 
   if (!user) {
@@ -59,7 +59,7 @@ export default function UserMenu({
           Sign Up
         </button>
       </div>
-    )
+    );
   }
 
   return (
@@ -73,7 +73,10 @@ export default function UserMenu({
           <Icon name="user" />
         </div>
         <span className={styles.email}>{user.email}</span>
-        <Icon name="chevron-down" className={`${styles.chevron} ${isOpen ? styles.open : ''}`} />
+        <Icon
+          name="chevron-down"
+          className={`${styles.chevron} ${isOpen ? styles.open : ""}`}
+        />
       </button>
 
       {isOpen && (
@@ -87,8 +90,8 @@ export default function UserMenu({
           <button
             className={styles.menuItem}
             onClick={() => {
-              onOpenProfile?.()
-              setIsOpen(false)
+              onOpenProfile?.();
+              setIsOpen(false);
             }}
           >
             <Icon name="user-circle" />
@@ -104,5 +107,5 @@ export default function UserMenu({
         </div>
       )}
     </div>
-  )
+  );
 }

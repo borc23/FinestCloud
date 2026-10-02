@@ -37,5 +37,17 @@ ENV/
 *.sqlite
 
 sandbox/
-tests/
 .claude
+# Tooling / build
+*.egg-info
+.ruff_cache
+.pytest_cache
+.tmp
+dist
+.DS_Store
+.ipynb_checkpoints
+.coverage
+
+# No sops encryption set up: never commit plaintext secrets
+deploy/secrets/*
+!deploy/secrets/.gitkeep

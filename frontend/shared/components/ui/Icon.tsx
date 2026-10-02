@@ -3,7 +3,7 @@
  * Provides tree-shakeable icons with consistent styling
  */
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSearch,
   faTimes,
@@ -36,8 +36,8 @@ import {
   faUserPlus,
   faUsers,
   faEnvelope,
-} from '@fortawesome/free-solid-svg-icons'
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+} from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 // Icon mapping for easy reference
 const iconMap: Record<string, IconDefinition> = {
@@ -48,46 +48,46 @@ const iconMap: Record<string, IconDefinition> = {
   plus: faPlus,
   minus: faMinus,
   expand: faExpand,
-  'cloud-upload-alt': faCloudUploadAlt,
+  "cloud-upload-alt": faCloudUploadAlt,
   upload: faCloudUploadAlt,
-  'exclamation-triangle': faExclamationTriangle,
+  "exclamation-triangle": faExclamationTriangle,
   warning: faExclamationTriangle,
-  'arrow-left': faArrowLeft,
+  "arrow-left": faArrowLeft,
   image: faImage,
-  'solar-panel': faSolarPanel,
+  "solar-panel": faSolarPanel,
   sun: faSun,
-  'redo-alt': faRedoAlt,
+  "redo-alt": faRedoAlt,
   refresh: faRedoAlt,
   user: faUser,
-  'user-circle': faUserCircle,
-  'sign-out-alt': faSignOutAlt,
+  "user-circle": faUserCircle,
+  "sign-out-alt": faSignOutAlt,
   logout: faSignOutAlt,
   lock: faLock,
-  'sign-in-alt': faSignInAlt,
+  "sign-in-alt": faSignInAlt,
   login: faSignInAlt,
   folder: faFolder,
-  'folder-open': faFolderOpen,
-  'location-arrow': faLocationArrow,
-  'check-circle': faCheckCircle,
-  'map-marker-alt': faMapMarkerAlt,
-  'chevron-down': faChevronDown,
-  'vector-square': faSquare,
-  'pen-to-square': faPenToSquare,
+  "folder-open": faFolderOpen,
+  "location-arrow": faLocationArrow,
+  "check-circle": faCheckCircle,
+  "map-marker-alt": faMapMarkerAlt,
+  "chevron-down": faChevronDown,
+  "vector-square": faSquare,
+  "pen-to-square": faPenToSquare,
   map: faMap,
   building: faBuilding,
-  'user-plus': faUserPlus,
+  "user-plus": faUserPlus,
   users: faUsers,
   envelope: faEnvelope,
-}
+};
 
 interface IconProps {
-  name: keyof typeof iconMap
-  className?: string
-  size?: 'xs' | 'sm' | 'lg' | '1x' | '2x' | '3x'
-  spin?: boolean
-  pulse?: boolean
-  fixedWidth?: boolean
-  style?: React.CSSProperties
+  name: keyof typeof iconMap;
+  className?: string;
+  size?: "xs" | "sm" | "lg" | "1x" | "2x" | "3x";
+  spin?: boolean;
+  pulse?: boolean;
+  fixedWidth?: boolean;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -103,11 +103,11 @@ export function Icon({
   fixedWidth,
   style,
 }: IconProps) {
-  const icon = iconMap[name]
+  const icon = iconMap[name];
 
   if (!icon) {
-    console.warn(`Icon "${name}" not found in icon map`)
-    return null
+    console.warn(`Icon "${name}" not found in icon map`);
+    return null;
   }
 
   return (
@@ -120,5 +120,5 @@ export function Icon({
       fixedWidth={fixedWidth}
       style={style as any}
     />
-  )
+  );
 }

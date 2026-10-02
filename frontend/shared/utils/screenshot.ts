@@ -3,7 +3,7 @@
  * Provides a wrapper for taking screenshots of DOM elements
  */
 
-import html2canvas from 'html2canvas'
+import html2canvas from "html2canvas";
 
 /**
  * Capture a screenshot of a DOM element
@@ -14,25 +14,25 @@ import html2canvas from 'html2canvas'
 export async function captureScreenshot(
   element: HTMLElement,
   options?: Partial<{
-    backgroundColor: string | null
-    allowTaint: boolean
-    useCORS: boolean
-    scale: number
-    width: number
-    height: number
-    windowWidth: number
-    windowHeight: number
-    logging: boolean
-  }>
+    backgroundColor: string | null;
+    allowTaint: boolean;
+    useCORS: boolean;
+    scale: number;
+    width: number;
+    height: number;
+    windowWidth: number;
+    windowHeight: number;
+    logging: boolean;
+  }>,
 ): Promise<HTMLCanvasElement> {
   return html2canvas(element, {
-    backgroundColor: options?.backgroundColor ?? '#ffffff',
+    backgroundColor: options?.backgroundColor ?? "#ffffff",
     allowTaint: options?.allowTaint ?? false,
     useCORS: options?.useCORS ?? true,
     scale: options?.scale ?? 2,
     logging: options?.logging ?? false,
     ...options,
-  })
+  });
 }
 
 /**
@@ -43,10 +43,10 @@ export async function captureScreenshot(
  */
 export async function captureScreenshotAsDataURL(
   element: HTMLElement,
-  options?: Parameters<typeof captureScreenshot>[1]
+  options?: Parameters<typeof captureScreenshot>[1],
 ): Promise<string> {
-  const canvas = await captureScreenshot(element, options)
-  return canvas.toDataURL('image/png')
+  const canvas = await captureScreenshot(element, options);
+  return canvas.toDataURL("image/png");
 }
 
 /**
@@ -57,15 +57,15 @@ export async function captureScreenshotAsDataURL(
  */
 export async function downloadScreenshot(
   element: HTMLElement,
-  filename: string = 'screenshot.png',
-  options?: Parameters<typeof captureScreenshot>[1]
+  filename: string = "screenshot.png",
+  options?: Parameters<typeof captureScreenshot>[1],
 ): Promise<void> {
-  const dataURL = await captureScreenshotAsDataURL(element, options)
+  const dataURL = await captureScreenshotAsDataURL(element, options);
 
-  const link = document.createElement('a')
-  link.href = dataURL
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  const link = document.createElement("a");
+  link.href = dataURL;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }

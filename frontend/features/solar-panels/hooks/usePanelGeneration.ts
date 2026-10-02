@@ -1,52 +1,68 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { SolarPanelApiService } from '@/features/solar-panels/lib/solarPanelApi'
-import { generateAndAnimatePanels, calculateSystemResults } from '@/features/solar-panels/lib/panelGenerator'
-import { setGridVectors, clearGridVectors } from '@/features/solar-panels/utils/gridSnapping'
-import { usePanelContext } from '../context/PanelContext'
-import type { PanelGenerationResponse, SolarDataSegment, AngleConfirmData } from '@/features/solar-panels/types/panel'
-import type { GeoTIFFData } from '@/features/solar-analysis/utils/geotiffParser'
+import { useState, useCallback, useRef, useEffect } from "react";
+import { SolarPanelApiService } from "@/features/solar-panels/lib/solarPanelApi";
+import {
+  generateAndAnimatePanels,
+  calculateSystemResults,
+} from "@/features/solar-panels/lib/panelGenerator";
+import {
+  setGridVectors,
+  clearGridVectors,
+} from "@/features/solar-panels/utils/gridSnapping";
+import { usePanelContext } from "../context/PanelContext";
+import type {
+  PanelGenerationResponse,
+  SolarDataSegment,
+  AngleConfirmData,
+} from "@/features/solar-panels/types/panel";
+import type { GeoTIFFData } from "@/features/solar-analysis/utils/geotiffParser";
 
 // Dynamic import helper for geotiff parser to avoid SSR/hydration issues
-async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTIFFData> {
-  const { parseGeoTIFFFromBuffer: parser } = await import('@/features/solar-analysis/utils/geotiffParser')
-  return parser(buffer)
+async function parseGeoTIFFFromBuffer(
+  buffer: ArrayBuffer,
+): Promise<GeoTIFFData> {
+  const { parseGeoTIFFFromBuffer: parser } = await import(
+    "@/features/solar-analysis/utils/geotiffParser"
+  );
+  return parser(buffer);
 }
 
 interface UsePanelGenerationProps {
-  map: google.maps.Map | null
-  roofPolygons: google.maps.Polygon[]
-  objectPolygons: google.maps.Polygon[]
-  onPanelsGenerated?: (data: PanelGenerationResponse) => void
+  map: google.maps.Map | null;
+  roofPolygons: google.maps.Polygon[];
+  objectPolygons: google.maps.Polygon[];
+  onPanelsGenerated?: (data: PanelGenerationResponse) => void;
 }
 
 interface PanelGenerationState {
-  isGenerating: boolean
-  progress: { current: number; total: number } | null
-  solarData: SolarDataSegment[] | null
-  panelData: PanelGenerationResponse | null
-  showAnglePanel: boolean
-  showCompletionAnimation: boolean
+  isGenerating: boolean;
+  progress: { current: number; total: number } | null;
+  solarData: SolarDataSegment[] | null;
+  panelData: PanelGenerationResponse | null;
+  showAnglePanel: boolean;
+  showCompletionAnimation: boolean;
   resultsData: {
-    panelCount: number
-    systemSize: number
-    annualProduction?: number
-  } | null
-  geotiffData: GeoTIFFData | null
-  isLoadingGeotiff: boolean
-  annualFluxUrl: string | null
+    panelCount: number;
+    systemSize: number;
+    annualProduction?: number;
+  } | null;
+  geotiffData: GeoTIFFData | null;
+  isLoadingGeotiff: boolean;
+  annualFluxUrl: string | null;
 }
 
 export function usePanelGeneration({
   map,
   roofPolygons,
   objectPolygons,
-  onPanelsGenerated
+  onPanelsGenerated,
 }: UsePanelGenerationProps) {
-  const { selectedPanel } = usePanelContext()
-  const solarPanelApiRef = useRef(new SolarPanelApiService())
-  const markersRef = useRef<google.maps.Polygon[]>([])
-  const geotiffAbortControllerRef = useRef<AbortController | null>(null)
-  const panelGenerationAbortControllerRef = useRef<AbortController | null>(null)
+  const { selectedPanel } = usePanelContext();
+  const solarPanelApiRef = useRef(new SolarPanelApiService());
+  const markersRef = useRef<google.maps.Polygon[]>([]);
+  const geotiffAbortControllerRef = useRef<AbortController | null>(null);
+  const panelGenerationAbortControllerRef = useRef<AbortController | null>(
+    null,
+  );
 
   const [state, setState] = useState<PanelGenerationState>({
     isGenerating: false,
@@ -58,290 +74,311 @@ export function usePanelGeneration({
     resultsData: null,
     geotiffData: null,
     isLoadingGeotiff: false,
-    annualFluxUrl: null
-  })
+    annualFluxUrl: null,
+  });
 
   // Cleanup on unmount: abort any pending requests
   useEffect(() => {
     return () => {
-      geotiffAbortControllerRef.current?.abort()
-      panelGenerationAbortControllerRef.current?.abort()
-    }
-  }, [])
+      geotiffAbortControllerRef.current?.abort();
+      panelGenerationAbortControllerRef.current?.abort();
+    };
+  }, []);
 
   const getRoofCenter = useCallback(() => {
-    if (roofPolygons.length === 0) return null
+    if (roofPolygons.length === 0) return null;
 
-    let totalLat = 0
-    let totalLng = 0
-    let pointCount = 0
+    let totalLat = 0;
+    let totalLng = 0;
+    let pointCount = 0;
 
-    roofPolygons.forEach(polygon => {
-      const path = polygon.getPath()
+    roofPolygons.forEach((polygon) => {
+      const path = polygon.getPath();
       for (let i = 0; i < path.getLength(); i++) {
-        const point = path.getAt(i)
-        totalLat += point.lat()
-        totalLng += point.lng()
-        pointCount++
+        const point = path.getAt(i);
+        totalLat += point.lat();
+        totalLng += point.lng();
+        pointCount++;
       }
-    })
+    });
 
-    if (pointCount === 0) return null
+    if (pointCount === 0) return null;
 
     return {
       lat: totalLat / pointCount,
-      lng: totalLng / pointCount
-    }
-  }, [roofPolygons])
+      lng: totalLng / pointCount,
+    };
+  }, [roofPolygons]);
 
   const loadGeotiffData = useCallback(async () => {
-    const roofCenter = getRoofCenter()
+    const roofCenter = getRoofCenter();
     if (!roofCenter) {
-      console.warn('No roof center available for GeoTIFF request')
-      return null
+      console.warn("No roof center available for GeoTIFF request");
+      return null;
     }
 
     // Abort any previous GeoTIFF request
-    geotiffAbortControllerRef.current?.abort()
-    geotiffAbortControllerRef.current = new AbortController()
+    geotiffAbortControllerRef.current?.abort();
+    geotiffAbortControllerRef.current = new AbortController();
 
-    setState(prev => ({ ...prev, isLoadingGeotiff: true }))
+    setState((prev) => ({ ...prev, isLoadingGeotiff: true }));
 
     try {
-      const response = await fetch('/api/solar-data-layers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/solar-data-layers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           location: {
             latitude: roofCenter.lat,
-            longitude: roofCenter.lng
+            longitude: roofCenter.lng,
           },
           radiusMeters: 100,
-          requiredQuality: 'HIGH'
+          requiredQuality: "HIGH",
         }),
-        signal: geotiffAbortControllerRef.current.signal
-      })
+        signal: geotiffAbortControllerRef.current.signal,
+      });
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Data layers API error:', errorText)
-        throw new Error(`Failed to fetch data layers: ${response.status}`)
+        const errorText = await response.text();
+        console.error("Data layers API error:", errorText);
+        throw new Error(`Failed to fetch data layers: ${response.status}`);
       }
 
-      const dataLayersResponse = await response.json()
+      const dataLayersResponse = await response.json();
 
-      const dataLayers = dataLayersResponse.data || dataLayersResponse
-      const annualFluxUrl = dataLayers.annualFluxUrl
+      const dataLayers = dataLayersResponse.data || dataLayersResponse;
+      const annualFluxUrl = dataLayers.annualFluxUrl;
 
       if (!annualFluxUrl) {
-        console.warn('No annual flux URL available')
-        return null
+        console.warn("No annual flux URL available");
+        return null;
       }
 
-      const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(annualFluxUrl)}`
+      const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(
+        annualFluxUrl,
+      )}`;
       const geotiffResponse = await fetch(proxyUrl, {
-        signal: geotiffAbortControllerRef.current.signal
-      })
+        signal: geotiffAbortControllerRef.current.signal,
+      });
 
       if (!geotiffResponse.ok) {
-        throw new Error(`Failed to fetch GeoTIFF: ${geotiffResponse.status}`)
+        throw new Error(`Failed to fetch GeoTIFF: ${geotiffResponse.status}`);
       }
 
-      const arrayBuffer = await geotiffResponse.arrayBuffer()
-      const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer)
+      const arrayBuffer = await geotiffResponse.arrayBuffer();
+      const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer);
 
-      setState(prev => ({ ...prev, geotiffData, isLoadingGeotiff: false, annualFluxUrl }))
-      return geotiffData
-
+      setState((prev) => ({
+        ...prev,
+        geotiffData,
+        isLoadingGeotiff: false,
+        annualFluxUrl,
+      }));
+      return geotiffData;
     } catch (err: any) {
       // Don't update state if request was aborted (component unmounted or new request started)
-      if (err.name === 'AbortError') {
-        return null
+      if (err.name === "AbortError") {
+        return null;
       }
-      console.error('Failed to load GeoTIFF data:', err)
-      setState(prev => ({ ...prev, isLoadingGeotiff: false }))
-      return null
+      console.error("Failed to load GeoTIFF data:", err);
+      setState((prev) => ({ ...prev, isLoadingGeotiff: false }));
+      return null;
     }
-  }, [getRoofCenter])
+  }, [getRoofCenter]);
 
   const loadGeotiffDataFromUrl = useCallback(async (url: string) => {
     // Abort any previous GeoTIFF request
-    geotiffAbortControllerRef.current?.abort()
-    geotiffAbortControllerRef.current = new AbortController()
+    geotiffAbortControllerRef.current?.abort();
+    geotiffAbortControllerRef.current = new AbortController();
 
-    setState(prev => ({ ...prev, isLoadingGeotiff: true }))
+    setState((prev) => ({ ...prev, isLoadingGeotiff: true }));
 
     try {
-      const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(url)}`
+      const proxyUrl = `/api/solar-data-layers/geotiff?url=${encodeURIComponent(
+        url,
+      )}`;
       const geotiffResponse = await fetch(proxyUrl, {
-        signal: geotiffAbortControllerRef.current.signal
-      })
+        signal: geotiffAbortControllerRef.current.signal,
+      });
 
       if (!geotiffResponse.ok) {
-        throw new Error(`Failed to fetch GeoTIFF: ${geotiffResponse.status}`)
+        throw new Error(`Failed to fetch GeoTIFF: ${geotiffResponse.status}`);
       }
 
-      const arrayBuffer = await geotiffResponse.arrayBuffer()
-      const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer)
+      const arrayBuffer = await geotiffResponse.arrayBuffer();
+      const geotiffData = await parseGeoTIFFFromBuffer(arrayBuffer);
 
-      setState(prev => ({ ...prev, geotiffData, isLoadingGeotiff: false, annualFluxUrl: url }))
-      return geotiffData
-
+      setState((prev) => ({
+        ...prev,
+        geotiffData,
+        isLoadingGeotiff: false,
+        annualFluxUrl: url,
+      }));
+      return geotiffData;
     } catch (err: any) {
       // Don't update state if request was aborted (component unmounted or new request started)
-      if (err.name === 'AbortError') {
-        return null
+      if (err.name === "AbortError") {
+        return null;
       }
-      console.error('Failed to load GeoTIFF data from URL:', err)
-      setState(prev => ({ ...prev, isLoadingGeotiff: false }))
-      return null
+      console.error("Failed to load GeoTIFF data from URL:", err);
+      setState((prev) => ({ ...prev, isLoadingGeotiff: false }));
+      return null;
     }
-  }, [])
+  }, []);
 
   const startPanelGeneration = useCallback(async () => {
     if (!map || roofPolygons.length === 0) {
-      console.warn('No roof polygons available for panel generation')
-      return
+      console.warn("No roof polygons available for panel generation");
+      return;
     }
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       resultsData: null,
       solarData: null,
-      showAnglePanel: true
-    }))
+      showAnglePanel: true,
+    }));
 
     try {
-      const result = await solarPanelApiRef.current.fetchSolarDataForPolygons(roofPolygons)
+      const result =
+        await solarPanelApiRef.current.fetchSolarDataForPolygons(roofPolygons);
 
       if (result.success && result.data) {
-        setState(prev => ({ ...prev, solarData: result.data || null }))
+        setState((prev) => ({ ...prev, solarData: result.data || null }));
       } else {
-        console.error('Failed to fetch solar panel data:', result.error)
+        console.error("Failed to fetch solar panel data:", result.error);
       }
 
-      await loadGeotiffData()
-
+      await loadGeotiffData();
     } catch (err) {
-      console.error('Panel generation failed:', err)
+      console.error("Panel generation failed:", err);
     }
-  }, [map, roofPolygons, loadGeotiffData])
+  }, [map, roofPolygons, loadGeotiffData]);
 
-  const handleAngleConfirm = useCallback(async (data: AngleConfirmData) => {
-    if (!map) return
+  const handleAngleConfirm = useCallback(
+    async (data: AngleConfirmData) => {
+      if (!map) return;
 
-    // Abort any previous panel generation request
-    panelGenerationAbortControllerRef.current?.abort()
-    panelGenerationAbortControllerRef.current = new AbortController()
+      // Abort any previous panel generation request
+      panelGenerationAbortControllerRef.current?.abort();
+      panelGenerationAbortControllerRef.current = new AbortController();
 
-    setState(prev => ({
-      ...prev,
-      showAnglePanel: false,
-      isGenerating: true
-    }))
+      setState((prev) => ({
+        ...prev,
+        showAnglePanel: false,
+        isGenerating: true,
+      }));
 
-    markersRef.current.forEach(marker => marker.setMap(null))
-    markersRef.current = []
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
 
-    try {
-      let panelData = data.panelData
+      try {
+        let panelData = data.panelData;
 
-      if (data._requestBody) {
-        const requestBody = {
-          ...data._requestBody,
-          panel_specs: selectedPanel ? {
-            width: selectedPanel.width,
-            height: selectedPanel.height,
-            power: selectedPanel.power,
-            efficiency: selectedPanel.efficiency
-          } : undefined
+        if (data._requestBody) {
+          const requestBody = {
+            ...data._requestBody,
+            panel_specs: selectedPanel
+              ? {
+                  width: selectedPanel.width,
+                  height: selectedPanel.height,
+                  power: selectedPanel.power,
+                  efficiency: selectedPanel.efficiency,
+                }
+              : undefined,
+          };
+
+          const response = await fetch("/api/generate_panels", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+            signal: panelGenerationAbortControllerRef.current.signal,
+          });
+          const responseData = await response.json();
+          panelData = responseData.results || responseData;
         }
 
-        const response = await fetch('/api/generate_panels', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-          signal: panelGenerationAbortControllerRef.current.signal
-        })
-        const responseData = await response.json()
-        panelData = responseData.results || responseData
+        if (panelData) {
+          setState((prev) => ({ ...prev, isGenerating: false }));
+
+          const { markers, totalPanels } = await generateAndAnimatePanels({
+            panelData,
+            map,
+            geotiffData: state.geotiffData,
+            onProgress: (current, total) => {
+              setState((prev) => ({ ...prev, progress: { current, total } }));
+            },
+            onFirstPanelPlaced: () => {
+              onPanelsGenerated?.(panelData);
+            },
+          });
+
+          const results = calculateSystemResults(
+            totalPanels,
+            state.solarData,
+            panelData,
+          );
+
+          setGridVectors(panelData);
+          markersRef.current = markers;
+
+          setState((prev) => ({
+            ...prev,
+            panelData,
+            resultsData: {
+              panelCount: totalPanels,
+              ...results,
+            },
+            progress: null,
+            showCompletionAnimation: true,
+          }));
+
+          setTimeout(() => {
+            setState((prev) => ({ ...prev, showCompletionAnimation: false }));
+          }, 1500);
+        }
+      } catch (error: any) {
+        // Don't update state if request was aborted (component unmounted or new request started)
+        if (error.name === "AbortError") {
+          return;
+        }
+        console.error("Error generating panels:", error);
+      } finally {
+        setState((prev) => ({ ...prev, isGenerating: false }));
       }
-
-      if (panelData) {
-        setState(prev => ({ ...prev, isGenerating: false }))
-
-        const { markers, totalPanels } = await generateAndAnimatePanels({
-          panelData,
-          map,
-          geotiffData: state.geotiffData,
-          onProgress: (current, total) => {
-            setState(prev => ({ ...prev, progress: { current, total } }))
-          },
-          onFirstPanelPlaced: () => {
-            onPanelsGenerated?.(panelData)
-          }
-        })
-
-        const results = calculateSystemResults(totalPanels, state.solarData, panelData)
-
-        setGridVectors(panelData)
-        markersRef.current = markers
-
-        setState(prev => ({
-          ...prev,
-          panelData,
-          resultsData: {
-            panelCount: totalPanels,
-            ...results
-          },
-          progress: null,
-          showCompletionAnimation: true
-        }))
-
-        setTimeout(() => {
-          setState(prev => ({ ...prev, showCompletionAnimation: false }))
-        }, 1500)
-      }
-    } catch (error: any) {
-      // Don't update state if request was aborted (component unmounted or new request started)
-      if (error.name === 'AbortError') {
-        return
-      }
-      console.error('Error generating panels:', error)
-    } finally {
-      setState(prev => ({ ...prev, isGenerating: false }))
-    }
-  }, [map, state.solarData, state.geotiffData, onPanelsGenerated, selectedPanel])
+    },
+    [map, state.solarData, state.geotiffData, onPanelsGenerated, selectedPanel],
+  );
 
   /**
    * Cancel angle panel
    */
   const handleAngleCancel = useCallback(() => {
-    setState(prev => ({ ...prev, showAnglePanel: false }))
-  }, [])
+    setState((prev) => ({ ...prev, showAnglePanel: false }));
+  }, []);
 
   /**
    * Clear all generated panels
    */
   const clearPanels = useCallback(() => {
     // Abort any in-flight requests
-    geotiffAbortControllerRef.current?.abort()
-    panelGenerationAbortControllerRef.current?.abort()
+    geotiffAbortControllerRef.current?.abort();
+    panelGenerationAbortControllerRef.current?.abort();
 
-    markersRef.current.forEach(marker => marker.setMap(null))
-    markersRef.current = []
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
 
-    clearGridVectors()
-    setState(prev => ({
+    clearGridVectors();
+    setState((prev) => ({
       ...prev,
       panelData: null,
       resultsData: null,
       geotiffData: null,
       solarData: null,
       isLoadingGeotiff: false,
-      isGenerating: false
-    }))
-  }, [])
+      isGenerating: false,
+    }));
+  }, []);
 
   return {
     isGenerating: state.isGenerating,
@@ -360,6 +397,6 @@ export function usePanelGeneration({
     handleAngleConfirm,
     handleAngleCancel,
     clearPanels,
-    loadGeotiffDataFromUrl
-  }
+    loadGeotiffDataFromUrl,
+  };
 }

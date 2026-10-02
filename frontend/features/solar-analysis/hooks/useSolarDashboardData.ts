@@ -1,20 +1,20 @@
-import { useMemo } from 'react'
-import { usePanelData } from '@/features/solar-panels/hooks/usePanelData'
-import { usePVWatts } from '@/features/solar-analysis/hooks/usePVWatts'
-import { isComplexData } from '@/features/solar-analysis/types/result_dashboard'
-import type { SolarResultsDashboardProps } from '@/features/solar-analysis/types/result_dashboard'
+import { useMemo } from "react";
+import { usePanelData } from "@/features/solar-panels/hooks/usePanelData";
+import { usePVWatts } from "@/features/solar-analysis/hooks/usePVWatts";
+import { isComplexData } from "@/features/solar-analysis/types/result_dashboard";
+import type { SolarResultsDashboardProps } from "@/features/solar-analysis/types/result_dashboard";
 
 interface PanelData {
-  totalPanels: number
-  systemSize: number
-  panelWattage: number
-  avgPitch: number
-  avgAzimuth: number
+  totalPanels: number;
+  systemSize: number;
+  panelWattage: number;
+  avgPitch: number;
+  avgAzimuth: number;
 }
 
 interface Location {
-  lat: number
-  lng: number
+  lat: number;
+  lng: number;
 }
 
 /**
@@ -22,7 +22,9 @@ interface Location {
  */
 export function useSolarDashboardData(props: SolarResultsDashboardProps) {
   // Extract and process panel data
-  const generatedPanelData = isComplexData(props) ? usePanelData(props.panelGenerationData) : null
+  const generatedPanelData = isComplexData(props)
+    ? usePanelData(props.panelGenerationData)
+    : null;
 
   const panelData: PanelData | null = useMemo(() => {
     if (isComplexData(props) && generatedPanelData) {
@@ -31,8 +33,8 @@ export function useSolarDashboardData(props: SolarResultsDashboardProps) {
         totalPanels: props.currentPanelCount ?? generatedPanelData.totalPanels,
         systemSize: props.currentPanelCount
           ? (props.currentPanelCount * generatedPanelData.panelWattage) / 1000
-          : generatedPanelData.systemSize
-      }
+          : generatedPanelData.systemSize,
+      };
     }
 
     // Handle SimpleDataProps
@@ -42,23 +44,23 @@ export function useSolarDashboardData(props: SolarResultsDashboardProps) {
         systemSize: props.systemSize,
         panelWattage: props.panelWattage || 400,
         avgPitch: props.tilt || 20,
-        avgAzimuth: props.azimuth || 180
-      }
+        avgAzimuth: props.azimuth || 180,
+      };
     }
 
-    return null
-  }, [props, generatedPanelData])
+    return null;
+  }, [props, generatedPanelData]);
 
   // Extract location data
   const location: Location | undefined = useMemo(() => {
     if (isComplexData(props)) {
-      return props.mapCenter
+      return props.mapCenter;
     }
     if (props.latitude && props.longitude) {
-      return { lat: props.latitude, lng: props.longitude }
+      return { lat: props.latitude, lng: props.longitude };
     }
-    return undefined
-  }, [props])
+    return undefined;
+  }, [props]);
 
   // Fetch PVWatts data
   const { data: pvwattsData, isLoading } = usePVWatts({
@@ -68,14 +70,15 @@ export function useSolarDashboardData(props: SolarResultsDashboardProps) {
     panelWattage: panelData?.panelWattage || 400,
     roofData: {
       pitch: panelData?.avgPitch,
-      azimuth: panelData?.avgAzimuth
+      azimuth: panelData?.avgAzimuth,
     },
-    autoFetch: true
-  })
+    autoFetch: true,
+  });
 
   // Use PVWatts production directly (no shade adjustment)
-  const annualProduction = pvwattsData?.annual_production ||
-    (!isComplexData(props) ? props.annualProduction : undefined)
+  const annualProduction =
+    pvwattsData?.annual_production ||
+    (!isComplexData(props) ? props.annualProduction : undefined);
 
   return {
     panelData,
@@ -83,6 +86,6 @@ export function useSolarDashboardData(props: SolarResultsDashboardProps) {
     pvwattsData,
     isLoading,
     annualProduction,
-    costEstimate: props.costEstimate
-  }
+    costEstimate: props.costEstimate,
+  };
 }

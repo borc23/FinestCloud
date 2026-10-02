@@ -1,13 +1,13 @@
-'use client'
+"use client";
 
-import type { Project } from '@/features/auth/types/database'
-import styles from './ProjectCard.module.css'
+import type { Project } from "@/features/auth/types/database";
+import styles from "./ProjectCard.module.css";
 
 interface ProjectCardProps {
-  project: Project
-  onLoad: () => void
-  onDelete: () => void
-  isDeleting?: boolean
+  project: Project;
+  onLoad: () => void;
+  onDelete: () => void;
+  isDeleting?: boolean;
 }
 
 export default function ProjectCard({
@@ -16,24 +16,24 @@ export default function ProjectCard({
   onDelete,
   isDeleting = false,
 }: ProjectCardProps) {
-  const createdDate = new Date(project.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  const createdDate = new Date(project.createdAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
-  const updatedDate = new Date(project.updatedAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  const updatedDate = new Date(project.updatedAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <h3 className={styles.title}>{project.projectName}</h3>
         <span className={`${styles.badge} ${styles[project.status]}`}>
-          {project.status === 'draft' ? 'Draft' : 'Completed'}
+          {project.status === "draft" ? "Draft" : "Completed"}
         </span>
       </div>
 
@@ -82,5 +82,5 @@ export default function ProjectCard({
         </button>
       </div>
     </div>
-  )
+  );
 }

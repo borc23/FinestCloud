@@ -1,466 +1,500 @@
-'use client'
+"use client";
 
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { getProfile, setDefaultLocation, updateProfile, setShowTutorial } from '@/features/auth/lib/profilesApi'
-import type { Project } from '@/features/auth/types/database'
-import ProjectCard from '@/features/projects/components/ProjectCard'
-import { deleteProject, getProjects } from '@/features/projects/lib/projectsApi'
-import { Icon } from '@/shared/components/ui/Icon'
-import { createClient } from '@/shared/lib/supabase/client'
-import { useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import { useTutorial } from '@/contexts/TutorialContext'
-import OrganizationSettings from '@/features/organization/components/OrganizationSettings'
-import TeamManagement from '@/features/organization/components/TeamManagement'
-import type { UserRole } from '@/features/organization/types/organization'
-import styles from './ProfilePanel.module.css'
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import {
+  getProfile,
+  setDefaultLocation,
+  updateProfile,
+  setShowTutorial,
+} from "@/features/auth/lib/profilesApi";
+import type { Project } from "@/features/auth/types/database";
+import ProjectCard from "@/features/projects/components/ProjectCard";
+import {
+  deleteProject,
+  getProjects,
+} from "@/features/projects/lib/projectsApi";
+import { Icon } from "@/shared/components/ui/Icon";
+import { createClient } from "@/shared/lib/supabase/client";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { useTutorial } from "@/contexts/TutorialContext";
+import OrganizationSettings from "@/features/organization/components/OrganizationSettings";
+import TeamManagement from "@/features/organization/components/TeamManagement";
+import type { UserRole } from "@/features/organization/types/organization";
+import styles from "./ProfilePanel.module.css";
 
 declare global {
   interface Window {
-    google: typeof google
+    google: typeof google;
   }
 }
 
 interface ProfilePanelProps {
-  isOpen: boolean
-  onClose: () => void
-  onLoadProject?: (projectId: string) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onLoadProject?: (projectId: string) => void;
 }
 
-type AuthView = 'login' | 'signup'
-type AuthenticatedView = 'profile' | 'projects' | 'organization'
+type AuthView = "login" | "signup";
+type AuthenticatedView = "profile" | "projects" | "organization";
 
-export default function ProfilePanel({ isOpen, onClose, onLoadProject }: ProfilePanelProps) {
-  const { user, signOut } = useAuth()
-  const { startTutorial } = useTutorial()
+export default function ProfilePanel({
+  isOpen,
+  onClose,
+  onLoadProject,
+}: ProfilePanelProps) {
+  const { user, signOut } = useAuth();
+  const { startTutorial } = useTutorial();
 
   // Auth state
-  const [authView, setAuthView] = useState<AuthView>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [authLoading, setAuthLoading] = useState(false)
-  const [authError, setAuthError] = useState<string | null>(null)
+  const [authView, setAuthView] = useState<AuthView>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Authenticated view state
-  const [activeTab, setActiveTab] = useState<AuthenticatedView>('profile')
+  const [activeTab, setActiveTab] = useState<AuthenticatedView>("profile");
 
   // Profile state
-  const [displayName, setDisplayName] = useState('')
-  const [defaultLat, setDefaultLat] = useState('')
-  const [defaultLng, setDefaultLng] = useState('')
-  const [showTutorialEnabled, setShowTutorialEnabled] = useState(false)
-  const [userRole, setUserRole] = useState<UserRole>('designer')
-  const [organizationSubTab, setOrganizationSubTab] = useState<'settings' | 'team'>('settings')
-  const [locationSearch, setLocationSearch] = useState('')
-  const [locationSuggestions, setLocationSuggestions] = useState<google.maps.places.PlacePrediction[]>([])
-  const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0, width: 0 })
-  const [profileLoading, setProfileLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [displayName, setDisplayName] = useState("");
+  const [defaultLat, setDefaultLat] = useState("");
+  const [defaultLng, setDefaultLng] = useState("");
+  const [showTutorialEnabled, setShowTutorialEnabled] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole>("designer");
+  const [organizationSubTab, setOrganizationSubTab] = useState<
+    "settings" | "team"
+  >("settings");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<
+    google.maps.places.PlacePrediction[]
+  >([]);
+  const [suggestionPosition, setSuggestionPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   // Refs
-  const locationInputRef = useRef<HTMLInputElement>(null)
-  const skipSuggestionsRef = useRef(false)
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const skipSuggestionsRef = useRef(false);
 
   // Projects state
-  const [projects, setProjects] = useState<Project[]>([])
-  const [projectsLoading, setProjectsLoading] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && user) {
-      loadProfile()
-      if (activeTab === 'projects') {
-        loadProjects()
+      loadProfile();
+      if (activeTab === "projects") {
+        loadProjects();
       }
     }
-  }, [isOpen, user, activeTab])
+  }, [isOpen, user, activeTab]);
 
   const loadProfile = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setProfileLoading(true)
-    setError(null)
+    setProfileLoading(true);
+    setError(null);
 
     try {
-      const profile = await getProfile(user.id)
+      const profile = await getProfile(user.id);
       if (profile) {
-        setDisplayName(profile.display_name || '')
-        const lat = profile.default_latitude
-        const lng = profile.default_longitude
-        setDefaultLat(lat?.toString() || '')
-        setDefaultLng(lng?.toString() || '')
-        setShowTutorialEnabled(profile.show_tutorial)
+        setDisplayName(profile.display_name || "");
+        const lat = profile.default_latitude;
+        const lng = profile.default_longitude;
+        setDefaultLat(lat?.toString() || "");
+        setDefaultLng(lng?.toString() || "");
+        setShowTutorialEnabled(profile.show_tutorial);
 
         // Get user role from profile
-        const supabase = createClient()
+        const supabase = createClient();
         const { data } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
         if (data?.role) {
-          setUserRole(data.role as UserRole)
+          setUserRole(data.role as UserRole);
         }
 
         // If we have coordinates, reverse geocode to get location name
         if (lat && lng && window.google?.maps) {
-          reverseGeocodeLocation(lat, lng)
+          reverseGeocodeLocation(lat, lng);
         }
       }
     } catch (err: any) {
-      console.error('Error loading profile:', err)
-      setError('Failed to load profile')
+      console.error("Error loading profile:", err);
+      setError("Failed to load profile");
     } finally {
-      setProfileLoading(false)
+      setProfileLoading(false);
     }
-  }
+  };
 
   const reverseGeocodeLocation = async (lat: number, lng: number) => {
     try {
-      const geocoder = new window.google.maps.Geocoder()
+      const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode(
         { location: { lat, lng } },
         (
-          results: google.maps.GeocoderResult[] | null, 
-          status: google.maps.GeocoderStatus
+          results: google.maps.GeocoderResult[] | null,
+          status: google.maps.GeocoderStatus,
         ) => {
-          if (status === 'OK' && results && results[0]) {
-            skipSuggestionsRef.current = true
-            setLocationSearch(results[0].formatted_address)
+          if (status === "OK" && results && results[0]) {
+            skipSuggestionsRef.current = true;
+            setLocationSearch(results[0].formatted_address);
           }
-        }
-      )
+        },
+      );
     } catch (err) {
-      console.error('Error reverse geocoding:', err)
+      console.error("Error reverse geocoding:", err);
     }
-  }
+  };
 
   const loadProjects = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setProjectsLoading(true)
+    setProjectsLoading(true);
 
     try {
-      const data = await getProjects(user.id)
-      setProjects(data.map(p => ({
-        id: p.id,
-        userId: p.user_id,
-        projectName: p.project_name,
-        status: p.status,
-        mapCenterLat: p.map_center_lat,
-        mapCenterLng: p.map_center_lng,
-        mapZoom: p.map_zoom,
-        annualFluxUrl: p.annual_flux_url,
-        organizationId: p.organization_id,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
-      })))
+      const data = await getProjects(user.id);
+      setProjects(
+        data.map((p) => ({
+          id: p.id,
+          userId: p.user_id,
+          projectName: p.project_name,
+          status: p.status,
+          mapCenterLat: p.map_center_lat,
+          mapCenterLng: p.map_center_lng,
+          mapZoom: p.map_zoom,
+          annualFluxUrl: p.annual_flux_url,
+          organizationId: p.organization_id,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at,
+        })),
+      );
     } catch (err: any) {
-      console.error('Error loading projects:', err)
+      console.error("Error loading projects:", err);
     } finally {
-      setProjectsLoading(false)
+      setProjectsLoading(false);
     }
-  }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAuthLoading(true)
-    setAuthError(null)
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
 
     try {
-      const supabase = createClient()
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
       // Reset form
-      setEmail('')
-      setPassword('')
+      setEmail("");
+      setPassword("");
     } catch (err: any) {
-      setAuthError(err.message || 'Failed to sign in')
+      setAuthError(err.message || "Failed to sign in");
     } finally {
-      setAuthLoading(false)
+      setAuthLoading(false);
     }
-  }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (password !== confirmPassword) {
-      setAuthError('Passwords do not match')
-      return
+      setAuthError("Passwords do not match");
+      return;
     }
 
-    setAuthLoading(true)
-    setAuthError(null)
+    setAuthLoading(true);
+    setAuthError(null);
 
     try {
-      const supabase = createClient()
+      const supabase = createClient();
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-      })
+      });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setAuthError(null)
-      toast.success('Check your email for confirmation link!')
+      setAuthError(null);
+      toast.success("Check your email for confirmation link!");
 
       // Reset form
-      setEmail('')
-      setPassword('')
-      setConfirmPassword('')
-      setAuthView('login')
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setAuthView("login");
     } catch (err: any) {
-      setAuthError(err.message || 'Failed to sign up')
+      setAuthError(err.message || "Failed to sign up");
     } finally {
-      setAuthLoading(false)
+      setAuthLoading(false);
     }
-  }
+  };
 
   const handleTutorialToggle = async (enabled: boolean) => {
-    if (!user) return
+    if (!user) return;
 
     try {
-      await setShowTutorial(user.id, enabled)
-      setShowTutorialEnabled(enabled)
+      await setShowTutorial(user.id, enabled);
+      setShowTutorialEnabled(enabled);
 
       // If enabling, start the tutorial
       if (enabled) {
-        toast.success('Tutorial enabled! Starting tutorial...')
-        onClose()
+        toast.success("Tutorial enabled! Starting tutorial...");
+        onClose();
         setTimeout(() => {
-          startTutorial()
-        }, 500)
+          startTutorial();
+        }, 500);
       } else {
-        toast.success('Tutorial disabled')
+        toast.success("Tutorial disabled");
       }
     } catch (err: any) {
-      console.error('Error updating tutorial preference:', err)
-      setError('Failed to update tutorial preference')
+      console.error("Error updating tutorial preference:", err);
+      setError("Failed to update tutorial preference");
     }
-  }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!user) return
+    if (!user) return;
 
-    setSaving(true)
-    setError(null)
-    setSuccess(false)
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
 
     try {
       await updateProfile(user.id, {
         display_name: displayName.trim() || null,
-      })
+      });
 
       if (defaultLat && defaultLng) {
-        const lat = parseFloat(defaultLat)
-        const lng = parseFloat(defaultLng)
+        const lat = parseFloat(defaultLat);
+        const lng = parseFloat(defaultLng);
 
         if (isNaN(lat) || isNaN(lng)) {
-          throw new Error('Invalid coordinates')
+          throw new Error("Invalid coordinates");
         }
 
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-          throw new Error('Coordinates out of range')
+          throw new Error("Coordinates out of range");
         }
 
-        await setDefaultLocation(user.id, lat, lng)
+        await setDefaultLocation(user.id, lat, lng);
       }
 
-      setSuccess(true)
+      setSuccess(true);
       setTimeout(() => {
-        setSuccess(false)
-        onClose()
-      }, 1000)
+        setSuccess(false);
+        onClose();
+      }, 1000);
     } catch (err: any) {
-      console.error('Error saving profile:', err)
-      setError(err.message || 'Failed to save profile')
+      console.error("Error saving profile:", err);
+      setError(err.message || "Failed to save profile");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleSignOut = async () => {
-    await signOut()
-    setActiveTab('profile')
-    onClose()
-  }
+    await signOut();
+    setActiveTab("profile");
+    onClose();
+  };
 
   const handleUseCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const lat = position.coords.latitude
-          const lng = position.coords.longitude
-          setDefaultLat(lat.toFixed(6))
-          setDefaultLng(lng.toFixed(6))
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setDefaultLat(lat.toFixed(6));
+          setDefaultLng(lng.toFixed(6));
 
           if (window.google?.maps) {
-            reverseGeocodeLocation(lat, lng)
+            reverseGeocodeLocation(lat, lng);
           }
         },
         (error) => {
-          console.error('Error getting location:', error)
-          setError('Failed to get current location')
-        }
-      )
+          console.error("Error getting location:", error);
+          setError("Failed to get current location");
+        },
+      );
     } else {
-      setError('Geolocation is not supported by your browser')
+      setError("Geolocation is not supported by your browser");
     }
-  }
+  };
 
   useEffect(() => {
     const updatePosition = () => {
       if (locationInputRef.current && locationSuggestions.length > 0) {
-        const rect = locationInputRef.current.getBoundingClientRect()
-        const dropdownHeight = 240
-        const viewportHeight = window.innerHeight
-        const spaceBelow = viewportHeight - rect.bottom
-        const spaceAbove = rect.top
+        const rect = locationInputRef.current.getBoundingClientRect();
+        const dropdownHeight = 240;
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
 
-        const shouldFlipUp = spaceBelow < dropdownHeight + 16 && spaceAbove > spaceBelow
+        const shouldFlipUp =
+          spaceBelow < dropdownHeight + 16 && spaceAbove > spaceBelow;
 
         const position = {
           top: shouldFlipUp ? rect.top - dropdownHeight - 8 : rect.bottom + 8,
           left: rect.left,
-          width: rect.width
-        }
-        setSuggestionPosition(position)
+          width: rect.width,
+        };
+        setSuggestionPosition(position);
       }
-    }
+    };
 
-    updatePosition()
+    updatePosition();
 
     // Update position on scroll and resize
-    const scrollContainer = document.querySelector(`.${styles.form}`)
+    const scrollContainer = document.querySelector(`.${styles.form}`);
     if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', updatePosition)
-      window.addEventListener('resize', updatePosition)
+      scrollContainer.addEventListener("scroll", updatePosition);
+      window.addEventListener("resize", updatePosition);
       return () => {
-        scrollContainer.removeEventListener('scroll', updatePosition)
-        window.removeEventListener('resize', updatePosition)
-      }
+        scrollContainer.removeEventListener("scroll", updatePosition);
+        window.removeEventListener("resize", updatePosition);
+      };
     }
-  }, [locationSuggestions])
+  }, [locationSuggestions]);
 
   useEffect(() => {
     if (skipSuggestionsRef.current) {
-      skipSuggestionsRef.current = false
-      return
+      skipSuggestionsRef.current = false;
+      return;
     }
 
     if (locationSearch.length < 3) {
-      setLocationSuggestions([])
-      return
+      setLocationSuggestions([]);
+      return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        if (!window.google?.maps) return
+        if (!window.google?.maps) return;
 
-        const { AutocompleteSuggestion } = (await window.google.maps.importLibrary(
-          'places'
-        )) as google.maps.PlacesLibrary
+        const { AutocompleteSuggestion } =
+          (await window.google.maps.importLibrary(
+            "places",
+          )) as google.maps.PlacesLibrary;
 
         const { suggestions: fetchedSuggestions } =
           await AutocompleteSuggestion.fetchAutocompleteSuggestions({
             input: locationSearch,
-            includedPrimaryTypes: ['geocode'],
+            includedPrimaryTypes: ["geocode"],
             locationBias: {
               west: -180.0,
               south: -90.0,
               east: 180.0,
               north: 90.0,
             },
-          })
+          });
 
         const predictions = fetchedSuggestions
-          .map(suggestion => suggestion.placePrediction)
-          .filter((pred): pred is google.maps.places.PlacePrediction => pred !== null)
-          .slice(0, 5)
+          .map((suggestion) => suggestion.placePrediction)
+          .filter(
+            (pred): pred is google.maps.places.PlacePrediction => pred !== null,
+          )
+          .slice(0, 5);
 
-        setLocationSuggestions(predictions)
+        setLocationSuggestions(predictions);
       } catch (error) {
-        console.error('Failed to fetch location suggestions:', error)
+        console.error("Failed to fetch location suggestions:", error);
       }
-    }, 300)
+    }, 300);
 
-    return () => clearTimeout(timer)
-  }, [locationSearch])
+    return () => clearTimeout(timer);
+  }, [locationSearch]);
 
-  const handleLocationSelect = async (prediction: google.maps.places.PlacePrediction) => {
-    const description = prediction.text?.toString() || ''
-    setLocationSuggestions([])
+  const handleLocationSelect = async (
+    prediction: google.maps.places.PlacePrediction,
+  ) => {
+    const description = prediction.text?.toString() || "";
+    setLocationSuggestions([]);
 
     // Geocode the selected location
     if (window.google?.maps) {
       try {
-        const geocoder = new window.google.maps.Geocoder()
+        const geocoder = new window.google.maps.Geocoder();
         geocoder.geocode(
           { address: description },
           (
-            results: google.maps.GeocoderResult[] | null, 
-            status: google.maps.GeocoderStatus
+            results: google.maps.GeocoderResult[] | null,
+            status: google.maps.GeocoderStatus,
           ) => {
-            if (status === 'OK' && results && results[0]) {
-              const location = results[0].geometry.location
-              setDefaultLat(location.lat().toFixed(6))
-              setDefaultLng(location.lng().toFixed(6))
-              skipSuggestionsRef.current = true
-              setLocationSearch(description)
+            if (status === "OK" && results && results[0]) {
+              const location = results[0].geometry.location;
+              setDefaultLat(location.lat().toFixed(6));
+              setDefaultLng(location.lng().toFixed(6));
+              skipSuggestionsRef.current = true;
+              setLocationSearch(description);
             } else {
-              setError('Failed to find coordinates for this location')
-              skipSuggestionsRef.current = true
-              setLocationSearch(description)
+              setError("Failed to find coordinates for this location");
+              skipSuggestionsRef.current = true;
+              setLocationSearch(description);
             }
-          }
-        )
+          },
+        );
       } catch (err) {
-        console.error('Error geocoding location:', err)
-        setError('Failed to geocode location')
-        skipSuggestionsRef.current = true
-        setLocationSearch(description)
+        console.error("Error geocoding location:", err);
+        setError("Failed to geocode location");
+        skipSuggestionsRef.current = true;
+        setLocationSearch(description);
       }
     }
-  }
+  };
 
   const handleDeleteProject = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return
+    if (
+      !confirm(
+        "Are you sure you want to delete this project? This action cannot be undone.",
+      )
+    ) {
+      return;
     }
 
-    setDeletingId(projectId)
+    setDeletingId(projectId);
 
     try {
-      await deleteProject(projectId)
-      setProjects(projects.filter(p => p.id !== projectId))
-      toast.success('Project deleted successfully')
+      await deleteProject(projectId);
+      setProjects(projects.filter((p) => p.id !== projectId));
+      toast.success("Project deleted successfully");
     } catch (err: any) {
-      console.error('Error deleting project:', err)
-      toast.error('Failed to delete project: ' + (err.message || 'Unknown error'))
+      console.error("Error deleting project:", err);
+      toast.error(
+        "Failed to delete project: " + (err.message || "Unknown error"),
+      );
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
   const handleLoadProjectClick = (projectId: string) => {
-    onLoadProject?.(projectId)
-    onClose()
-  }
+    onLoadProject?.(projectId);
+    onClose();
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   // Not authenticated - show auth forms
   if (!user) {
@@ -470,14 +504,17 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           <div className={styles.header}>
             <h2>
               <Icon name="user-circle" />
-              {authView === 'login' ? 'Sign In' : 'Create Account'}
+              {authView === "login" ? "Sign In" : "Create Account"}
             </h2>
             <button className={styles.closeButton} onClick={onClose}>
               <Icon name="times" />
             </button>
           </div>
 
-          <form onSubmit={authView === 'login' ? handleLogin : handleSignUp} className={styles.authForm}>
+          <form
+            onSubmit={authView === "login" ? handleLogin : handleSignUp}
+            className={styles.authForm}
+          >
             {authError && (
               <div className={styles.error}>
                 <Icon name="warning" />
@@ -510,11 +547,13 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                 required
                 disabled={authLoading}
                 minLength={6}
-                autoComplete={authView === 'login' ? 'current-password' : 'new-password'}
+                autoComplete={
+                  authView === "login" ? "current-password" : "new-password"
+                }
               />
             </div>
 
-            {authView === 'signup' && (
+            {authView === "signup" && (
               <div className={styles.field}>
                 <label htmlFor="confirmPassword">Confirm Password</label>
                 <input
@@ -539,22 +578,26 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
               {authLoading ? (
                 <>
                   <div className={styles.smallSpinner}></div>
-                  {authView === 'login' ? 'Signing in...' : 'Creating account...'}
+                  {authView === "login"
+                    ? "Signing in..."
+                    : "Creating account..."}
                 </>
+              ) : authView === "login" ? (
+                "Sign In"
               ) : (
-                authView === 'login' ? 'Sign In' : 'Create Account'
+                "Create Account"
               )}
             </button>
 
             <div className={styles.switchView}>
-              {authView === 'login' ? (
+              {authView === "login" ? (
                 <>
-                  Don't have an account?{' '}
+                  Don't have an account?{" "}
                   <button
                     type="button"
                     onClick={() => {
-                      setAuthView('signup')
-                      setAuthError(null)
+                      setAuthView("signup");
+                      setAuthError(null);
                     }}
                     className={styles.linkButton}
                   >
@@ -563,12 +606,12 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                 </>
               ) : (
                 <>
-                  Already have an account?{' '}
+                  Already have an account?{" "}
                   <button
                     type="button"
                     onClick={() => {
-                      setAuthView('login')
-                      setAuthError(null)
+                      setAuthView("login");
+                      setAuthError(null);
                     }}
                     className={styles.linkButton}
                   >
@@ -580,7 +623,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           </form>
         </div>
       </div>
-    )
+    );
   }
 
   // Authenticated - show profile/projects
@@ -600,22 +643,28 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         {/* Tabs */}
         <div className={styles.tabs}>
           <button
-            className={`${styles.tab} ${activeTab === 'profile' ? styles.active : ''}`}
-            onClick={() => setActiveTab('profile')}
+            className={`${styles.tab} ${
+              activeTab === "profile" ? styles.active : ""
+            }`}
+            onClick={() => setActiveTab("profile")}
           >
             <Icon name="user" />
             <span>Profile</span>
           </button>
           <button
-            className={`${styles.tab} ${activeTab === 'projects' ? styles.active : ''}`}
-            onClick={() => setActiveTab('projects')}
+            className={`${styles.tab} ${
+              activeTab === "projects" ? styles.active : ""
+            }`}
+            onClick={() => setActiveTab("projects")}
           >
             <Icon name="folder" />
             <span>Projects</span>
           </button>
           <button
-            className={`${styles.tab} ${activeTab === 'organization' ? styles.active : ''}`}
-            onClick={() => setActiveTab('organization')}
+            className={`${styles.tab} ${
+              activeTab === "organization" ? styles.active : ""
+            }`}
+            onClick={() => setActiveTab("organization")}
           >
             <Icon name="building" />
             <span>Organization</span>
@@ -623,8 +672,8 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         </div>
 
         {/* Profile Tab */}
-        {activeTab === 'profile' && (
-          profileLoading ? (
+        {activeTab === "profile" &&
+          (profileLoading ? (
             <div className={styles.loading}>
               <div className={styles.spinner}></div>
               <p>Loading profile...</p>
@@ -653,7 +702,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                   <input
                     id="email"
                     type="email"
-                    value={user?.email || ''}
+                    value={user?.email || ""}
                     disabled
                     className={styles.disabled}
                   />
@@ -695,7 +744,9 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                     />
                   </div>
                   {defaultLat && defaultLng && (
-                    <small>Coordinates: {defaultLat}, {defaultLng}</small>
+                    <small>
+                      Coordinates: {defaultLat}, {defaultLng}
+                    </small>
                   )}
                 </div>
 
@@ -755,16 +806,15 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
                     className={styles.saveButton}
                     disabled={saving}
                   >
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </div>
             </form>
-          )
-        )}
+          ))}
 
         {/* Projects Tab */}
-        {activeTab === 'projects' && (
+        {activeTab === "projects" && (
           <div className={styles.projectsTab}>
             {projectsLoading ? (
               <div className={styles.loading}>
@@ -775,7 +825,10 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
               <div className={styles.empty}>
                 <Icon name="folder-open" />
                 <h3>No projects yet</h3>
-                <p>Create your first solar panel design and save it to see it here.</p>
+                <p>
+                  Create your first solar panel design and save it to see it
+                  here.
+                </p>
               </div>
             ) : (
               <div className={styles.projectsGrid}>
@@ -794,24 +847,28 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         )}
 
         {/* Organization Tab */}
-        {activeTab === 'organization' && user && (
+        {activeTab === "organization" && user && (
           <div className={styles.organizationTab}>
             <div className={styles.orgSubTabs}>
               <button
-                className={`${styles.subTab} ${organizationSubTab === 'settings' ? styles.active : ''}`}
-                onClick={() => setOrganizationSubTab('settings')}
+                className={`${styles.subTab} ${
+                  organizationSubTab === "settings" ? styles.active : ""
+                }`}
+                onClick={() => setOrganizationSubTab("settings")}
               >
                 Settings
               </button>
               <button
-                className={`${styles.subTab} ${organizationSubTab === 'team' ? styles.active : ''}`}
-                onClick={() => setOrganizationSubTab('team')}
+                className={`${styles.subTab} ${
+                  organizationSubTab === "team" ? styles.active : ""
+                }`}
+                onClick={() => setOrganizationSubTab("team")}
               >
                 Team
               </button>
             </div>
 
-            {organizationSubTab === 'settings' ? (
+            {organizationSubTab === "settings" ? (
               <OrganizationSettings userId={user.id} />
             ) : (
               <TeamManagement userId={user.id} userRole={userRole} />
@@ -827,7 +884,7 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
           style={{
             top: `${suggestionPosition.top}px`,
             left: `${suggestionPosition.left}px`,
-            width: `${suggestionPosition.width}px`
+            width: `${suggestionPosition.width}px`,
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -845,5 +902,5 @@ export default function ProfilePanel({ isOpen, onClose, onLoadProject }: Profile
         </div>
       )}
     </div>
-  )
+  );
 }
