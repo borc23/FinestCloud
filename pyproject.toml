@@ -1,0 +1,78 @@
+[project]
+name = "finestcloud"
+version = "2.0.0"
+description = "Solar panel detection and configuration API"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # FastAPI core
+    "fastapi==0.104.1",
+    "uvicorn[standard]==0.25.0",
+    "pydantic==2.5.0",
+    "pydantic-settings==2.1.0",
+    # HTTP clients
+    "httpx==0.25.2",
+    "requests==2.32.3",
+    # Caching
+    "cachelib==0.13.0",
+    # Machine learning & computer vision
+    "torch==2.8.0",
+    "torchvision==0.23.0",
+    "ultralytics==8.3.208",
+    "numpy<2.0",
+    "opencv-python==4.11.0.86",
+    "pillow==11.0.0",
+    "rdp==0.8",
+    "huggingface-hub",
+    # Data processing
+    "pandas==2.2.3",
+    "scipy==1.15.2",
+    "matplotlib==3.10.1",
+    "seaborn==0.13.2",
+    "networkx==3.4.2",
+    # Geospatial & utilities
+    "rtree==1.4.1",
+    "shapely",
+    "psutil==7.0.0",
+    "tqdm==4.67.1",
+    # Configuration & environment
+    "python-dotenv==1.1.0",
+    "pyyaml==6.0.2",
+    # AWS
+    "boto3==1.38.9",
+]
+
+[project.scripts]
+finestcloud = "finestcloud.main:main"
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13"]
+build-backend = "uv_build"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[dependency-groups]
+dev = [
+    "notebook>=7.5.5",
+    "pre-commit>=4.3.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Body",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Path",
+    "fastapi.Header",
+]
