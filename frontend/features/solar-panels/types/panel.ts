@@ -46,7 +46,7 @@ export interface PanelGenerationResponse {
   module: string;
 }
 
-export interface SolarPanelStats {
+interface SolarPanelStats {
   yearlyEnergyDcKwh?: number;
 }
 
@@ -70,16 +70,6 @@ export interface AngleConfirmData {
   _requestBody?: unknown;
 }
 
-export interface RoofPolygonRequest {
-  coords: Coordinate[];
-  pitch: number;
-  azimuth: number;
-}
-
-export interface ObjectPolygonRequest {
-  coords: Coordinate[];
-}
-
 export interface PanelGenerationRequest {
   roofPolygons: Array<{ coords: Coordinate[] }>;
   objectPolygons?: Array<{ coords: Coordinate[] }>;
@@ -99,9 +89,4 @@ export interface PanelGenerationRequest {
   max_panels?: number | null;
   edgePadding?: number;
   panelOrientation?: string;
-}
-
-export interface SystemResults {
-  systemSize: number;
-  annualProduction?: number;
 }

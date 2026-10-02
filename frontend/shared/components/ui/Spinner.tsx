@@ -1,7 +1,7 @@
 "use client";
 
-export type SpinnerSize = "sm" | "md" | "lg";
-export type SpinnerVariant = "primary" | "white" | "dark";
+type SpinnerSize = "sm" | "md" | "lg";
+type SpinnerVariant = "primary" | "white" | "dark";
 
 interface SpinnerProps {
   size?: SpinnerSize;

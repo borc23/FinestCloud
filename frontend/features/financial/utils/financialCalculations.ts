@@ -246,7 +246,7 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
  * Calculate Internal Rate of Return (IRR) using Newton-Raphson method
  * IRR is the discount rate that makes NPV = 0
  */
-export function calculateIRR(
+function calculateIRR(
   initialInvestment: number,
   yearlyBreakdown: YearlyBreakdown[],
 ): number {
@@ -320,31 +320,4 @@ export function estimateSystemCost(systemSizeKw: number): number {
   }
 
   return systemSizeKw * 1000 * pricePerWatt;
-}
-
-/**
- * Get default utility rates by German state (Bundesland)
- */
-export function getDefaultUtilityRate(state?: string): number {
-  // Average rates by Bundesland (€/kWh) - 2024 estimates
-  const stateRates: Record<string, number> = {
-    BW: 0.38, // Baden-Württemberg
-    BY: 0.37, // Bayern
-    BE: 0.35, // Berlin
-    BB: 0.36, // Brandenburg
-    HB: 0.37, // Bremen
-    HH: 0.35, // Hamburg
-    HE: 0.38, // Hessen
-    MV: 0.36, // Mecklenburg-Vorpommern
-    NI: 0.37, // Niedersachsen
-    NW: 0.37, // Nordrhein-Westfalen
-    RP: 0.38, // Rheinland-Pfalz
-    SL: 0.39, // Saarland
-    SN: 0.36, // Sachsen
-    ST: 0.36, // Sachsen-Anhalt
-    SH: 0.36, // Schleswig-Holstein
-    TH: 0.37, // Thüringen
-  };
-
-  return stateRates[state?.toUpperCase() || ""] || 0.37; // German average ~37ct/kWh
 }

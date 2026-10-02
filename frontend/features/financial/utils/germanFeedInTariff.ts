@@ -8,7 +8,7 @@
  * German Feed-In Tariff Tiers for Partial Feed-In (Überschusseinspeisung)
  * Updated for November 2025 with compensation bonus for negative price hours
  */
-export const GERMAN_FEED_IN_TIERS_2025 = {
+const GERMAN_FEED_IN_TIERS_2025 = {
   // Base rates (ct/kWh)
   tier1_0_10kW: 7.94, // First 10 kWp
   tier2_10_40kW: 6.88, // 10-40 kWp portion
@@ -159,44 +159,4 @@ export function getFeedInTariffBreakdown(
  */
 export function formatFeedInTariff(tariffEuroPerKwh: number): string {
   return `${(tariffEuroPerKwh * 100).toFixed(2)} ct/kWh`;
-}
-
-/**
- * Get explanation text for feed-in tariff
- */
-export function getFeedInTariffExplanation(
-  systemSizeKw: number,
-  includeCompensationBonus: boolean = true,
-): string {
-  const weightedRate = calculateGermanFeedInTariff(
-    systemSizeKw,
-    includeCompensationBonus,
-    false,
-  );
-  const breakdown = getFeedInTariffBreakdown(
-    systemSizeKw,
-    includeCompensationBonus,
-    false,
-  );
-
-  let explanation = `Your ${systemSizeKw.toFixed(
-    1,
-  )} kW system receives a weighted average feed-in tariff of ${formatFeedInTariff(
-    weightedRate,
-  )} under Germany's EEG 2025 regulations.\n\n`;
-
-  explanation += `Rate breakdown:\n`;
-  breakdown.forEach((tier) => {
-    explanation += `• ${tier.tier}: ${tier.capacityKw.toFixed(
-      2,
-    )} kW @ ${tier.rateCtPerKwh.toFixed(2)} ct/kWh\n`;
-  });
-
-  if (includeCompensationBonus) {
-    explanation += `\n✓ Includes 0.6 ct/kWh bonus to compensate for exclusion during negative-price hours (2025 regulation)`;
-  }
-
-  explanation += `\n\nThis is for partial feed-in (Überschusseinspeisung) where you self-consume first and export excess energy to the grid. The feed-in tariff is guaranteed for 20 years from installation.`;
-
-  return explanation;
 }

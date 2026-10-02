@@ -10,23 +10,6 @@ export interface ValidationResult {
   criticalWarnings?: string[];
 }
 
-export interface FinancialInputValidation {
-  systemSize?: string;
-  annualProduction?: string;
-  costPerKwh?: string;
-  avgMonthlyBill?: string;
-  escalationRate?: string;
-  systemCost?: string;
-  feedInTariff?: string;
-  selfConsumptionRate?: string;
-  stateGrant?: string;
-  municipalGrant?: string;
-  discountRate?: string;
-  downPayment?: string;
-  loanTerm?: string;
-  interestRate?: string;
-}
-
 /**
  * Validation constraints for financial inputs
  */

@@ -67,17 +67,6 @@
   animation: processingFloat 2s ease-in-out infinite;
 }
 
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top: 2px solid rgba(0, 122, 255, 0.8);
-  border-right: 2px solid rgba(0, 122, 255, 0.6);
-  border-radius: var(--radius-full);
-  animation: liquidSpin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-  filter: drop-shadow(0 2px 8px rgba(0, 122, 255, 0.3));
-}
-
 .actionContainer {
   position: absolute;
   top: calc(100% + 20px);
@@ -100,14 +89,6 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
-}
-
-/* iOS-style haptic feedback simulation */
-@media (prefers-reduced-motion: no-preference) {
-  .detectButton:active:not(:disabled),
-  .cancelButton:active:not(:disabled) {
-    animation: hapticTap 0.1s ease-out;
-  }
 }
 
 /* Responsive adjustments */

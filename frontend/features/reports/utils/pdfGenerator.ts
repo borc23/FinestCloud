@@ -5,10 +5,7 @@
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import type {
-  ReportData,
-  ReportOptions,
-} from "@/features/reports/types/report";
+import type { ReportData } from "@/features/reports/types/report";
 import { hexToRgb } from "@/shared/utils/colorUtils";
 
 // Extend jsPDF type to include autoTable
@@ -23,23 +20,7 @@ declare module "jspdf" {
 /**
  * Generate a professional PDF report for solar installation
  */
-export function generateSolarReport(
-  data: ReportData,
-  options: ReportOptions = {},
-): jsPDF {
-  const {
-    includeCustomerInfo = true,
-    includeSiteInfo = true,
-    includeEnergyProduction = true,
-    includeFinancials = true,
-    includeMonthlyBreakdown = false,
-    includeSystemSpecs = true,
-    includeEnvironmental = true,
-    includeElectrical = true,
-    includeMonitoring = true,
-    language = "en",
-  } = options;
-
+export function generateSolarReport(data: ReportData): jsPDF {
   const doc = new jsPDF();
   let yPos = 20;
 
@@ -54,14 +35,8 @@ export function generateSolarReport(
   yPos = addHeader(doc, data, yPos, primaryColor);
   yPos += 10;
 
-  // Customer & Site Information
-  if (includeCustomerInfo && data.customer) {
-    yPos = checkPageBreak(doc, yPos, 60);
-    yPos = addCustomerInfo(doc, data, yPos, primaryColor, textColor, lightGray);
-    yPos += 10;
-  }
-
-  if (includeSiteInfo && data.site) {
+  // Site Information
+  if (data.site) {
     yPos = checkPageBreak(doc, yPos, 50);
     yPos = addSiteInfo(doc, data, yPos, primaryColor, textColor, lightGray);
     yPos += 10;
@@ -73,21 +48,19 @@ export function generateSolarReport(
   yPos += 10;
 
   // System Specifications
-  if (includeSystemSpecs) {
-    yPos = checkPageBreak(doc, yPos, 60);
-    yPos = addSystemSpecifications(
-      doc,
-      data,
-      yPos,
-      primaryColor,
-      textColor,
-      lightGray,
-    );
-    yPos += 10;
-  }
+  yPos = checkPageBreak(doc, yPos, 60);
+  yPos = addSystemSpecifications(
+    doc,
+    data,
+    yPos,
+    primaryColor,
+    textColor,
+    lightGray,
+  );
+  yPos += 10;
 
   // Energy Production Estimate
-  if (includeEnergyProduction && data.energyProduction) {
+  if (data.energyProduction) {
     yPos = checkPageBreak(doc, yPos, 80);
     yPos = addEnergyProduction(
       doc,
@@ -101,63 +74,36 @@ export function generateSolarReport(
   }
 
   // Financial Analysis
-  if (includeFinancials) {
-    yPos = checkPageBreak(doc, yPos, 60);
-    yPos = addFinancialAnalysis(
-      doc,
-      data,
-      yPos,
-      primaryColor,
-      textColor,
-      lightGray,
-    );
-    yPos += 10;
-  }
+  yPos = checkPageBreak(doc, yPos, 60);
+  yPos = addFinancialAnalysis(
+    doc,
+    data,
+    yPos,
+    primaryColor,
+    textColor,
+    lightGray,
+  );
+  yPos += 10;
 
   // Cost Breakdown
-  if (includeFinancials) {
-    yPos = checkPageBreak(doc, yPos, 60);
-    yPos = addCostBreakdown(
-      doc,
-      data,
-      yPos,
-      primaryColor,
-      textColor,
-      lightGray,
-    );
-    yPos += 10;
-  }
+  yPos = checkPageBreak(doc, yPos, 60);
+  yPos = addCostBreakdown(doc, data, yPos, primaryColor, textColor, lightGray);
+  yPos += 10;
 
   // Environmental Impact
-  if (includeEnvironmental) {
-    yPos = checkPageBreak(doc, yPos, 50);
-    yPos = addEnvironmentalImpact(
-      doc,
-      data,
-      yPos,
-      primaryColor,
-      textColor,
-      lightGray,
-    );
-    yPos += 10;
-  }
-
-  // Electrical Design Summary
-  if (includeElectrical && data.electricalDesign) {
-    yPos = checkPageBreak(doc, yPos, 60);
-    yPos = addElectricalDesign(
-      doc,
-      data,
-      yPos,
-      primaryColor,
-      textColor,
-      lightGray,
-    );
-    yPos += 10;
-  }
+  yPos = checkPageBreak(doc, yPos, 50);
+  yPos = addEnvironmentalImpact(
+    doc,
+    data,
+    yPos,
+    primaryColor,
+    textColor,
+    lightGray,
+  );
+  yPos += 10;
 
   // Monitoring & Maintenance
-  if (includeMonitoring && data.monitoring) {
+  if (data.monitoring) {
     yPos = checkPageBreak(doc, yPos, 60);
     yPos = addMonitoringMaintenance(
       doc,
@@ -638,64 +584,6 @@ function addEnvironmentalImpact(
 }
 
 /**
- * Add customer information section
- */
-function addCustomerInfo(
-  doc: jsPDF,
-  data: ReportData,
-  yPos: number,
-  primaryColor: [number, number, number],
-  textColor: [number, number, number],
-  lightGray: [number, number, number],
-): number {
-  doc.setFontSize(14);
-  doc.setTextColor(...primaryColor);
-  doc.setFont("helvetica", "bold");
-  doc.text("Customer Information", 20, yPos);
-
-  yPos += 5;
-
-  const customer = data.customer!;
-  const customerInfo = [
-    ["Customer Name", customer.name],
-    ["Address", customer.address],
-  ];
-
-  if (customer.email) {
-    customerInfo.push(["Email", customer.email]);
-  }
-  if (customer.phone) {
-    customerInfo.push(["Phone", customer.phone]);
-  }
-  if (customer.propertyType) {
-    customerInfo.push([
-      "Property Type",
-      customer.propertyType.charAt(0).toUpperCase() +
-        customer.propertyType.slice(1),
-    ]);
-  }
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [],
-    body: customerInfo,
-    theme: "plain",
-    styles: {
-      fontSize: 10,
-      cellPadding: 3,
-      textColor: textColor,
-    },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 60 },
-      1: { cellWidth: "auto" },
-    },
-    margin: { left: 20, right: 20 },
-  });
-
-  return doc.lastAutoTable.finalY + 5;
-}
-
-/**
  * Add site information section
  */
 function addSiteInfo(
@@ -720,21 +608,6 @@ function addSiteInfo(
     siteInfo.push([
       "GPS Coordinates",
       `${site.location.lat.toFixed(6)}, ${site.location.lng.toFixed(6)}`,
-    ]);
-  }
-  if (site.roofType) {
-    siteInfo.push(["Roof Type", site.roofType]);
-  }
-  if (site.roofMaterial) {
-    siteInfo.push(["Roof Material", site.roofMaterial]);
-  }
-  if (site.roofAge) {
-    siteInfo.push(["Roof Age", `${site.roofAge} years`]);
-  }
-  if (site.roofCondition) {
-    siteInfo.push([
-      "Roof Condition",
-      site.roofCondition.charAt(0).toUpperCase() + site.roofCondition.slice(1),
     ]);
   }
 
@@ -868,92 +741,6 @@ function addEnergyProduction(
     });
 
     yPos = doc.lastAutoTable.finalY;
-  }
-
-  return yPos + 5;
-}
-
-/**
- * Add electrical design summary section
- */
-function addElectricalDesign(
-  doc: jsPDF,
-  data: ReportData,
-  yPos: number,
-  primaryColor: [number, number, number],
-  textColor: [number, number, number],
-  lightGray: [number, number, number],
-): number {
-  doc.setFontSize(14);
-  doc.setTextColor(...primaryColor);
-  doc.setFont("helvetica", "bold");
-  doc.text("Electrical Design Summary", 20, yPos);
-
-  yPos += 5;
-
-  const electrical = data.electricalDesign!;
-  const stringConfig = electrical.stringConfig;
-  const wireSizing = electrical.wiring;
-
-  const electricalInfo = [
-    ["String Configuration", ""],
-    ["  Panels per String", stringConfig.panelsPerString.toString()],
-    ["  Number of Strings", stringConfig.numberOfStrings.toString()],
-    ["  String Voltage (Voc)", `${stringConfig.stringVoltageVoc.toFixed(1)} V`],
-    ["  String Voltage (Vmp)", `${stringConfig.stringVoltageVmp.toFixed(1)} V`],
-    ["  String Current", `${stringConfig.stringCurrent.toFixed(1)} A`],
-    ["", ""],
-    ["Wire Sizing", ""],
-    ["  DC Cable Size", `${wireSizing.dcCableSize} mm²`],
-    ["  AC Cable Size", `${wireSizing.acCableSize} mm²`],
-    ["  DC Voltage Drop", `${wireSizing.dcVoltageDrop.toFixed(2)}%`],
-    ["  AC Voltage Drop", `${wireSizing.acVoltageDrop.toFixed(2)}%`],
-    ["", ""],
-    ["Protection", ""],
-    ["  DC Breaker", `${electrical.breakers.dcBreakerRating}A`],
-    ["  AC Breaker", `${electrical.breakers.acBreakerRating}A`],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [],
-    body: electricalInfo,
-    theme: "plain",
-    styles: {
-      fontSize: 10,
-      cellPadding: 3,
-      textColor: textColor,
-    },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 80 },
-      1: { cellWidth: "auto", halign: "right" },
-    },
-    margin: { left: 20, right: 20 },
-  });
-
-  yPos = doc.lastAutoTable.finalY + 5;
-
-  // Safety note
-  if (data.electricalSafety) {
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont("helvetica", "italic");
-    doc.text(
-      `Grounding: ${data.electricalSafety.grounding} | Surge Protection: ${
-        data.electricalSafety.surgeProtection ? "Yes" : "No"
-      }`,
-      20,
-      yPos,
-    );
-    yPos += 4;
-    if (data.electricalSafety.localCompliance.length > 0) {
-      doc.text(
-        `Compliance: ${data.electricalSafety.localCompliance.join(", ")}`,
-        20,
-        yPos,
-      );
-      yPos += 4;
-    }
   }
 
   return yPos + 5;

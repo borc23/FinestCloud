@@ -251,20 +251,6 @@ export interface Database {
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
-// Typed helper interfaces for application use
-export interface Profile {
-  id: string;
-  email: string;
-  displayName: string | null;
-  defaultLatitude: number | null;
-  defaultLongitude: number | null;
-  showTutorial: boolean;
-  organizationId: string | null;
-  role: "owner" | "admin" | "designer" | "viewer";
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface Project {
   id: string;
   userId: string;

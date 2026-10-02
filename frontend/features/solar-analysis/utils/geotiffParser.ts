@@ -3,7 +3,7 @@
  * Parses and decodes GeoTIFF files from Google Solar API data layers
  */
 
-import { fromUrl, fromArrayBuffer, GeoTIFF } from "geotiff";
+import { fromArrayBuffer, GeoTIFF } from "geotiff";
 import proj4 from "proj4";
 
 export interface GeoTIFFData {
@@ -18,73 +18,6 @@ export interface GeoTIFFData {
   };
   min: number;
   max: number;
-}
-
-export interface GeoTIFFMetadata {
-  width: number;
-  height: number;
-  bounds: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
-  };
-  resolution: number;
-}
-
-/**
- * Fetch and parse a GeoTIFF file from a URL
- */
-export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
-  try {
-    const tiff: GeoTIFF = await fromUrl(url);
-    const image = await tiff.getImage();
-
-    // Get image dimensions
-    const width = image.getWidth();
-    const height = image.getHeight();
-
-    // Read raster data
-    const rasters = await image.readRasters();
-
-    // Get bounding box
-    const bbox = image.getBoundingBox();
-    const bounds = {
-      west: bbox[0],
-      south: bbox[1],
-      east: bbox[2],
-      north: bbox[3],
-    };
-
-    // Calculate min/max values for normalization
-    const data = rasters[0] as Float32Array;
-    let min = Infinity;
-    let max = -Infinity;
-
-    for (let i = 0; i < data.length; i++) {
-      const value = data[i];
-      if (!isNaN(value)) {
-        min = Math.min(min, value);
-        max = Math.max(max, value);
-      }
-    }
-
-    return {
-      width,
-      height,
-      rasters: [data],
-      bounds,
-      min: min === Infinity ? 0 : min,
-      max: max === -Infinity ? 0 : max,
-    };
-  } catch (error) {
-    console.error("Error parsing GeoTIFF:", error);
-    throw new Error(
-      `Failed to parse GeoTIFF: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`,
-    );
-  }
 }
 
 /**
@@ -132,13 +65,6 @@ export async function parseGeoTIFFFromBuffer(
       try {
         const fromProj = `EPSG:${sourceEpsg}`;
         const toProj = "EPSG:4326"; // WGS84 lat/lng for Google Maps
-
-        const centerX = (bbox[0] + bbox[2]) / 2;
-        const centerY = (bbox[1] + bbox[3]) / 2;
-        const [centerLng, centerLat] = proj4(fromProj, toProj, [
-          centerX,
-          centerY,
-        ]);
 
         const extentX = bbox[2] - bbox[0]; // meters
         const extentY = bbox[3] - bbox[1]; // meters
@@ -228,46 +154,6 @@ export async function parseGeoTIFFFromBuffer(
 }
 
 /**
- * Get metadata from GeoTIFF without loading full raster data
- */
-export async function getGeoTIFFMetadata(
-  url: string,
-): Promise<GeoTIFFMetadata> {
-  try {
-    const tiff: GeoTIFF = await fromUrl(url);
-    const image = await tiff.getImage();
-
-    const width = image.getWidth();
-    const height = image.getHeight();
-
-    const bbox = image.getBoundingBox();
-    const bounds = {
-      west: bbox[0],
-      south: bbox[1],
-      east: bbox[2],
-      north: bbox[3],
-    };
-
-    // Calculate resolution in meters per pixel
-    const resolution = image.getResolution()[0];
-
-    return {
-      width,
-      height,
-      bounds,
-      resolution,
-    };
-  } catch (error) {
-    console.error("Error getting GeoTIFF metadata:", error);
-    throw new Error(
-      `Failed to get GeoTIFF metadata: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`,
-    );
-  }
-}
-
-/**
  * Convert GeoTIFF data to RGBA canvas data for visualization
  * Uses a color scale to represent values (e.g., blue = low, red = high)
  */
@@ -310,59 +196,8 @@ export function geotiffToRGBA(
 }
 
 /**
- * Query GeoTIFF value at specific coordinates
- *
- * @param geotiffData - Parsed GeoTIFF data (already in WGS84)
- * @param lat - Latitude in WGS84
- * @param lng - Longitude in WGS84
- * @returns The value at the specified coordinates, or null if out of bounds
- */
-export function getValueAtCoordinate(
-  geotiffData: GeoTIFFData,
-  lat: number,
-  lng: number,
-): number | null {
-  // Check if coordinates are within bounds
-  if (
-    lat < geotiffData.bounds.south ||
-    lat > geotiffData.bounds.north ||
-    lng < geotiffData.bounds.west ||
-    lng > geotiffData.bounds.east
-  ) {
-    return null;
-  }
-
-  // Convert lat/lng to pixel coordinates
-  const x = Math.floor(
-    ((lng - geotiffData.bounds.west) /
-      (geotiffData.bounds.east - geotiffData.bounds.west)) *
-      geotiffData.width,
-  );
-  const y = Math.floor(
-    ((geotiffData.bounds.north - lat) /
-      (geotiffData.bounds.north - geotiffData.bounds.south)) *
-      geotiffData.height,
-  );
-
-  // Clamp to valid pixel range
-  const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x));
-  const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y));
-
-  // Get value from raster data
-  const index = clampedY * geotiffData.width + clampedX;
-  const value = geotiffData.rasters[0][index];
-
-  // Return null for no-data values
-  if (value === null || value === undefined || isNaN(value)) {
-    return null;
-  }
-
-  return value;
-}
-
-/**
  * Query GeoTIFF values for multiple coordinates (batch operation)
- * More efficient than calling getValueAtCoordinate multiple times
+ * Batch lookup: opens the raster once for all coordinates
  *
  * @param geotiffData - Parsed GeoTIFF data (already in WGS84)
  * @param coordinates - Array of {lat, lng} coordinates in WGS84

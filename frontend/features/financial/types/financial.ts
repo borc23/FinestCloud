@@ -92,8 +92,3 @@ export interface FinancialResults {
   // Breakdown
   yearlyBreakdown?: YearlyBreakdown[];
 }
-
-export interface FinancialCalculatorProps {
-  inputs: FinancialInputs;
-  onClose?: () => void;
-}

@@ -430,12 +430,6 @@
   letter-spacing: -0.01em;
 }
 
-.coordsGroup {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
 .locationInputWrapper {
   position: relative;
 }
@@ -775,10 +769,6 @@
   .form,
   .projectsTab {
     padding: 20px;
-  }
-
-  .coordsGroup {
-    grid-template-columns: 1fr;
   }
 
   .actions {

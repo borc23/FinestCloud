@@ -13,7 +13,7 @@ export interface LatLng {
   lng: number;
 }
 
-export interface Vec2 {
+interface Vec2 {
   lat: number;
   lng: number;
 }

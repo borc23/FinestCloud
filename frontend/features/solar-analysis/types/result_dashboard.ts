@@ -26,7 +26,7 @@ export interface PanelGenerationData {
   module: string;
 }
 
-export interface Location {
+interface Location {
   lat: number;
   lng: number;
 }

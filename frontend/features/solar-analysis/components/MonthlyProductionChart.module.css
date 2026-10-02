@@ -149,17 +149,6 @@
   text-align: center;
 }
 
-.footer {
-  padding: 12px 20px;
-  border-top: var(--glass-border);
-  text-align: center;
-}
-
-.footerText {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
 /* Responsive adjustments */
 @media (max-width: 796px) {
   .container {

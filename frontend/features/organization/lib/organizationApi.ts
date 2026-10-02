@@ -7,7 +7,6 @@ import type { ProfileRow } from "@/features/auth/types/database";
 import type {
   OrganizationRow,
   InvitationRow,
-  ActivityLogRow,
   UserRole,
 } from "../types/organization";
 
@@ -229,20 +228,4 @@ export async function acceptInvitation(token: string) {
   const supabase = createClient();
   const { error } = await supabase.rpc("accept_invitation", { p_token: token });
   if (error) throw error;
-}
-
-// Get activity log
-export async function getActivityLog(
-  orgId: string,
-  limit = 50,
-): Promise<ActivityLogRow[]> {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("activity_log")
-    .select("*")
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  return data || [];
 }

@@ -46,7 +46,7 @@ export const STANDARD_PANEL_SPECS: Record<number, PanelSpecs> = {
 /**
  * Calculate optimal string configuration
  */
-export function calculateStringConfiguration(
+function calculateStringConfiguration(
   panelSpecs: PanelSpecs,
   totalPanels: number,
   inverterType: "string" | "microinverter" | "optimizer",
@@ -129,7 +129,7 @@ export function calculateStringConfiguration(
 /**
  * Select appropriate inverter specifications
  */
-export function selectInverter(
+function selectInverter(
   systemSizeKw: number,
   stringConfig: StringConfiguration,
   inverterType: "string" | "microinverter" | "optimizer",
@@ -179,7 +179,7 @@ export function selectInverter(
 /**
  * Calculate wire sizing based on current and distance
  */
-export function calculateWireSizing(
+function calculateWireSizing(
   stringConfig: StringConfiguration,
   inverterType: InverterType,
   dcCableLength: number = 15,
@@ -246,7 +246,7 @@ export function calculateWireSizing(
 /**
  * Calculate breaker/fuse sizing
  */
-export function calculateBreakerSizing(
+function calculateBreakerSizing(
   stringConfig: StringConfiguration,
   systemSizeKw: number,
 ): BreakerSizing {

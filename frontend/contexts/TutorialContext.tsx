@@ -267,15 +267,3 @@ export function useTutorial() {
   }
   return context;
 }
-
-// Hook for individual tooltips - checks if should show based on tutorial state
-export function useTooltip(id: string) {
-  const { tutorialState, showTooltip, hasSeenTooltip } = useTutorial();
-
-  const shouldShow = !tutorialState.tutorialCompleted && !hasSeenTooltip(id);
-
-  return {
-    shouldShow,
-    showTooltip,
-  };
-}

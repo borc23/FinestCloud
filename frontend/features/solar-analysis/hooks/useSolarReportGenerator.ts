@@ -8,10 +8,7 @@ import {
   estimateSystemCost,
   FINANCIAL_DEFAULTS,
 } from "@/features/financial/utils/financialCalculations";
-import {
-  generateMonthlyEstimate,
-  generate25YearProjection,
-} from "@/features/solar-analysis/utils/solarCalculations";
+import { generateMonthlyEstimate } from "@/features/solar-analysis/utils/solarCalculations";
 import { calculateGermanFeedInTariff } from "@/features/financial/utils/germanFeedInTariff";
 import { useOrganization } from "@/features/organization/hooks/useOrganization";
 import type { ReportData } from "@/features/reports/types/report";
@@ -90,7 +87,6 @@ export function useSolarReportGenerator({
         annualProduction: annualProduction,
         avgPitch: panelData.avgPitch,
         avgAzimuth: panelData.avgAzimuth,
-        location: location,
       },
       energyProduction: {
         monthlyYield:
@@ -103,13 +99,8 @@ export function useSolarReportGenerator({
           ? Math.round(pvwatts.annual_solar_radiation * 365)
           : undefined,
         degradationRate: 0.5,
-        estimatedOutput25Years: generate25YearProjection(annualProduction, 0.5),
       },
       financials: financials,
-      electricityRate: FINANCIAL_DEFAULTS.costPerKwh,
-      monthlyBill: financials.avgMonthlySavings,
-      feedInTariff: feedInTariff,
-      selfConsumptionRate: FINANCIAL_DEFAULTS.selfConsumptionRate,
       systemCost: systemCost,
       monitoring: {
         monitoringSystem: "Web Portal & Mobile App",
@@ -138,11 +129,8 @@ export function useSolarReportGenerator({
       companyEmail: organization?.company_email || undefined,
       companyPhone: organization?.company_phone || undefined,
       companyWebsite: organization?.company_website || undefined,
-      companyAddress: organization?.company_address || undefined,
       organizationPrimaryColor: organization?.primary_color || undefined,
-      organizationSecondaryColor: organization?.secondary_color || undefined,
       projectDate: new Date(),
-      proposalValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     };
 
     const doc = generateSolarReport(reportData);

@@ -26,21 +26,3 @@ export function generateMonthlyEstimate(annualProduction: number): number[] {
     Math.round(annualProduction * ratio),
   );
 }
-
-/**
- * Generate 25-year production projection with degradation
- * @param annualProduction - First year annual production in kWh
- * @param degradationRate - Annual degradation rate as percentage (e.g., 0.5 for 0.5%)
- * @returns Array of 25 yearly production values
- */
-export function generate25YearProjection(
-  annualProduction: number,
-  degradationRate: number,
-): number[] {
-  const projection: number[] = [];
-  for (let year = 0; year < 25; year++) {
-    const degradationFactor = Math.pow(1 - degradationRate / 100, year);
-    projection.push(Math.round(annualProduction * degradationFactor));
-  }
-  return projection;
-}

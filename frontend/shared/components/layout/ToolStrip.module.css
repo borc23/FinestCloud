@@ -15,11 +15,6 @@
   transition: height var(--transition-slow);
 }
 
-.toolStrip.expanded {
-  height: 62px;
-  padding: 4px;
-}
-
 /* Profile Button - Static */
 .profileButton {
   position: relative;
@@ -320,19 +315,9 @@
   pointer-events: none;
 }
 
-.tabButton:hover .tool,
 .searchButton:hover .tool,
 .iconWrapper:hover .tool {
   color: rgba(255, 255, 255, 1);
-}
-
-.toolLabel {
-  font-size: 10px;
-  font-weight: var(--font-semibold);
-  letter-spacing: -0.1px;
-  text-align: center;
-  line-height: 12px;
-  color: inherit;
 }
 
 /* Frosted Overlay - Only inside middle strip */
@@ -355,11 +340,6 @@
 
 .toolStrip[data-has-generate="true"] .frostedOverlay {
   width: 91.5px;
-}
-
-.toolStrip.expanded .frostedOverlay {
-  height: 54px;
-  top: -9px;
 }
 
 .frostedOverlay[data-tool-index="0"] {
@@ -391,7 +371,6 @@
 }
 
 @media (max-width: 500px) {
-  .tabButton,
   .searchButton {
     width: clamp(40px, 11vw, 52px);
   }
