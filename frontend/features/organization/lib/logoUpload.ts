@@ -18,14 +18,9 @@ export async function uploadOrganizationLogo(
     throw new Error("Logo file size must be less than 5MB");
   }
 
-  const allowedTypes = [
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-    "image/svg+xml",
-  ];
+  const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
-    throw new Error("Logo must be PNG, JPEG, or SVG format");
+    throw new Error("Logo must be PNG, JPEG, or WebP format");
   }
 
   // Generate unique filename with timestamp to prevent caching issues

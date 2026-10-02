@@ -12,6 +12,7 @@ import type { FinancialInputs } from "@/features/financial/types/financial";
 import {
   calculateFinancials,
   estimateSystemCost,
+  FINANCIAL_DEFAULTS,
 } from "@/features/financial/utils/financialCalculations";
 import { validateGermanProduction } from "@/features/solar-analysis/utils/germanSolarCalculations";
 import { validateFinancialInputs } from "@/features/financial/utils/validation";
@@ -50,14 +51,18 @@ export default function FinancialCalculator({
   );
 
   // User inputs with German market defaults
-  const [costPerKwh, setCostPerKwh] = useState(0.37);
+  const [costPerKwh, setCostPerKwh] = useState(FINANCIAL_DEFAULTS.costPerKwh);
   const [avgMonthlyBill, setAvgMonthlyBill] = useState(130);
-  const [escalationRate, setEscalationRate] = useState(4);
+  const [escalationRate, setEscalationRate] = useState(
+    FINANCIAL_DEFAULTS.escalationRate,
+  );
   const [systemCostInput, setSystemCostInput] = useState(
     estimateSystemCost(systemSize),
   );
   const [feedInTariff, setFeedInTariff] = useState(calculatedFeedInTariff);
-  const [selfConsumptionRate, setSelfConsumptionRate] = useState(30);
+  const [selfConsumptionRate, setSelfConsumptionRate] = useState(
+    FINANCIAL_DEFAULTS.selfConsumptionRate,
+  );
   const [stateGrant, setStateGrant] = useState(0);
   const [municipalGrant, setMunicipalGrant] = useState(0);
   const [discountRate, setDiscountRate] = useState(4);

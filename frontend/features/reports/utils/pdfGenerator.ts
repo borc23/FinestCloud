@@ -602,7 +602,7 @@ function addEnvironmentalImpact(
   yPos += 5;
 
   const environmental = [
-    ["Self-Consumption Rate", `${data.financials.energyOffsetPercentage}%`],
+    ["Household Energy Offset", `${data.financials.energyOffsetPercentage}%`],
     [
       "Self-Consumed Energy",
       `${data.financials.selfConsumptionAmount.toLocaleString()} kWh/year`,
@@ -781,10 +781,16 @@ function addEnergyProduction(
   const energy = data.energyProduction!;
   const energyInfo = [
     ["Annual Energy Yield", `${energy.annualYield.toLocaleString()} kWh`],
-    ["Performance Ratio", `${energy.performanceRatio}%`],
-    ["Solar Irradiance", `${energy.solarIrradiance} kWh/m²/year`],
+    energy.capacityFactor !== undefined && [
+      "Capacity Factor",
+      `${energy.capacityFactor.toFixed(1)}%`,
+    ],
+    energy.solarIrradiance !== undefined && [
+      "Solar Irradiance",
+      `${energy.solarIrradiance.toLocaleString()} kWh/m²/year`,
+    ],
     ["Degradation Rate", `${energy.degradationRate}% per year`],
-  ];
+  ].filter((row): row is string[] => !!row);
 
   autoTable(doc, {
     startY: yPos,

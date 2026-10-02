@@ -71,8 +71,8 @@ export interface BatterySpecs {
 export interface EnergyProduction {
   monthlyYield: number[]; // 12 months in kWh
   annualYield: number; // kWh
-  performanceRatio: number; // %
-  solarIrradiance: number; // kWh/m²/year
+  capacityFactor?: number; // %
+  solarIrradiance?: number; // kWh/m²/year
   degradationRate: number; // % per year
   estimatedOutput25Years: number[]; // yearly production for 25 years
 }

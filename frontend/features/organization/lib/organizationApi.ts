@@ -34,8 +34,8 @@ export async function getUserOrganization(
   return data;
 }
 
-// Create organization
-export async function createOrganization(userId: string, name: string) {
+// Create organization (caller becomes owner, enforced server-side)
+export async function createOrganization(name: string) {
   const supabase = createClient();
 
   // Generate subdomain from organization name (lowercase, no spaces, alphanumeric only)
@@ -46,32 +46,13 @@ export async function createOrganization(userId: string, name: string) {
     .replace(/^-|-$/g, "")
     .substring(0, 63); // Max subdomain length
 
-  // Create organization
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({
-      name,
-      subdomain,
-      tier: "small",
-      max_users: 5,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("create_organization", {
+    p_name: name,
+    p_subdomain: subdomain,
+  });
 
-  if (orgError) throw orgError;
-
-  // Update user's profile to be owner of this organization
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      organization_id: org.id,
-      role: "owner",
-    })
-    .eq("id", userId);
-
-  if (profileError) throw profileError;
-
-  return org;
+  if (error) throw error;
+  return data;
 }
 
 // Update organization
@@ -105,21 +86,20 @@ export async function getOrganizationMembers(
 // Update member role
 export async function updateMemberRole(userId: string, role: UserRole) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ role })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("set_member_role", {
+    p_member_id: userId,
+    p_role: role,
+  });
 
   if (error) throw error;
 }
 
-// Remove member
+// Remove member, or leave when userId is the current user
 export async function removeMember(userId: string) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ organization_id: null, role: "designer" })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("remove_member", {
+    p_member_id: userId,
+  });
 
   if (error) throw error;
 }
@@ -231,62 +211,24 @@ export async function cancelInvitation(invitationId: string) {
   if (error) throw error;
 }
 
-// Get invitation by token
+// Get invitation by token (works before sign-in; token is the secret)
 export async function getInvitationByToken(token: string) {
   const supabase = createClient();
-  const { data } = await supabase
-    .from("invitations")
-    .select("*, organizations(name)")
-    .eq("token", token)
-    .single();
-
-  return data;
+  const { data } = await supabase.rpc("get_invitation", { p_token: token });
+  return data as {
+    email: string;
+    role: UserRole;
+    status: InvitationRow["status"];
+    expires_at: string;
+    organizations: { name: string };
+  } | null;
 }
 
-// Accept invitation
-export async function acceptInvitation(token: string, userId: string) {
+// Accept invitation (email match, expiry and member limit checked server-side)
+export async function acceptInvitation(token: string) {
   const supabase = createClient();
-
-  const { data: invitation, error: fetchError } = await supabase
-    .from("invitations")
-    .select("*")
-    .eq("token", token)
-    .single();
-
-  if (fetchError) throw fetchError;
-  if (!invitation) throw new Error("Invalid invitation");
-  if (new Date(invitation.expires_at) < new Date())
-    throw new Error("Invitation expired");
-  if (invitation.status === "accepted") throw new Error("Already accepted");
-
-  console.log("Accepting invitation:", invitation);
-
-  // Update profile
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      organization_id: invitation.organization_id,
-      role: invitation.role,
-    })
-    .eq("id", userId);
-
-  if (profileError) {
-    console.error("Error updating profile:", profileError);
-    throw profileError;
-  }
-
-  // Mark as accepted
-  const { error: inviteError } = await supabase
-    .from("invitations")
-    .update({ status: "accepted" })
-    .eq("id", invitation.id);
-
-  if (inviteError) {
-    console.error("Error updating invitation status:", inviteError);
-    throw inviteError;
-  }
-
-  console.log("Invitation accepted successfully");
+  const { error } = await supabase.rpc("accept_invitation", { p_token: token });
+  if (error) throw error;
 }
 
 // Get activity log

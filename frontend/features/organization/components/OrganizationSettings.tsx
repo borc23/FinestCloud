@@ -305,7 +305,7 @@ export default function OrganizationSettings({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+            accept="image/png,image/jpeg,image/webp"
             onChange={handleLogoUpload}
             disabled={uploadingLogo}
             style={{ display: "none" }}
@@ -323,7 +323,7 @@ export default function OrganizationSettings({
                 ? "Change Logo"
                 : "Upload Logo"}
           </button>
-          <small>PNG, JPEG, or SVG. Max 5MB.</small>
+          <small>PNG, JPEG, or WebP. Max 5MB.</small>
         </div>
 
         <div className={styles.colorRow}>

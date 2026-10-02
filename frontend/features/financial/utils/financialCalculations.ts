@@ -10,6 +10,13 @@ import type {
 } from "@/features/financial/types/financial";
 import { safeDivide } from "./validation";
 
+/** German market defaults shared by the calculator UI and the PDF report. Rates are percentages. */
+export const FINANCIAL_DEFAULTS = {
+  costPerKwh: 0.37,
+  escalationRate: 4,
+  selfConsumptionRate: 30,
+};
+
 /**
  * Calculate comprehensive financial analysis for solar system (German market)
  * @throws {Error} If critical input values are invalid

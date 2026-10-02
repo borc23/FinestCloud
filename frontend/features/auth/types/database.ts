@@ -231,7 +231,19 @@ export interface Database {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      create_organization: {
+        Args: { p_name: string; p_subdomain: string };
+        Returns: OrganizationRow;
+      };
+      get_invitation: { Args: { p_token: string }; Returns: Json };
+      accept_invitation: { Args: { p_token: string }; Returns: undefined };
+      set_member_role: {
+        Args: { p_member_id: string; p_role: string };
+        Returns: undefined;
+      };
+      remove_member: { Args: { p_member_id: string }; Returns: undefined };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };

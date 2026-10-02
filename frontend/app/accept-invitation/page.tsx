@@ -67,7 +67,7 @@ function AcceptInvitation() {
     setError(null);
 
     try {
-      await acceptInvitation(token, user.id);
+      await acceptInvitation(token);
       setSuccess(true);
       setTimeout(() => {
         router.push("/");

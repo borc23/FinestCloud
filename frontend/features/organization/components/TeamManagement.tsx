@@ -149,7 +149,7 @@ export default function TeamManagement({
 
   const handleAcceptInvitation = async (token: string) => {
     try {
-      await acceptInvitation(token, userId);
+      await acceptInvitation(token);
       toast.success("Invitation accepted! You have joined the organization.");
       await loadData();
       // Reload the page to update the organization context
@@ -181,7 +181,7 @@ export default function TeamManagement({
     setError(null);
 
     try {
-      await createOrganization(userId, orgName);
+      await createOrganization(orgName);
       toast.success("Organization created successfully!");
       setOrgName("");
       setShowCreateForm(false);

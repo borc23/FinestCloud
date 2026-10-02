@@ -57,7 +57,7 @@ export default function SolarResultsDashboard(
     annualProduction,
     location,
     costEstimate,
-    capacityFactor: pvwattsData?.capacity_factor,
+    pvwatts: pvwattsData,
   });
 
   // Expose minimize function to parent via ref
