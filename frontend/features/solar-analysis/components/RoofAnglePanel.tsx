@@ -6,7 +6,6 @@ import Button from "@/shared/components/ui/Button";
 import styles from "./RoofAnglePanel.module.css";
 import { extractPolygonCoordinates } from "@/features/map-drawing/utils/polygonUtils";
 import type { AngleConfirmData } from "@/features/solar-panels/types/panel";
-import { useTutorial } from "@/contexts/TutorialContext";
 
 interface RoofSegment {
   polygonIndex: number;
@@ -34,7 +33,6 @@ export default function RoofAnglePanel({
   const [edgePadding, setEdgePadding] = useState("20");
   const [panelOrientation, setPanelOrientation] = useState("best");
   const labelsRef = useRef<google.maps.Marker[]>([]);
-  const { showTooltip, markStepComplete } = useTutorial();
 
   // Check if all angles are populated
   const isGenerateEnabled =
@@ -54,19 +52,6 @@ export default function RoofAnglePanel({
       return pitchDegrees && pitchDegrees > 0 ? pitchDegrees.toFixed(1) : "";
     });
     setAngles(initialAngles);
-
-    // Show tutorial tooltip when panel opens
-    setTimeout(() => {
-      showTooltip({
-        id: "roof_angle_panel",
-        targetElement: '[data-tutorial="generate-button"]',
-        content:
-          "We've auto-filled roof angles from Google Solar API. Adjust if needed, then click Generate Panels.",
-        position: "top",
-        showNext: false,
-        showSkip: true,
-      });
-    }, 500);
 
     roofPolygons.forEach((polygon, index) => {
       const path = polygon.getPath().getArray();
@@ -101,7 +86,7 @@ export default function RoofAnglePanel({
       labelsRef.current.forEach((label) => label.setMap(null));
       labelsRef.current = [];
     };
-  }, [roofPolygons, solarData, showTooltip]);
+  }, [roofPolygons, solarData]);
 
   const handleConfirm = () => {
     const parsedAngles = angles.map((a, i) => {
@@ -154,9 +139,6 @@ export default function RoofAnglePanel({
       module: "standard",
       spacing: 0.5,
     };
-
-    // Mark generate step as complete
-    markStepComplete("generate");
 
     // Close popup immediately, then make API call in background
     onConfirm({
@@ -332,7 +314,6 @@ export default function RoofAnglePanel({
             variant="primary"
             onClick={handleConfirm}
             disabled={!isGenerateEnabled}
-            data-tutorial="generate-button"
           >
             Generate
           </Button>

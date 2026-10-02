@@ -5,7 +5,6 @@ import {
   getProfile,
   setDefaultLocation,
   updateProfile,
-  setShowTutorial,
 } from "@/features/auth/lib/profilesApi";
 import type { Project } from "@/features/auth/types/database";
 import ProjectCard from "@/features/projects/components/ProjectCard";
@@ -17,7 +16,6 @@ import { Icon } from "@/shared/components/ui/Icon";
 import { createClient } from "@/shared/lib/supabase/client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useTutorial } from "@/contexts/TutorialContext";
 import OrganizationSettings from "@/features/organization/components/OrganizationSettings";
 import TeamManagement from "@/features/organization/components/TeamManagement";
 import type { UserRole } from "@/features/organization/types/organization";
@@ -44,7 +42,6 @@ export default function ProfilePanel({
   onLoadProject,
 }: ProfilePanelProps) {
   const { user, signOut } = useAuth();
-  const { startTutorial } = useTutorial();
 
   // Auth state
   const [authView, setAuthView] = useState<AuthView>("login");
@@ -61,7 +58,6 @@ export default function ProfilePanel({
   const [displayName, setDisplayName] = useState("");
   const [defaultLat, setDefaultLat] = useState("");
   const [defaultLng, setDefaultLng] = useState("");
-  const [showTutorialEnabled, setShowTutorialEnabled] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("designer");
   const [organizationSubTab, setOrganizationSubTab] = useState<
     "settings" | "team"
@@ -112,7 +108,6 @@ export default function ProfilePanel({
         const lng = profile.default_longitude;
         setDefaultLat(lat?.toString() || "");
         setDefaultLng(lng?.toString() || "");
-        setShowTutorialEnabled(profile.show_tutorial);
 
         // Get user role from profile
         const supabase = createClient();
@@ -246,29 +241,6 @@ export default function ProfilePanel({
       setAuthError(err.message || "Failed to sign up");
     } finally {
       setAuthLoading(false);
-    }
-  };
-
-  const handleTutorialToggle = async (enabled: boolean) => {
-    if (!user) return;
-
-    try {
-      await setShowTutorial(user.id, enabled);
-      setShowTutorialEnabled(enabled);
-
-      // If enabling, start the tutorial
-      if (enabled) {
-        toast.success("Tutorial enabled! Starting tutorial...");
-        onClose();
-        setTimeout(() => {
-          startTutorial();
-        }, 500);
-      } else {
-        toast.success("Tutorial disabled");
-      }
-    } catch (err: any) {
-      console.error("Error updating tutorial preference:", err);
-      setError("Failed to update tutorial preference");
     }
   };
 
@@ -759,26 +731,6 @@ export default function ProfilePanel({
                   <Icon name="location-arrow" />
                   Use Current Location
                 </button>
-              </div>
-
-              <div className={styles.section}>
-                <h3>Tutorial</h3>
-                <p className={styles.description}>
-                  Show interactive tutorial when using the application
-                </p>
-
-                <div className={styles.field}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={false}
-                      onChange={(e) => handleTutorialToggle(e.target.checked)}
-                      disabled={true}
-                    />
-                    <span>Enable tutorial tooltips</span>
-                  </label>
-                  <small>Tutorial feature is currently disabled.</small>
-                </div>
               </div>
 
               <div className={styles.actions}>

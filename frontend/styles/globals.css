@@ -719,19 +719,6 @@ select:focus-visible,
   }
 }
 
-/* Pulse Glow - Pulsing border effect */
-@keyframes pulseGlow {
-  0%,
-  100% {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(14, 165, 233, 0.05);
-  }
-  50% {
-    border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(14, 165, 233, 0.1);
-  }
-}
-
 /* Suggestion Slide In - For dropdown animations */
 @keyframes suggestionSlideIn {
   0% {

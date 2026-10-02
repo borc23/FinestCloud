@@ -61,8 +61,6 @@ export async function updateProfile(
       display_name: updates.display_name,
       default_latitude: updates.default_latitude,
       default_longitude: updates.default_longitude,
-      show_tutorial:
-        updates.show_tutorial !== undefined ? updates.show_tutorial : true,
     };
 
     const { data, error } = await supabase
@@ -108,13 +106,4 @@ export async function getDefaultLocation(
   }
 
   return null;
-}
-
-export async function setShowTutorial(
-  userId: string,
-  showTutorial: boolean,
-): Promise<void> {
-  await updateProfile(userId, {
-    show_tutorial: showTutorial,
-  });
 }

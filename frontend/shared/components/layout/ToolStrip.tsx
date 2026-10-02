@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { Icon } from "@/shared/components/ui/Icon";
-import { useTutorial } from "@/contexts/TutorialContext";
 import styles from "./ToolStrip.module.css";
 
 declare global {
@@ -15,17 +14,13 @@ declare global {
 interface ToolStripProps {
   activeTool: string;
   onToolSelect: (tool: string) => void;
-  onStatsToggle: () => void;
   showPanelsTool?: boolean;
   map?: google.maps.Map | null;
-  isImageMode?: boolean;
-  onToggleMode?: () => void;
   isAuthenticated?: boolean;
   onOpenProfile?: () => void;
 }
 
 const mainToolsDefinition = [
-  { id: "upload", icon: "upload", label: "Upload" },
   { id: "select", icon: "vector-square", label: "Select" },
   { id: "panels", icon: "solar-panel", label: "Generate" },
   { id: "edit", icon: "pen-to-square", label: "Edit" },
@@ -67,37 +62,30 @@ const ProfileButton = ({
   </div>
 );
 
-// Search button component - static, no motion (inactive in image mode)
+// Search button component - static, no motion
 const SearchButton = ({
   isActive,
   onHover,
   onClick,
-  isImageMode,
   showTooltip,
   tooltipText,
 }: {
   isActive: boolean;
   onHover: () => void;
   onClick: () => void;
-  isImageMode?: boolean;
   showTooltip: boolean;
   tooltipText: string;
 }) => (
-  <div
-    className={styles.searchButton}
-    onMouseEnter={onHover}
-    onClick={isImageMode ? undefined : onClick}
-  >
+  <div className={styles.searchButton} onMouseEnter={onHover} onClick={onClick}>
     <button
       id="search-button"
-      className={`${styles.tool} ${isImageMode ? styles.inactive : ""}`}
+      className={styles.tool}
       aria-label="Search"
       aria-pressed={isActive}
-      disabled={isImageMode}
     >
       <Icon name="search" />
     </button>
-    {showTooltip && !isImageMode && (
+    {showTooltip && (
       <motion.div
         className={styles.tooltip}
         initial={{ opacity: 0, y: 5, x: "-50%" }}
@@ -119,7 +107,6 @@ const MiddleIconStrip = ({
   showPanelsTool,
   onHover,
   onClick,
-  isImageMode,
   showTooltipFor,
   getTooltipText,
 }: {
@@ -129,7 +116,6 @@ const MiddleIconStrip = ({
   showPanelsTool: boolean;
   onHover: (toolId: string | null) => void;
   onClick: (toolId: string) => void;
-  isImageMode?: boolean;
   showTooltipFor: string | null;
   getTooltipText: (toolId: string) => string;
 }) => {
@@ -140,74 +126,57 @@ const MiddleIconStrip = ({
 
   const activeIndex = getActiveToolIndex(hoveredTool);
 
-  const getToolIcon = (tool: (typeof mainToolsDefinition)[number]) => {
-    if (tool.id === "upload" && isImageMode) {
-      return "map";
-    }
-    return tool.icon;
-  };
-
-  const getToolLabel = (tool: (typeof mainToolsDefinition)[number]) => {
-    if (tool.id === "upload" && isImageMode) {
-      return "Map";
-    }
-    return tool.label;
-  };
-
   return (
     <div className={styles.middleStrip}>
       <LayoutGroup>
         <div className={styles.iconsContainer}>
-          {tools.map((tool) => {
-            const isDisabled = tool.id === "upload" && !isImageMode;
-            return (
-              <motion.div
-                key={tool.id}
-                layout
-                transition={{
-                  type: "spring",
-                  stiffness: 350,
-                  damping: 25,
-                }}
-                className={styles.iconWrapper}
-                onMouseEnter={isDisabled ? undefined : () => onHover(tool.id)}
-                onClick={isDisabled ? undefined : () => onClick(tool.id)}
+          {tools.map((tool) => (
+            <motion.div
+              key={tool.id}
+              layout
+              transition={{
+                type: "spring",
+                stiffness: 350,
+                damping: 25,
+              }}
+              className={styles.iconWrapper}
+              onMouseEnter={() => onHover(tool.id)}
+              onClick={() => onClick(tool.id)}
+            >
+              <button
+                className={styles.tool}
+                aria-label={tool.label}
+                aria-pressed={activeTool === tool.id}
+                data-tool={tool.id}
               >
-                <button
-                  className={`${styles.tool} ${
-                    isDisabled ? styles.inactive : ""
-                  }`}
-                  aria-label={getToolLabel(tool)}
-                  aria-pressed={activeTool === tool.id}
-                  disabled={isDisabled}
-                  data-tool={tool.id}
+                <Icon name={tool.icon} />
+              </button>
+              {showTooltipFor === tool.id && (
+                <motion.div
+                  className={styles.tooltip}
+                  initial={{ opacity: 0, y: 5, x: "-50%" }}
+                  animate={{ opacity: 1, y: 0, x: "-50%" }}
+                  exit={{ opacity: 0, y: 5, x: "-50%" }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <Icon name={getToolIcon(tool) as any} />
-                </button>
-                {showTooltipFor === tool.id && !isDisabled && (
-                  <motion.div
-                    className={styles.tooltip}
-                    initial={{ opacity: 0, y: 5, x: "-50%" }}
-                    animate={{ opacity: 1, y: 0, x: "-50%" }}
-                    exit={{ opacity: 0, y: 5, x: "-50%" }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {getTooltipText(tool.id)}
-                  </motion.div>
-                )}
-              </motion.div>
-            );
-          })}
+                  {getTooltipText(tool.id)}
+                </motion.div>
+              )}
+            </motion.div>
+          ))}
         </div>
       </LayoutGroup>
 
       {/* Frosted Overlay - only for middle strip */}
       <div
         className={styles.frostedOverlay}
-        data-tool-index={activeIndex}
-        style={{
-          opacity: activeIndex === -1 ? 0 : 1,
-        }}
+        style={
+          {
+            "--tool-count": tools.length,
+            "--tool-index": Math.max(activeIndex, 0),
+            opacity: activeIndex === -1 ? 0 : 1,
+          } as React.CSSProperties
+        }
       />
     </div>
   );
@@ -216,11 +185,8 @@ const MiddleIconStrip = ({
 export default function ToolStrip({
   activeTool,
   onToolSelect,
-  onStatsToggle,
   showPanelsTool = false,
   map,
-  isImageMode = false,
-  onToggleMode,
   isAuthenticated = false,
   onOpenProfile,
 }: ToolStripProps) {
@@ -237,7 +203,6 @@ export default function ToolStrip({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const geocoder = useRef<google.maps.Geocoder | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const { showTooltip, markStepComplete } = useTutorial();
 
   const tools = useMemo(
     () =>
@@ -342,29 +307,6 @@ export default function ToolStrip({
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, 300);
-    } else if (toolId === "upload") {
-      // Upload button is disabled in map mode
-      if (!isImageMode) return;
-      // Upload button toggles between image and map mode
-      onToggleMode?.();
-    } else if (toolId === "panels") {
-      // Mark edit mode as complete when Generate tool is clicked
-      markStepComplete("edit_mode");
-
-      // Show tooltip about panel generation
-      setTimeout(() => {
-        showTooltip({
-          id: "generate_panels",
-          targetElement: '[data-tool="panels"]',
-          content:
-            "Configure and place solar panels on the detected roof areas.",
-          position: "right",
-          showNext: false,
-          showSkip: true,
-        });
-      }, 500);
-
-      onToolSelect(toolId);
     } else {
       onToolSelect(toolId);
     }
@@ -452,9 +394,6 @@ export default function ToolStrip({
     if (toolId === "search") {
       return "Search Location";
     }
-    if (toolId === "upload") {
-      return isImageMode ? "Switch to Map" : "Upload Image";
-    }
     const tool = tools.find((t) => t.id === toolId);
     return tool?.label || "";
   };
@@ -463,7 +402,6 @@ export default function ToolStrip({
     <div
       ref={containerRef}
       className={`${styles.toolStrip} ${isSearchMode ? styles.searchMode : ""}`}
-      data-has-generate={showPanelsTool}
       onMouseLeave={handleContainerMouseLeave}
     >
       {isSearchMode ? (
@@ -562,7 +500,6 @@ export default function ToolStrip({
             showPanelsTool={showPanelsTool}
             onHover={handleToolHover}
             onClick={handleToolClick}
-            isImageMode={isImageMode}
             showTooltipFor={showTooltipFor}
             getTooltipText={getTooltipText}
           />
@@ -571,7 +508,6 @@ export default function ToolStrip({
             isActive={activeTool === "search"}
             onHover={() => handleToolHover("search")}
             onClick={() => handleToolClick("search")}
-            isImageMode={isImageMode}
             showTooltip={showTooltipFor === "search"}
             tooltipText={getTooltipText("search")}
           />

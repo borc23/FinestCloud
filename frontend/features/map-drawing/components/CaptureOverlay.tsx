@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Button from "@/shared/components/ui/Button";
 import Spinner from "@/shared/components/ui/Spinner";
 import styles from "./CaptureOverlay.module.css";
-import { useTutorial } from "@/contexts/TutorialContext";
 
 interface CaptureOverlayProps {
   isVisible: boolean;
@@ -24,7 +23,6 @@ export default function CaptureOverlay({
 }: CaptureOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { showTooltip, markStepComplete } = useTutorial();
 
   const updatePosition = useCallback(() => {
     if (!overlayRef.current || !map) return;
@@ -58,22 +56,6 @@ export default function CaptureOverlay({
     if (isVisible && map) {
       updatePosition();
 
-      // Show tutorial tooltip when capture overlay becomes visible
-      setTimeout(() => {
-        showTooltip({
-          id: "capture_overlay",
-          targetElement: '[data-tutorial="capture-square"]',
-          content:
-            "Position this square over the roof and click Capture. Our AI will detect roofs and obstacles.",
-          position: "top",
-          showNext: false,
-          showSkip: true,
-        });
-      }, 500);
-
-      // Mark search step as complete
-      markStepComplete("search");
-
       // Update position when map changes
       const listeners = [
         google.maps.event.addListener(map, "zoom_changed", updatePosition),
@@ -88,7 +70,7 @@ export default function CaptureOverlay({
         listeners.length = 0;
       };
     }
-  }, [isVisible, map, updatePosition, showTooltip, markStepComplete]);
+  }, [isVisible, map, updatePosition]);
 
   // Add ESC key handler
   useEffect(() => {
@@ -257,22 +239,6 @@ export default function CaptureOverlay({
         : undefined;
 
       await onCapture(bounds, size);
-
-      // Mark capture step as complete after successful capture
-      markStepComplete("capture");
-
-      // Show edit mode tooltip to explain editing capabilities
-      setTimeout(() => {
-        showTooltip({
-          id: "edit_mode",
-          targetElement: '[data-tool="polygon"]',
-          content:
-            "Now you can edit, move, or draw more polygons to refine areas our AI might have missed. Use the drawing tools to add or adjust roof sections.",
-          position: "right",
-          showNext: true,
-          showSkip: true,
-        });
-      }, 1500);
     } finally {
       setIsProcessing(false);
     }
@@ -292,7 +258,6 @@ export default function CaptureOverlay({
         ref={overlayRef}
         className={styles.captureSquare}
         data-processing={isProcessing}
-        data-tutorial="capture-square"
       >
         <div className={styles.squareBorder}></div>
 
