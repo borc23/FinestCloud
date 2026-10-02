@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
@@ -10,7 +10,7 @@ import {
 import { Icon } from "@/shared/components/ui/Icon";
 import styles from "./page.module.css";
 
-export default function AcceptInvitationPage() {
+function AcceptInvitation() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -185,5 +185,23 @@ export default function AcceptInvitationPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary for the page to prerender
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className={styles.container}>
+          <div className={styles.card}>
+            <div className={styles.spinner}></div>
+            <p>Loading invitation...</p>
+          </div>
+        </div>
+      }
+    >
+      <AcceptInvitation />
+    </Suspense>
   );
 }

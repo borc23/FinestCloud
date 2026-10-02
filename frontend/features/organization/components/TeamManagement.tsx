@@ -15,10 +15,10 @@ import {
   acceptInvitation,
   createOrganization,
 } from "../lib/organizationApi";
+import type { ProfileRow } from "@/features/auth/types/database";
 import type {
-  Organization,
-  OrganizationMember,
-  Invitation,
+  OrganizationRow,
+  InvitationRow,
   UserRole,
 } from "../types/organization";
 import styles from "./TeamManagement.module.css";
@@ -32,10 +32,12 @@ export default function TeamManagement({
   userId,
   userRole,
 }: TeamManagementProps) {
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [myInvitations, setMyInvitations] = useState<Invitation[]>([]);
+  const [organization, setOrganization] = useState<OrganizationRow | null>(
+    null,
+  );
+  const [members, setMembers] = useState<ProfileRow[]>([]);
+  const [invitations, setInvitations] = useState<InvitationRow[]>([]);
+  const [myInvitations, setMyInvitations] = useState<InvitationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

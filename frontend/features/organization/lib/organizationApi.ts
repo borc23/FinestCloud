@@ -3,18 +3,18 @@
  */
 
 import { createClient } from "@/shared/lib/supabase/client";
+import type { ProfileRow } from "@/features/auth/types/database";
 import type {
-  Organization,
-  Invitation,
-  OrganizationMember,
-  ActivityLogEntry,
+  OrganizationRow,
+  InvitationRow,
+  ActivityLogRow,
   UserRole,
 } from "../types/organization";
 
 // Get user's organization
 export async function getUserOrganization(
   userId: string,
-): Promise<Organization | null> {
+): Promise<OrganizationRow | null> {
   const supabase = createClient();
 
   const { data: profile } = await supabase
@@ -91,7 +91,7 @@ export async function updateOrganization(orgId: string, updates: any) {
 // Get organization members
 export async function getOrganizationMembers(
   orgId: string,
-): Promise<OrganizationMember[]> {
+): Promise<ProfileRow[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("profiles")
@@ -125,7 +125,7 @@ export async function removeMember(userId: string) {
 }
 
 // Get invitations for organization (sent by this org)
-export async function getInvitations(orgId: string): Promise<Invitation[]> {
+export async function getInvitations(orgId: string): Promise<InvitationRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("invitations")
@@ -144,7 +144,7 @@ export async function getInvitations(orgId: string): Promise<Invitation[]> {
 }
 
 // Get invitations for current user (received invitations)
-export async function getMyInvitations(): Promise<Invitation[]> {
+export async function getMyInvitations(): Promise<InvitationRow[]> {
   const supabase = createClient();
 
   try {
@@ -293,7 +293,7 @@ export async function acceptInvitation(token: string, userId: string) {
 export async function getActivityLog(
   orgId: string,
   limit = 50,
-): Promise<ActivityLogEntry[]> {
+): Promise<ActivityLogRow[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("activity_log")

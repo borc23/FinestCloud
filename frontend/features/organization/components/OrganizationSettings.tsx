@@ -10,7 +10,7 @@ import {
   uploadOrganizationLogo,
   deleteOrganizationLogo,
 } from "../lib/logoUpload";
-import type { Organization } from "../types/organization";
+import type { OrganizationRow } from "../types/organization";
 import styles from "./OrganizationSettings.module.css";
 
 interface OrganizationSettingsProps {
@@ -20,7 +20,9 @@ interface OrganizationSettingsProps {
 export default function OrganizationSettings({
   userId,
 }: OrganizationSettingsProps) {
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organization, setOrganization] = useState<OrganizationRow | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

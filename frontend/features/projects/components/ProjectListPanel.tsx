@@ -52,6 +52,7 @@ export default function ProjectListPanel({
           mapCenterLng: p.map_center_lng,
           mapZoom: p.map_zoom,
           annualFluxUrl: p.annual_flux_url,
+          organizationId: p.organization_id,
           createdAt: p.created_at,
           updatedAt: p.updated_at,
         })),
