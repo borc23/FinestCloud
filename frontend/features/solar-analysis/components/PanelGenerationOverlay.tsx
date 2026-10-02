@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import styles from './PanelGenerationOverlay.module.css'
+import styles from "./PanelGenerationOverlay.module.css";
 
 interface PanelGenerationOverlayProps {
-  isVisible: boolean
-  progress?: { current: number; total: number } | null
+  isVisible: boolean;
+  progress?: { current: number; total: number } | null;
 }
 
 /**
@@ -13,9 +13,9 @@ interface PanelGenerationOverlayProps {
  */
 export default function PanelGenerationOverlay({
   isVisible,
-  progress
+  progress,
 }: PanelGenerationOverlayProps) {
-  if (!isVisible) return null
+  if (!isVisible) return null;
 
   return (
     <div className={styles.overlay}>
@@ -24,9 +24,9 @@ export default function PanelGenerationOverlay({
         <span className={styles.text}>
           {progress
             ? `Generating panels... ${progress.current}/${progress.total}`
-            : 'Generating solar panels...'}
+            : "Generating solar panels..."}
         </span>
       </div>
     </div>
-  )
+  );
 }

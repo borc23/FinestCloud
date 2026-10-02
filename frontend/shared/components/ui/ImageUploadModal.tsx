@@ -1,80 +1,84 @@
-'use client'
+"use client";
 
-import { useState, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './ImageUploadModal.module.css'
+import { useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./ImageUploadModal.module.css";
 
 interface ImageUploadModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onImageUpload: (imageUrl: string) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onImageUpload: (imageUrl: string) => void;
 }
 
-export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: ImageUploadModalProps) {
-  const [dragActive, setDragActive] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+export default function ImageUploadModal({
+  isOpen,
+  onClose,
+  onImageUpload,
+}: ImageUploadModalProps) {
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
     }
-  }, [])
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0])
+      handleFile(e.dataTransfer.files[0]);
     }
-  }, [])
+  }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault()
+    e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0])
+      handleFile(e.target.files[0]);
     }
-  }, [])
+  }, []);
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file')
-      return
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
     }
 
-    setUploading(true)
+    setUploading(true);
 
     try {
       // Create a local URL for the image
-      const imageUrl = URL.createObjectURL(file)
-      onImageUpload(imageUrl)
-      onClose()
-      toast.success('Image uploaded successfully')
+      const imageUrl = URL.createObjectURL(file);
+      onImageUpload(imageUrl);
+      onClose();
+      toast.success("Image uploaded successfully");
     } catch (error) {
-      console.error('Error uploading image:', error)
-      toast.error('Failed to upload image')
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   const handleButtonClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose()
+      onClose();
     }
-  }
+  };
 
   return (
     <AnimatePresence>
@@ -91,7 +95,7 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
             <div className={styles.header}>
               <h2 className={styles.title}>Upload Image</h2>
@@ -105,7 +109,9 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
             </div>
 
             <div
-              className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''}`}
+              className={`${styles.dropzone} ${
+                dragActive ? styles.dragActive : ""
+              }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -141,5 +147,5 @@ export default function ImageUploadModal({ isOpen, onClose, onImageUpload }: Ima
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }

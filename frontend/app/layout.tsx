@@ -1,39 +1,37 @@
-import type { Metadata } from 'next'
-import Script from 'next/script'
-import { Inter } from 'next/font/google'
-import '@/styles/globals.css'
-import { PanelProvider } from '@/features/solar-panels/context/PanelContext'
-import { AuthProvider } from '@/features/auth/context/AuthContext'
-import { ThemeProvider } from '@/features/organization/components/ThemeProvider'
-import { Toaster } from 'sonner'
+import type { Metadata } from "next";
+import Script from "next/script";
+import { Inter } from "next/font/google";
+import "@/styles/globals.css";
+import { PanelProvider } from "@/features/solar-panels/context/PanelContext";
+import { AuthProvider } from "@/features/auth/context/AuthContext";
+import { ThemeProvider } from "@/features/organization/components/ThemeProvider";
+import { Toaster } from "sonner";
 
 const inter = Inter({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  display: 'swap',
-})
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: 'FinestCloud Solar',
-  description: 'Solar panel analysis and configuration tool',
+  title: "FinestCloud Solar",
+  description: "Solar panel analysis and configuration tool",
   icons: {
-    icon: '/favicon.ico',
+    icon: "/favicon.ico",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" className={inter.className}>
       <body>
         <AuthProvider>
           <ThemeProvider>
-            <PanelProvider>
-              {children}
-            </PanelProvider>
+            <PanelProvider>{children}</PanelProvider>
           </ThemeProvider>
         </AuthProvider>
         <Toaster position="top-right" richColors />
@@ -44,5 +42,5 @@ export default function RootLayout({
         />
       </body>
     </html>
-  )
+  );
 }

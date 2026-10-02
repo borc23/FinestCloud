@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { signUp } from '@/features/auth/lib/authApi'
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './AuthModal.module.css'
+import { useState } from "react";
+import { signUp } from "@/features/auth/lib/authApi";
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./AuthModal.module.css";
 
 interface SignUpModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSwitchToLogin: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSwitchToLogin: () => void;
 }
 
 export default function SignUpModal({
@@ -16,48 +16,48 @@ export default function SignUpModal({
   onClose,
   onSwitchToLogin,
 }: SignUpModalProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
-      return
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      setLoading(false)
-      return
+      setError("Password must be at least 6 characters");
+      setLoading(false);
+      return;
     }
 
     try {
-      await signUp(email, password)
-      setSuccess(true)
-      setEmail('')
-      setPassword('')
-      setConfirmPassword('')
+      await signUp(email, password);
+      setSuccess(true);
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
       setTimeout(() => {
-        onClose()
-        setSuccess(false)
-      }, 2000)
+        onClose();
+        setSuccess(false);
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up')
+      setError(err.message || "Failed to sign up");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -123,12 +123,12 @@ export default function SignUpModal({
             className={styles.submitButton}
             disabled={loading || success}
           >
-            {loading ? 'Creating account...' : 'Sign Up'}
+            {loading ? "Creating account..." : "Sign Up"}
           </button>
 
           <div className={styles.footer}>
             <p>
-              Already have an account?{' '}
+              Already have an account?{" "}
               <button
                 type="button"
                 onClick={onSwitchToLogin}
@@ -142,5 +142,5 @@ export default function SignUpModal({
         </form>
       </div>
     </div>
-  )
+  );
 }

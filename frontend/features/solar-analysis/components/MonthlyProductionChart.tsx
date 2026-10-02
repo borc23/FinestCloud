@@ -1,52 +1,59 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import styles from './MonthlyProductionChart.module.css'
-import type { PVWattsResponse } from '@/features/solar-analysis/types/pvwatts'
+import { useState } from "react";
+import styles from "./MonthlyProductionChart.module.css";
+import type { PVWattsResponse } from "@/features/solar-analysis/types/pvwatts";
 
 interface MonthlyProductionChartProps {
-  data: PVWattsResponse
-  onClose?: () => void
+  data: PVWattsResponse;
+  onClose?: () => void;
 }
 
-export default function MonthlyProductionChart({ data, onClose }: MonthlyProductionChartProps) {
-  const [isVisible, setIsVisible] = useState(true)
+export default function MonthlyProductionChart({
+  data,
+  onClose,
+}: MonthlyProductionChartProps) {
+  const [isVisible, setIsVisible] = useState(true);
 
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ]
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
   const monthlyData = data.monthly_production.map((production, index) => ({
     month: months[index],
     production: Math.round(production),
-    percentage: (production / data.annual_production) * 100
-  }))
+    percentage: (production / data.annual_production) * 100,
+  }));
 
-  const maxProduction = Math.max(...data.monthly_production)
+  const maxProduction = Math.max(...data.monthly_production);
 
   const handleClose = () => {
-    setIsVisible(false)
-    onClose?.()
-  }
+    setIsVisible(false);
+    onClose?.();
+  };
 
-  if (!isVisible) return null
+  if (!isVisible) return null;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h3 className={styles.title}>Monthly Solar Production</h3>
-        <button className={styles.closeButton} onClick={handleClose} aria-label="Close">
+        <button
+          className={styles.closeButton}
+          onClick={handleClose}
+          aria-label="Close"
+        >
           ×
         </button>
       </div>
@@ -60,12 +67,15 @@ export default function MonthlyProductionChart({ data, onClose }: MonthlyProduct
         </div>
         <div className={styles.summaryItem}>
           <span className={styles.summaryLabel}>Capacity Factor</span>
-          <span className={styles.summaryValue}>{data.capacity_factor.toFixed(1)}%</span>
+          <span className={styles.summaryValue}>
+            {data.capacity_factor.toFixed(1)}%
+          </span>
         </div>
         {data.station_info?.city && (
           <div className={styles.weatherInfo}>
             Weather data: {data.station_info.city}, {data.station_info.state}
-            {data.station_info.distance && ` (${Math.round(data.station_info.distance)}km)`}
+            {data.station_info.distance &&
+              ` (${Math.round(data.station_info.distance)}km)`}
           </div>
         )}
       </div>
@@ -77,16 +87,18 @@ export default function MonthlyProductionChart({ data, onClose }: MonthlyProduct
               <div
                 className={styles.bar}
                 style={{
-                  height: `${(item.production / maxProduction) * 100}%`
+                  height: `${(item.production / maxProduction) * 100}%`,
                 }}
                 title={`${item.month}: ${item.production.toLocaleString()} kWh`}
               />
             </div>
             <span className={styles.monthLabel}>{item.month}</span>
-            <span className={styles.productionValue}>{item.production.toLocaleString()}</span>
+            <span className={styles.productionValue}>
+              {item.production.toLocaleString()}
+            </span>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }

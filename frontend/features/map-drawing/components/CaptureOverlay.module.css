@@ -23,7 +23,7 @@
 
 .squareBorder::before {
   will-change: transform;
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
@@ -43,7 +43,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.95);
-  background: linear-gradient(135deg,
+  background: linear-gradient(
+    135deg,
     rgba(0, 0, 0, 0.8) 0%,
     rgba(28, 28, 30, 0.9) 100%
   );

@@ -1,38 +1,39 @@
-'use client'
+"use client";
 
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import { ButtonHTMLAttributes, ReactNode } from "react";
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success'
-export type ButtonSize = 'sm' | 'md' | 'lg'
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "success";
+export type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  size?: ButtonSize
-  loading?: boolean
-  children: ReactNode
-  className?: string
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  children: ReactNode;
+  className?: string;
 }
 
 export default function Button({
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   loading = false,
   children,
-  className = '',
+  className = "",
   disabled,
   ...props
 }: ButtonProps) {
-  const variantClass = `btn-${variant}`
-  const sizeClass = size !== 'md' ? `btn-${size}` : ''
-  const loadingClass = loading ? 'btn-loading' : ''
+  const variantClass = `btn-${variant}`;
+  const sizeClass = size !== "md" ? `btn-${size}` : "";
+  const loadingClass = loading ? "btn-loading" : "";
 
-  const classes = [
-    'btn',
-    variantClass,
-    sizeClass,
-    loadingClass,
-    className
-  ].filter(Boolean).join(' ')
+  const classes = ["btn", variantClass, sizeClass, loadingClass, className]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <button
@@ -44,5 +45,5 @@ export default function Button({
       {loading && <span className="spinner" aria-hidden="true" />}
       {!loading && children}
     </button>
-  )
+  );
 }

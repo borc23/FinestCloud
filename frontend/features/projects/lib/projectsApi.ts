@@ -1,33 +1,40 @@
-import { createClient } from '../../../shared/lib/supabase/client'
-import type { Database, CreateProjectData, ProjectWithData } from '@/features/auth/types/database'
-import type { Coordinate } from '@/features/solar-panels/types/panel'
+import { createClient } from "../../../shared/lib/supabase/client";
+import type {
+  Database,
+  CreateProjectData,
+  ProjectWithData,
+} from "@/features/auth/types/database";
+import type { Coordinate } from "@/features/solar-panels/types/panel";
 
-type Project = Database['public']['Tables']['projects']['Row']
-type ProjectInsert = Database['public']['Tables']['projects']['Insert']
-type RoofAnalysisInsert = Database['public']['Tables']['roof_analysis']['Insert']
-type ObjectPolygonInsert = Database['public']['Tables']['object_polygons']['Insert']
-type PanelConfigInsert = Database['public']['Tables']['panel_configurations']['Insert']
+type Project = Database["public"]["Tables"]["projects"]["Row"];
+type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+type RoofAnalysisInsert =
+  Database["public"]["Tables"]["roof_analysis"]["Insert"];
+type ObjectPolygonInsert =
+  Database["public"]["Tables"]["object_polygons"]["Insert"];
+type PanelConfigInsert =
+  Database["public"]["Tables"]["panel_configurations"]["Insert"];
 
 export async function createProject(
   userId: string,
-  projectData: CreateProjectData
+  projectData: CreateProjectData,
 ): Promise<string> {
-  const supabase = createClient() as any as any
+  const supabase = createClient() as any as any;
 
   // Get user's organization_id
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', userId)
-    .single()
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", userId)
+    .single();
 
   // 1. Create the project
   const { data: project, error: projectError } = await supabase
-    .from('projects')
+    .from("projects")
     .insert({
       user_id: userId,
       project_name: projectData.projectName,
-      status: projectData.status || 'draft',
+      status: projectData.status || "draft",
       map_center_lat: projectData.mapCenter.lat,
       map_center_lng: projectData.mapCenter.lng,
       map_zoom: projectData.mapZoom,
@@ -35,18 +42,18 @@ export async function createProject(
       organization_id: profile?.organization_id || null,
     })
     .select()
-    .single()
+    .single();
 
-  if (projectError) throw projectError
-  if (!project) throw new Error('Failed to create project')
+  if (projectError) throw projectError;
+  if (!project) throw new Error("Failed to create project");
 
-  const projectId = project.id
+  const projectId = project.id;
 
   try {
     // 2. Create roof analyses and panel configurations
     for (const roof of projectData.roofs) {
       const { data: roofAnalysis, error: roofError } = await supabase
-        .from('roof_analysis')
+        .from("roof_analysis")
         .insert({
           project_id: projectId,
           roof_index: roof.roofIndex,
@@ -59,98 +66,102 @@ export async function createProject(
           shade_stats: roof.shadeStats as any,
         })
         .select()
-        .single()
+        .single();
 
-      if (roofError) throw roofError
+      if (roofError) throw roofError;
 
       // Create panel configuration if provided
       if (roof.panelPositions && roof.moduleType && roof.moduleSpecs) {
         const { error: panelConfigError } = await supabase
-          .from('panel_configurations')
+          .from("panel_configurations")
           .insert({
             roof_analysis_id: roofAnalysis.id,
             panel_positions: roof.panelPositions as any,
             module_type: roof.moduleType,
             module_specs: roof.moduleSpecs as any,
-          })
+          });
 
-        if (panelConfigError) throw panelConfigError
+        if (panelConfigError) throw panelConfigError;
       }
     }
 
     // 3. Create object polygons (obstacles)
     if (projectData.objects && projectData.objects.length > 0) {
-      const objectInserts: ObjectPolygonInsert[] = projectData.objects.map((obj) => ({
-        project_id: projectId,
-        polygon_coords: obj.coords as any,
-      }))
+      const objectInserts: ObjectPolygonInsert[] = projectData.objects.map(
+        (obj) => ({
+          project_id: projectId,
+          polygon_coords: obj.coords as any,
+        }),
+      );
 
       const { error: objectsError } = await supabase
-        .from('object_polygons')
-        .insert(objectInserts)
+        .from("object_polygons")
+        .insert(objectInserts);
 
-      if (objectsError) throw objectsError
+      if (objectsError) throw objectsError;
     }
 
-    return projectId
+    return projectId;
   } catch (error) {
     // Rollback: delete the project if any related data fails
-    await supabase.from('projects').delete().eq('id', projectId)
-    throw error
+    await supabase.from("projects").delete().eq("id", projectId);
+    throw error;
   }
 }
 
 export async function getProjects(userId: string): Promise<Project[]> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
+    .from("projects")
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
 
-  if (error) throw error
-  return data || []
+  if (error) throw error;
+  return data || [];
 }
 
-export async function getProject(projectId: string): Promise<ProjectWithData | null> {
-  const supabase = createClient() as any
+export async function getProject(
+  projectId: string,
+): Promise<ProjectWithData | null> {
+  const supabase = createClient() as any;
 
   // Fetch project
   const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', projectId)
-    .single()
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .single();
 
-  if (projectError) throw projectError
-  if (!project) return null
+  if (projectError) throw projectError;
+  if (!project) return null;
 
   // Fetch roof analyses
   const { data: roofAnalyses, error: roofError } = await supabase
-    .from('roof_analysis')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('roof_index')
+    .from("roof_analysis")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("roof_index");
 
-  if (roofError) throw roofError
+  if (roofError) throw roofError;
 
   // Fetch panel configurations for all roofs
-  const roofIds = (roofAnalyses || []).map((r: any) => r.id)
+  const roofIds = (roofAnalyses || []).map((r: any) => r.id);
   const { data: panelConfigs, error: panelConfigError } = await supabase
-    .from('panel_configurations')
-    .select('*')
-    .in('roof_analysis_id', roofIds)
+    .from("panel_configurations")
+    .select("*")
+    .in("roof_analysis_id", roofIds);
 
-  if (panelConfigError) throw panelConfigError
+  if (panelConfigError) throw panelConfigError;
 
   // Fetch object polygons
   const { data: objectPolygons, error: objectError } = await supabase
-    .from('object_polygons')
-    .select('*')
-    .eq('project_id', projectId)
+    .from("object_polygons")
+    .select("*")
+    .eq("project_id", projectId);
 
-  if (objectError) throw objectError
+  if (objectError) throw objectError;
 
   // Transform data to application format
   return {
@@ -194,33 +205,33 @@ export async function getProject(projectId: string): Promise<ProjectWithData | n
       moduleSpecs: config.module_specs as any,
       createdAt: config.created_at,
     })),
-  }
+  };
 }
 
 export async function updateProject(
   projectId: string,
-  updates: Partial<ProjectInsert>
+  updates: Partial<ProjectInsert>,
 ): Promise<void> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
   const { error } = await supabase
-    .from('projects')
+    .from("projects")
     .update(updates)
-    .eq('id', projectId)
+    .eq("id", projectId);
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 export async function deleteProject(projectId: string): Promise<void> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
   // Cascade delete is handled by the database
   const { error } = await supabase
-    .from('projects')
+    .from("projects")
     .delete()
-    .eq('id', projectId)
+    .eq("id", projectId);
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 /**
@@ -228,43 +239,43 @@ export async function deleteProject(projectId: string): Promise<void> {
  * Can be restored later using restoreProject()
  */
 export async function softDeleteProject(projectId: string): Promise<void> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
-  const { error } = await supabase.rpc('soft_delete_project', {
+  const { error } = await supabase.rpc("soft_delete_project", {
     project_id: projectId,
-  })
+  });
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 /**
  * Restore a soft-deleted project (clears deleted_at timestamp)
  */
 export async function restoreProject(projectId: string): Promise<void> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
-  const { error } = await supabase.rpc('restore_project', {
+  const { error } = await supabase.rpc("restore_project", {
     project_id: projectId,
-  })
+  });
 
-  if (error) throw error
+  if (error) throw error;
 }
 
 /**
  * Get soft-deleted projects for the current user
  */
 export async function getDeletedProjects(userId: string): Promise<Project[]> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('user_id', userId)
-    .not('deleted_at', 'is', null)
-    .order('deleted_at', { ascending: false })
+    .from("projects")
+    .select("*")
+    .eq("user_id", userId)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
 
-  if (error) throw error
-  return data || []
+  if (error) throw error;
+  return data || [];
 }
 
 /**
@@ -272,36 +283,38 @@ export async function getDeletedProjects(userId: string): Promise<Project[]> {
  * @param daysOld - Projects deleted more than this many days ago will be permanently removed
  * @returns Number of projects permanently deleted
  */
-export async function cleanupDeletedProjects(daysOld: number = 30): Promise<number> {
-  const supabase = createClient() as any
+export async function cleanupDeletedProjects(
+  daysOld: number = 30,
+): Promise<number> {
+  const supabase = createClient() as any;
 
-  const { data, error } = await supabase.rpc('cleanup_deleted_projects', {
+  const { data, error } = await supabase.rpc("cleanup_deleted_projects", {
     days_old: daysOld,
-  })
+  });
 
-  if (error) throw error
-  return data || 0
+  if (error) throw error;
+  return data || 0;
 }
 
 /**
  * Get project statistics using the database view
  */
 export async function getProjectStats(userId: string): Promise<any[]> {
-  const supabase = createClient() as any
+  const supabase = createClient() as any;
 
   const { data, error } = await supabase
-    .from('project_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
+    .from("project_stats")
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
 
-  if (error) throw error
-  return data || []
+  if (error) throw error;
+  return data || [];
 }
 
 export async function updateProjectStatus(
   projectId: string,
-  status: 'draft' | 'completed'
+  status: "draft" | "completed",
 ): Promise<void> {
-  await updateProject(projectId, { status })
+  await updateProject(projectId, { status });
 }

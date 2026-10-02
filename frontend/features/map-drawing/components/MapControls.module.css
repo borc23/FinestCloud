@@ -55,7 +55,7 @@
 }
 
 .clearControl::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -4px;
   left: 50%;
@@ -93,7 +93,7 @@
 }
 
 .shadeControl::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -4px;
   left: 50%;

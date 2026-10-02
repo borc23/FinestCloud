@@ -1,242 +1,303 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { RoofModel, CoordinateModel } from '@/features/solar-analysis/types/detection'
-import { StyleConfig } from '../../../shared/utils/styleConfig'
+import { useState, useCallback, useRef, useEffect } from "react";
+import {
+  RoofModel,
+  CoordinateModel,
+} from "@/features/solar-analysis/types/detection";
+import { StyleConfig } from "../../../shared/utils/styleConfig";
 
 interface UsePolygonsReturn {
-  roofPolygons: google.maps.Polygon[]
-  objectPolygons: google.maps.Polygon[]
-  renderPolygons: (polygonData: RoofModel[], isRoof: boolean, enableHover?: boolean) => void
-  clearAllPolygons: () => void
-  togglePolygonVisibility: (visible: boolean) => void
-  toggleRoofPolygonsVisibility: (visible: boolean) => void
-  toggleObjectPolygonsVisibility: (visible: boolean) => void
-  removePolygonListeners: (polygon: google.maps.Polygon) => void
-  removeClickListener: (polygon: google.maps.Polygon) => void
-  removePolygons: (polygons: google.maps.Polygon[]) => void
-  hasRoofs: boolean
-  hasPolygons: boolean
+  roofPolygons: google.maps.Polygon[];
+  objectPolygons: google.maps.Polygon[];
+  renderPolygons: (
+    polygonData: RoofModel[],
+    isRoof: boolean,
+    enableHover?: boolean,
+  ) => void;
+  clearAllPolygons: () => void;
+  togglePolygonVisibility: (visible: boolean) => void;
+  toggleRoofPolygonsVisibility: (visible: boolean) => void;
+  toggleObjectPolygonsVisibility: (visible: boolean) => void;
+  removePolygonListeners: (polygon: google.maps.Polygon) => void;
+  removeClickListener: (polygon: google.maps.Polygon) => void;
+  removePolygons: (polygons: google.maps.Polygon[]) => void;
+  hasRoofs: boolean;
+  hasPolygons: boolean;
 }
 
 export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
-  const [roofPolygons, setRoofPolygons] = useState<google.maps.Polygon[]>([])
-  const [objectPolygons, setObjectPolygons] = useState<google.maps.Polygon[]>([])
-  const polygonListenersRef = useRef<Map<google.maps.Polygon, google.maps.MapsEventListener[]>>(new Map())
+  const [roofPolygons, setRoofPolygons] = useState<google.maps.Polygon[]>([]);
+  const [objectPolygons, setObjectPolygons] = useState<google.maps.Polygon[]>(
+    [],
+  );
+  const polygonListenersRef = useRef<
+    Map<google.maps.Polygon, google.maps.MapsEventListener[]>
+  >(new Map());
 
-  const convertCoordinatesToLatLng = useCallback((coords: CoordinateModel[]): google.maps.LatLng[] => {
-    return coords
-      .filter(coord => coord.lat !== undefined && coord.lng !== undefined)
-      .map(coord => new google.maps.LatLng(coord.lat!, coord.lng!))
-  }, [])
+  const convertCoordinatesToLatLng = useCallback(
+    (coords: CoordinateModel[]): google.maps.LatLng[] => {
+      return coords
+        .filter((coord) => coord.lat !== undefined && coord.lng !== undefined)
+        .map((coord) => new google.maps.LatLng(coord.lat!, coord.lng!));
+    },
+    [],
+  );
 
-  const createPolygonOptions = useCallback((isRoof: boolean): google.maps.PolygonOptions => {
-    return StyleConfig.getOptionsForType(isRoof, false)
-  }, [])
+  const createPolygonOptions = useCallback(
+    (isRoof: boolean): google.maps.PolygonOptions => {
+      return StyleConfig.getOptionsForType(isRoof, false);
+    },
+    [],
+  );
 
-  const addHoverEffects = useCallback((polygon: google.maps.Polygon, isRoof: boolean, currentMap: google.maps.Map) => {
-    const baseColor = isRoof ? StyleConfig.COLORS.ROOF : StyleConfig.COLORS.OBJECT
-    const defaultOptions = StyleConfig.getOptionsForType(isRoof, false)
+  const addHoverEffects = useCallback(
+    (
+      polygon: google.maps.Polygon,
+      isRoof: boolean,
+      currentMap: google.maps.Map,
+    ) => {
+      const baseColor = isRoof
+        ? StyleConfig.COLORS.ROOF
+        : StyleConfig.COLORS.OBJECT;
+      const defaultOptions = StyleConfig.getOptionsForType(isRoof, false);
 
-    const listeners: google.maps.MapsEventListener[] = []
+      const listeners: google.maps.MapsEventListener[] = [];
 
-    // Hover effects - simple and efficient
-    const mouseoverListener = polygon.addListener('mouseover', () => {
-      // Don't apply hover effect if polygon is selected (draggable means selected), being drag-selected, or not clickable
-      const currentStrokeColor = polygon.get('strokeColor')
-      if (!polygon.getDraggable() && polygon.get('clickable') && currentStrokeColor !== '#3498db') {
-        polygon.setOptions({
-          strokeColor: baseColor.HOVER,
-          fillColor: baseColor.HOVER
-        })
-      }
-    })
-
-    const mouseoutListener = polygon.addListener('mouseout', () => {
-      const currentStrokeColor = polygon.get('strokeColor')
-      if (!polygon.getDraggable() && currentStrokeColor !== '#3498db') {
-        polygon.setOptions(defaultOptions)
-      }
-    })
-
-    const clickListener = polygon.addListener('click', (event: google.maps.MapMouseEvent) => {
-      if (!polygon.get('clickable')) {
-        return
-      }
-      // Note: Map centering removed - user should control map view
-      // Previous behavior: auto-centered map on clicked polygon
-    })
-
-    listeners.push(mouseoverListener, mouseoutListener, clickListener)
-
-    polygonListenersRef.current.set(polygon, listeners)
-    interface PolygonWithClickListener extends google.maps.Polygon {
-      __clickListener?: google.maps.MapsEventListener
-    }
-    ;(polygon as PolygonWithClickListener).__clickListener = clickListener
-  }, [])
-
-  const renderPolygons = useCallback((polygonData: RoofModel[], isRoof: boolean, enableHover: boolean = true) => {
-    if (!map || !polygonData) return
-
-    // Batch polygon creation to avoid N+1 rendering issue
-    // Create all polygons first without adding to map
-    const newPolygons: google.maps.Polygon[] = []
-
-    for (const roof of polygonData) {
-      if (!roof || !roof.coords || roof.coords.length === 0) continue
-
-      const latLngCoords = convertCoordinatesToLatLng(roof.coords)
-      if (latLngCoords.length === 0) continue
-
-      const options = createPolygonOptions(isRoof)
-
-      // Create polygon without map first to batch rendering
-      const polygon = new google.maps.Polygon({
-        paths: latLngCoords,
-        ...options,
-        map: null
-      })
-
-      newPolygons.push(polygon)
-    }
-
-    // Single state update triggers one re-render instead of N
-    const updateState = isRoof ? setRoofPolygons : setObjectPolygons
-
-    updateState(prev => {
-      // Now attach all polygons to map and add listeners in one batch
-      newPolygons.forEach(polygon => {
-        polygon.setMap(map)
-        if (enableHover) {
-          addHoverEffects(polygon, isRoof, map)
+      // Hover effects - simple and efficient
+      const mouseoverListener = polygon.addListener("mouseover", () => {
+        // Don't apply hover effect if polygon is selected (draggable means selected), being drag-selected, or not clickable
+        const currentStrokeColor = polygon.get("strokeColor");
+        if (
+          !polygon.getDraggable() &&
+          polygon.get("clickable") &&
+          currentStrokeColor !== "#3498db"
+        ) {
+          polygon.setOptions({
+            strokeColor: baseColor.HOVER,
+            fillColor: baseColor.HOVER,
+          });
         }
-      })
+      });
 
-      return [...prev, ...newPolygons]
-    })
-  }, [map, convertCoordinatesToLatLng, createPolygonOptions, addHoverEffects])
+      const mouseoutListener = polygon.addListener("mouseout", () => {
+        const currentStrokeColor = polygon.get("strokeColor");
+        if (!polygon.getDraggable() && currentStrokeColor !== "#3498db") {
+          polygon.setOptions(defaultOptions);
+        }
+      });
+
+      const clickListener = polygon.addListener(
+        "click",
+        (event: google.maps.MapMouseEvent) => {
+          if (!polygon.get("clickable")) {
+            return;
+          }
+          // Note: Map centering removed - user should control map view
+          // Previous behavior: auto-centered map on clicked polygon
+        },
+      );
+
+      listeners.push(mouseoverListener, mouseoutListener, clickListener);
+
+      polygonListenersRef.current.set(polygon, listeners);
+      interface PolygonWithClickListener extends google.maps.Polygon {
+        __clickListener?: google.maps.MapsEventListener;
+      }
+      (polygon as PolygonWithClickListener).__clickListener = clickListener;
+    },
+    [],
+  );
+
+  const renderPolygons = useCallback(
+    (
+      polygonData: RoofModel[],
+      isRoof: boolean,
+      enableHover: boolean = true,
+    ) => {
+      if (!map || !polygonData) return;
+
+      // Batch polygon creation to avoid N+1 rendering issue
+      // Create all polygons first without adding to map
+      const newPolygons: google.maps.Polygon[] = [];
+
+      for (const roof of polygonData) {
+        if (!roof || !roof.coords || roof.coords.length === 0) continue;
+
+        const latLngCoords = convertCoordinatesToLatLng(roof.coords);
+        if (latLngCoords.length === 0) continue;
+
+        const options = createPolygonOptions(isRoof);
+
+        // Create polygon without map first to batch rendering
+        const polygon = new google.maps.Polygon({
+          paths: latLngCoords,
+          ...options,
+          map: null,
+        });
+
+        newPolygons.push(polygon);
+      }
+
+      // Single state update triggers one re-render instead of N
+      const updateState = isRoof ? setRoofPolygons : setObjectPolygons;
+
+      updateState((prev) => {
+        // Now attach all polygons to map and add listeners in one batch
+        newPolygons.forEach((polygon) => {
+          polygon.setMap(map);
+          if (enableHover) {
+            addHoverEffects(polygon, isRoof, map);
+          }
+        });
+
+        return [...prev, ...newPolygons];
+      });
+    },
+    [map, convertCoordinatesToLatLng, createPolygonOptions, addHoverEffects],
+  );
 
   const clearPolygonGroup = useCallback((polygons: google.maps.Polygon[]) => {
     polygons.forEach((polygon) => {
       if (polygon) {
-        const listeners = polygonListenersRef.current.get(polygon)
+        const listeners = polygonListenersRef.current.get(polygon);
         if (listeners) {
-          listeners.forEach(listener => google.maps.event.removeListener(listener))
-          polygonListenersRef.current.delete(polygon)
+          listeners.forEach((listener) =>
+            google.maps.event.removeListener(listener),
+          );
+          polygonListenersRef.current.delete(polygon);
         }
-        polygon.setMap(null)
+        polygon.setMap(null);
       }
-    })
-  }, [])
+    });
+  }, []);
 
   const clearAllPolygons = useCallback(() => {
-    setRoofPolygons(prevRoof => {
-      clearPolygonGroup(prevRoof)
-      return []
-    })
-    setObjectPolygons(prevObj => {
-      clearPolygonGroup(prevObj)
-      return []
-    })
-  }, [clearPolygonGroup])
+    setRoofPolygons((prevRoof) => {
+      clearPolygonGroup(prevRoof);
+      return [];
+    });
+    setObjectPolygons((prevObj) => {
+      clearPolygonGroup(prevObj);
+      return [];
+    });
+  }, [clearPolygonGroup]);
 
-  const setPolygonGroupVisibility = useCallback((polygons: google.maps.Polygon[], visible: boolean) => {
-    polygons.forEach(polygon => {
-      if (polygon) {
-        polygon.setVisible(visible)
-      }
-    })
-  }, [])
+  const setPolygonGroupVisibility = useCallback(
+    (polygons: google.maps.Polygon[], visible: boolean) => {
+      polygons.forEach((polygon) => {
+        if (polygon) {
+          polygon.setVisible(visible);
+        }
+      });
+    },
+    [],
+  );
 
-  const togglePolygonVisibility = useCallback((visible: boolean) => {
-    setRoofPolygons(prevRoof => {
-      setPolygonGroupVisibility(prevRoof, visible)
-      return prevRoof
-    })
-    setObjectPolygons(prevObj => {
-      setPolygonGroupVisibility(prevObj, visible)
-      return prevObj
-    })
-  }, [setPolygonGroupVisibility])
+  const togglePolygonVisibility = useCallback(
+    (visible: boolean) => {
+      setRoofPolygons((prevRoof) => {
+        setPolygonGroupVisibility(prevRoof, visible);
+        return prevRoof;
+      });
+      setObjectPolygons((prevObj) => {
+        setPolygonGroupVisibility(prevObj, visible);
+        return prevObj;
+      });
+    },
+    [setPolygonGroupVisibility],
+  );
 
-  const toggleRoofPolygonsVisibility = useCallback((visible: boolean) => {
-    setRoofPolygons(prevRoof => {
-      setPolygonGroupVisibility(prevRoof, visible)
-      return prevRoof
-    })
-  }, [setPolygonGroupVisibility])
+  const toggleRoofPolygonsVisibility = useCallback(
+    (visible: boolean) => {
+      setRoofPolygons((prevRoof) => {
+        setPolygonGroupVisibility(prevRoof, visible);
+        return prevRoof;
+      });
+    },
+    [setPolygonGroupVisibility],
+  );
 
-  const toggleObjectPolygonsVisibility = useCallback((visible: boolean) => {
-    setObjectPolygons(prevObj => {
-      setPolygonGroupVisibility(prevObj, visible)
-      return prevObj
-    })
-  }, [setPolygonGroupVisibility])
+  const toggleObjectPolygonsVisibility = useCallback(
+    (visible: boolean) => {
+      setObjectPolygons((prevObj) => {
+        setPolygonGroupVisibility(prevObj, visible);
+        return prevObj;
+      });
+    },
+    [setPolygonGroupVisibility],
+  );
 
   useEffect(() => {
     return () => {
       polygonListenersRef.current.forEach((listeners) => {
-        listeners.forEach(listener => google.maps.event.removeListener(listener))
-      })
-      polygonListenersRef.current.clear()
+        listeners.forEach((listener) =>
+          google.maps.event.removeListener(listener),
+        );
+      });
+      polygonListenersRef.current.clear();
 
-      setRoofPolygons(prevRoof => {
-        prevRoof.forEach(polygon => polygon.setMap(null))
-        return []
-      })
-      setObjectPolygons(prevObj => {
-        prevObj.forEach(polygon => polygon.setMap(null))
-        return []
-      })
-    }
-  }, [])
+      setRoofPolygons((prevRoof) => {
+        prevRoof.forEach((polygon) => polygon.setMap(null));
+        return [];
+      });
+      setObjectPolygons((prevObj) => {
+        prevObj.forEach((polygon) => polygon.setMap(null));
+        return [];
+      });
+    };
+  }, []);
 
   const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
     interface PolygonWithClickListener extends google.maps.Polygon {
-      __clickListener?: google.maps.MapsEventListener
+      __clickListener?: google.maps.MapsEventListener;
     }
-    const listeners = polygonListenersRef.current.get(polygon)
+    const listeners = polygonListenersRef.current.get(polygon);
     if (listeners) {
-      listeners.forEach(listener => google.maps.event.removeListener(listener))
-      polygonListenersRef.current.delete(polygon)
-      delete (polygon as PolygonWithClickListener).__clickListener
+      listeners.forEach((listener) =>
+        google.maps.event.removeListener(listener),
+      );
+      polygonListenersRef.current.delete(polygon);
+      delete (polygon as PolygonWithClickListener).__clickListener;
     }
-  }, [])
+  }, []);
 
   const removeClickListener = useCallback((polygon: google.maps.Polygon) => {
     interface PolygonWithClickListener extends google.maps.Polygon {
-      __clickListener?: google.maps.MapsEventListener
+      __clickListener?: google.maps.MapsEventListener;
     }
-    const clickListener = (polygon as PolygonWithClickListener).__clickListener
+    const clickListener = (polygon as PolygonWithClickListener).__clickListener;
     if (clickListener) {
-      google.maps.event.removeListener(clickListener)
-      delete (polygon as PolygonWithClickListener).__clickListener
+      google.maps.event.removeListener(clickListener);
+      delete (polygon as PolygonWithClickListener).__clickListener;
     }
-  }, [])
+  }, []);
 
-  const removePolygons = useCallback((polygonsToRemove: google.maps.Polygon[]) => {
-    const polygonSet = new Set(polygonsToRemove)
+  const removePolygons = useCallback(
+    (polygonsToRemove: google.maps.Polygon[]) => {
+      const polygonSet = new Set(polygonsToRemove);
 
-    setRoofPolygons(prev => {
-      const toRemove = prev.filter(p => polygonSet.has(p))
-      toRemove.forEach((polygon) => {
-        clearPolygonGroup([polygon])
-      })
-      const remaining = prev.filter(p => !polygonSet.has(p))
-      return remaining
-    })
+      setRoofPolygons((prev) => {
+        const toRemove = prev.filter((p) => polygonSet.has(p));
+        toRemove.forEach((polygon) => {
+          clearPolygonGroup([polygon]);
+        });
+        const remaining = prev.filter((p) => !polygonSet.has(p));
+        return remaining;
+      });
 
-    setObjectPolygons(prev => {
-      const toRemove = prev.filter(p => polygonSet.has(p))
-      toRemove.forEach(polygon => {
-        clearPolygonGroup([polygon])
-      })
-      const remaining = prev.filter(p => !polygonSet.has(p))
-      return remaining
-    })
-  }, [clearPolygonGroup])
+      setObjectPolygons((prev) => {
+        const toRemove = prev.filter((p) => polygonSet.has(p));
+        toRemove.forEach((polygon) => {
+          clearPolygonGroup([polygon]);
+        });
+        const remaining = prev.filter((p) => !polygonSet.has(p));
+        return remaining;
+      });
+    },
+    [clearPolygonGroup],
+  );
 
-  const hasRoofs = roofPolygons.length > 0
-  const hasPolygons = roofPolygons.length > 0 || objectPolygons.length > 0
+  const hasRoofs = roofPolygons.length > 0;
+  const hasPolygons = roofPolygons.length > 0 || objectPolygons.length > 0;
 
   return {
     roofPolygons,
@@ -250,6 +311,6 @@ export function usePolygons(map: google.maps.Map | null): UsePolygonsReturn {
     removeClickListener,
     removePolygons,
     hasRoofs,
-    hasPolygons
-  }
+    hasPolygons,
+  };
 }

@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { createProject } from '@/features/projects/lib/projectsApi'
-import type { CreateProjectData } from '@/features/auth/types/database'
-import styles from './ProjectModal.module.css'
+import { useState } from "react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { createProject } from "@/features/projects/lib/projectsApi";
+import type { CreateProjectData } from "@/features/auth/types/database";
+import styles from "./ProjectModal.module.css";
 
 interface SaveProjectModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (projectId: string) => void
-  projectData: Omit<CreateProjectData, 'projectName' | 'status'>
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (projectId: string) => void;
+  projectData: Omit<CreateProjectData, "projectName" | "status">;
 }
 
 export default function SaveProjectModal({
@@ -19,53 +19,53 @@ export default function SaveProjectModal({
   onSave,
   projectData,
 }: SaveProjectModalProps) {
-  const { user } = useAuth()
-  const [projectName, setProjectName] = useState('')
-  const [status, setStatus] = useState<'draft' | 'completed'>('draft')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth();
+  const [projectName, setProjectName] = useState("");
+  const [status, setStatus] = useState<"draft" | "completed">("draft");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!user) {
-      setError('You must be logged in to save projects')
-      return
+      setError("You must be logged in to save projects");
+      return;
     }
 
     if (!projectName.trim()) {
-      setError('Please enter a project name')
-      return
+      setError("Please enter a project name");
+      return;
     }
 
     if (projectData.roofs.length === 0) {
-      setError('No roof data to save. Please add at least one roof.')
-      return
+      setError("No roof data to save. Please add at least one roof.");
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const fullProjectData: CreateProjectData = {
         ...projectData,
         projectName: projectName.trim(),
         status,
-      }
+      };
 
-      const projectId = await createProject(user.id, fullProjectData)
-      onSave(projectId)
-      setProjectName('')
-      onClose()
+      const projectId = await createProject(user.id, fullProjectData);
+      onSave(projectId);
+      setProjectName("");
+      onClose();
     } catch (err: any) {
-      console.error('Error saving project:', err)
-      setError(err.message || 'Failed to save project')
+      console.error("Error saving project:", err);
+      setError(err.message || "Failed to save project");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -83,18 +83,28 @@ export default function SaveProjectModal({
           <div className={styles.projectSummary}>
             <div className={styles.summaryItem}>
               <i className="fas fa-home"></i>
-              <span>{projectData.roofs.length} roof{projectData.roofs.length !== 1 ? 's' : ''}</span>
+              <span>
+                {projectData.roofs.length} roof
+                {projectData.roofs.length !== 1 ? "s" : ""}
+              </span>
             </div>
             <div className={styles.summaryItem}>
               <i className="fas fa-solar-panel"></i>
               <span>
-                {projectData.roofs.reduce((sum, roof) => sum + roof.panelCount, 0)} panels
+                {projectData.roofs.reduce(
+                  (sum, roof) => sum + roof.panelCount,
+                  0,
+                )}{" "}
+                panels
               </span>
             </div>
             {projectData.objects && projectData.objects.length > 0 && (
               <div className={styles.summaryItem}>
                 <i className="fas fa-circle-exclamation"></i>
-                <span>{projectData.objects.length} obstacle{projectData.objects.length !== 1 ? 's' : ''}</span>
+                <span>
+                  {projectData.objects.length} obstacle
+                  {projectData.objects.length !== 1 ? "s" : ""}
+                </span>
               </div>
             )}
           </div>
@@ -118,7 +128,9 @@ export default function SaveProjectModal({
             <select
               id="status"
               value={status}
-              onChange={(e) => setStatus(e.target.value as 'draft' | 'completed')}
+              onChange={(e) =>
+                setStatus(e.target.value as "draft" | "completed")
+              }
               disabled={loading}
             >
               <option value="draft">Draft</option>
@@ -140,11 +152,11 @@ export default function SaveProjectModal({
               className={styles.saveButton}
               disabled={loading}
             >
-              {loading ? 'Saving...' : 'Save Project'}
+              {loading ? "Saving..." : "Save Project"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

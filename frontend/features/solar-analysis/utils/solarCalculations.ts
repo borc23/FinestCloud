@@ -9,10 +9,22 @@
  */
 export function generateMonthlyEstimate(annualProduction: number): number[] {
   const monthlyDistribution = [
-    0.04, 0.06, 0.08, 0.10, 0.11, 0.12,  // Jan-Jun
-    0.13, 0.12, 0.10, 0.07, 0.04, 0.03   // Jul-Dec
-  ]
-  return monthlyDistribution.map(ratio => Math.round(annualProduction * ratio))
+    0.04,
+    0.06,
+    0.08,
+    0.1,
+    0.11,
+    0.12, // Jan-Jun
+    0.13,
+    0.12,
+    0.1,
+    0.07,
+    0.04,
+    0.03, // Jul-Dec
+  ];
+  return monthlyDistribution.map((ratio) =>
+    Math.round(annualProduction * ratio),
+  );
 }
 
 /**
@@ -21,11 +33,14 @@ export function generateMonthlyEstimate(annualProduction: number): number[] {
  * @param degradationRate - Annual degradation rate as percentage (e.g., 0.5 for 0.5%)
  * @returns Array of 25 yearly production values
  */
-export function generate25YearProjection(annualProduction: number, degradationRate: number): number[] {
-  const projection: number[] = []
+export function generate25YearProjection(
+  annualProduction: number,
+  degradationRate: number,
+): number[] {
+  const projection: number[] = [];
   for (let year = 0; year < 25; year++) {
-    const degradationFactor = Math.pow(1 - degradationRate / 100, year)
-    projection.push(Math.round(annualProduction * degradationFactor))
+    const degradationFactor = Math.pow(1 - degradationRate / 100, year);
+    projection.push(Math.round(annualProduction * degradationFactor));
   }
-  return projection
+  return projection;
 }

@@ -1,28 +1,30 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import styles from './SolarResultsDashboard.module.css'
-import MonthlyProductionChart from './MonthlyProductionChart'
-import FinancialCalculator from '@/features/financial/components/FinancialCalculator'
-import ElectricalDesignPanel from '@/features/electrical/components//ElectricalDesignPanel'
-import DashboardActions from './DashboardActions'
-import { useSolarDashboardData } from '@/features/solar-analysis/hooks/useSolarDashboardData'
-import { useDashboardModals } from '@/features/solar-analysis/hooks/useDashboardModals'
-import { useSolarReportGenerator } from '@/features/solar-analysis/hooks/useSolarReportGenerator'
+import { useEffect } from "react";
+import styles from "./SolarResultsDashboard.module.css";
+import MonthlyProductionChart from "./MonthlyProductionChart";
+import FinancialCalculator from "@/features/financial/components/FinancialCalculator";
+import ElectricalDesignPanel from "@/features/electrical/components//ElectricalDesignPanel";
+import DashboardActions from "./DashboardActions";
+import { useSolarDashboardData } from "@/features/solar-analysis/hooks/useSolarDashboardData";
+import { useDashboardModals } from "@/features/solar-analysis/hooks/useDashboardModals";
+import { useSolarReportGenerator } from "@/features/solar-analysis/hooks/useSolarReportGenerator";
 import {
   SolarResultsDashboardProps,
   DashboardSummaryProps,
-  MetricItemProps
-} from '@/features/solar-analysis/types/result_dashboard'
-import { useTutorial } from '@/contexts/TutorialContext'
+  MetricItemProps,
+} from "@/features/solar-analysis/types/result_dashboard";
+import { useTutorial } from "@/contexts/TutorialContext";
 
-export default function SolarResultsDashboard(props: SolarResultsDashboardProps & {
-  onMinimizeChange?: (minimized: boolean) => void
-  onSaveProject?: () => void
-  isAuthenticated?: boolean
-  minimizeRef?: React.MutableRefObject<(() => void) | null>
-}) {
-  const { showTooltip, markStepComplete } = useTutorial()
+export default function SolarResultsDashboard(
+  props: SolarResultsDashboardProps & {
+    onMinimizeChange?: (minimized: boolean) => void;
+    onSaveProject?: () => void;
+    isAuthenticated?: boolean;
+    minimizeRef?: React.MutableRefObject<(() => void) | null>;
+  },
+) {
+  const { showTooltip, markStepComplete } = useTutorial();
 
   // Extract and prepare all dashboard data
   const {
@@ -31,8 +33,8 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     pvwattsData,
     isLoading,
     annualProduction,
-    costEstimate
-  } = useSolarDashboardData(props)
+    costEstimate,
+  } = useSolarDashboardData(props);
 
   // Manage modal states
   const {
@@ -43,11 +45,11 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     showElectrical,
     setShowElectrical,
     isMinimized,
-    setIsMinimized
+    setIsMinimized,
   } = useDashboardModals({
     isEditMode: props.isEditMode,
-    onMinimizeChange: props.onMinimizeChange
-  })
+    onMinimizeChange: props.onMinimizeChange,
+  });
 
   // PDF report generation
   const { handleGeneratePDF } = useSolarReportGenerator({
@@ -55,41 +57,42 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
     annualProduction,
     location,
     costEstimate,
-    capacityFactor: pvwattsData?.capacity_factor
-  })
+    capacityFactor: pvwattsData?.capacity_factor,
+  });
 
   // Expose minimize function to parent via ref
   useEffect(() => {
     if (props.minimizeRef) {
-      props.minimizeRef.current = () => setIsMinimized(true)
+      props.minimizeRef.current = () => setIsMinimized(true);
     }
-  }, [props.minimizeRef, setIsMinimized])
+  }, [props.minimizeRef, setIsMinimized]);
 
   // Show tutorial tooltip when results are available
   useEffect(() => {
     if (panelData && annualProduction && !isMinimized) {
       setTimeout(() => {
         showTooltip({
-          id: 'results_dashboard',
+          id: "results_dashboard",
           targetElement: '[data-tutorial="dashboard"]',
-          content: '🎉 Your solar system is ready! Explore metrics, financial analysis, and electrical design.',
-          position: 'left',
+          content:
+            "🎉 Your solar system is ready! Explore metrics, financial analysis, and electrical design.",
+          position: "left",
           showNext: false,
           showSkip: true,
-        })
-        markStepComplete('results')
-      }, 1000)
+        });
+        markStepComplete("results");
+      }, 1000);
     }
-  }, [panelData, annualProduction, isMinimized, showTooltip, markStepComplete])
+  }, [panelData, annualProduction, isMinimized, showTooltip, markStepComplete]);
 
   if (!panelData) {
-    return null
+    return null;
   }
 
   return (
     <>
       <div
-        className={`${styles.dashboard} ${isMinimized ? styles.minimized : ''}`}
+        className={`${styles.dashboard} ${isMinimized ? styles.minimized : ""}`}
         data-tutorial="dashboard"
       >
         {isMinimized ? (
@@ -115,7 +118,10 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
 
             <div className={styles.details}>
               <MetricItem label="Panel Count" value={panelData.totalPanels} />
-              <MetricItem label="System Size" value={`${panelData.systemSize.toFixed(3)} kW`} />
+              <MetricItem
+                label="System Size"
+                value={`${panelData.systemSize.toFixed(3)} kW`}
+              />
               {annualProduction && (
                 <MetricItem
                   label="Annual Production"
@@ -124,10 +130,16 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
                 />
               )}
               {pvwattsData && (
-                <MetricItem label="Capacity Factor" value={`${pvwattsData.capacity_factor.toFixed(1)}%`} />
+                <MetricItem
+                  label="Capacity Factor"
+                  value={`${pvwattsData.capacity_factor.toFixed(1)}%`}
+                />
               )}
               {costEstimate && (
-                <MetricItem label="Estimated Cost" value={`$${costEstimate.toLocaleString()}`} />
+                <MetricItem
+                  label="Estimated Cost"
+                  value={`$${costEstimate.toLocaleString()}`}
+                />
               )}
             </div>
 
@@ -149,8 +161,8 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
         <MonthlyProductionChart
           data={pvwattsData}
           onClose={() => {
-            setShowMonthlyChart(false)
-            setIsMinimized(false)
+            setShowMonthlyChart(false);
+            setIsMinimized(false);
           }}
         />
       )}
@@ -162,8 +174,8 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
           panelCount={panelData.totalPanels}
           panelWattage={panelData.panelWattage}
           onClose={() => {
-            setShowFinancials(false)
-            setIsMinimized(false)
+            setShowFinancials(false);
+            setIsMinimized(false);
           }}
         />
       )}
@@ -174,16 +186,20 @@ export default function SolarResultsDashboard(props: SolarResultsDashboardProps 
           totalPanels={panelData.totalPanels}
           systemSizeKw={panelData.systemSize}
           onClose={() => {
-            setShowElectrical(false)
-            setIsMinimized(false)
+            setShowElectrical(false);
+            setIsMinimized(false);
           }}
         />
       )}
     </>
-  )
+  );
 }
 
-function DashboardSummary({ panelCount, systemSize, annualProduction }: DashboardSummaryProps) {
+function DashboardSummary({
+  panelCount,
+  systemSize,
+  annualProduction,
+}: DashboardSummaryProps) {
   return (
     <div className={styles.summary}>
       <span className={styles.metric}>{panelCount} panels</span>
@@ -198,7 +214,7 @@ function DashboardSummary({ panelCount, systemSize, annualProduction }: Dashboar
         </>
       )}
     </div>
-  )
+  );
 }
 
 function MetricItem({ label, value, isLoading = false }: MetricItemProps) {
@@ -206,8 +222,12 @@ function MetricItem({ label, value, isLoading = false }: MetricItemProps) {
     <div className={styles.detailItem}>
       <span className={styles.label}>{label}</span>
       <span className={styles.value}>
-        {isLoading ? <span className={styles.loadingIndicator}>...</span> : value}
+        {isLoading ? (
+          <span className={styles.loadingIndicator}>...</span>
+        ) : (
+          value
+        )}
       </span>
     </div>
-  )
+  );
 }

@@ -1,17 +1,20 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { getProjects, deleteProject } from '@/features/projects/lib/projectsApi'
-import type { Project } from '@/features/auth/types/database'
-import { toast } from 'sonner'
-import ProjectCard from './ProjectCard'
-import styles from './ProjectListPanel.module.css'
+import { useEffect, useState } from "react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import {
+  getProjects,
+  deleteProject,
+} from "@/features/projects/lib/projectsApi";
+import type { Project } from "@/features/auth/types/database";
+import { toast } from "sonner";
+import ProjectCard from "./ProjectCard";
+import styles from "./ProjectListPanel.module.css";
 
 interface ProjectListPanelProps {
-  isOpen: boolean
-  onClose: () => void
-  onLoadProject: (projectId: string) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onLoadProject: (projectId: string) => void;
 }
 
 export default function ProjectListPanel({
@@ -19,71 +22,79 @@ export default function ProjectListPanel({
   onClose,
   onLoadProject,
 }: ProjectListPanelProps) {
-  const { user } = useAuth()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { user } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && user) {
-      loadProjects()
+      loadProjects();
     }
-  }, [isOpen, user])
+  }, [isOpen, user]);
 
   const loadProjects = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const data = await getProjects(user.id)
-      setProjects(data.map(p => ({
-        id: p.id,
-        userId: p.user_id,
-        projectName: p.project_name,
-        status: p.status,
-        mapCenterLat: p.map_center_lat,
-        mapCenterLng: p.map_center_lng,
-        mapZoom: p.map_zoom,
-        annualFluxUrl: p.annual_flux_url,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
-      })))
+      const data = await getProjects(user.id);
+      setProjects(
+        data.map((p) => ({
+          id: p.id,
+          userId: p.user_id,
+          projectName: p.project_name,
+          status: p.status,
+          mapCenterLat: p.map_center_lat,
+          mapCenterLng: p.map_center_lng,
+          mapZoom: p.map_zoom,
+          annualFluxUrl: p.annual_flux_url,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at,
+        })),
+      );
     } catch (err: any) {
-      console.error('Error loading projects:', err)
-      setError(err.message || 'Failed to load projects')
+      console.error("Error loading projects:", err);
+      setError(err.message || "Failed to load projects");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDelete = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return
+    if (
+      !confirm(
+        "Are you sure you want to delete this project? This action cannot be undone.",
+      )
+    ) {
+      return;
     }
 
-    setDeletingId(projectId)
+    setDeletingId(projectId);
 
     try {
-      await deleteProject(projectId)
-      setProjects(projects.filter(p => p.id !== projectId))
-      toast.success('Project deleted successfully')
+      await deleteProject(projectId);
+      setProjects(projects.filter((p) => p.id !== projectId));
+      toast.success("Project deleted successfully");
     } catch (err: any) {
-      console.error('Error deleting project:', err)
-      toast.error('Failed to delete project: ' + (err.message || 'Unknown error'))
+      console.error("Error deleting project:", err);
+      toast.error(
+        "Failed to delete project: " + (err.message || "Unknown error"),
+      );
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
   const handleLoad = (projectId: string) => {
-    onLoadProject(projectId)
-    onClose()
-  }
+    onLoadProject(projectId);
+    onClose();
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -137,5 +148,5 @@ export default function ProjectListPanel({
         </div>
       </div>
     </div>
-  )
+  );
 }

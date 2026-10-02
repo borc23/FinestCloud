@@ -1,1 +1,1 @@
-export type DrawingMode = 'roof' | 'object';
+export type DrawingMode = "roof" | "object";

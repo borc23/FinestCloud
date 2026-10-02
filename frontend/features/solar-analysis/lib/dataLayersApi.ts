@@ -6,15 +6,16 @@
 import type {
   DataLayersResponse,
   DataLayersApiResponse,
-  DataLayersRequest
-} from '@/features/solar-analysis/types/solar-api'
+  DataLayersRequest,
+} from "@/features/solar-analysis/types/solar-api";
 
 export class DataLayersApiService {
-  private baseUrl = '/api/solar-data-layers'
-  private cachedData: Map<string, DataLayersResponse> = new Map()
-  private cacheTimestamp: Map<string, number> = new Map()
-  private cacheTTL: number = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
-  private inFlightRequests: Map<string, Promise<DataLayersResponse>> = new Map()
+  private baseUrl = "/api/solar-data-layers";
+  private cachedData: Map<string, DataLayersResponse> = new Map();
+  private cacheTimestamp: Map<string, number> = new Map();
+  private cacheTTL: number = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  private inFlightRequests: Map<string, Promise<DataLayersResponse>> =
+    new Map();
 
   /**
    * Get data layers for a specific location
@@ -23,22 +24,22 @@ export class DataLayersApiService {
     latitude: number,
     longitude: number,
     radiusMeters: number = 50,
-    requiredQuality: 'LOW' | 'MEDIUM' | 'HIGH' = 'HIGH'
+    requiredQuality: "LOW" | "MEDIUM" | "HIGH" = "HIGH",
   ): Promise<DataLayersResponse> {
-    const cacheKey = this.getCacheKey(latitude, longitude, radiusMeters)
+    const cacheKey = this.getCacheKey(latitude, longitude, radiusMeters);
 
     // Check cache
     if (this.isCachedDataValid(cacheKey)) {
-      const cached = this.cachedData.get(cacheKey)
+      const cached = this.cachedData.get(cacheKey);
       if (cached) {
-        return cached
+        return cached;
       }
     }
 
     // Check if there's an in-flight request
-    const inFlight = this.inFlightRequests.get(cacheKey)
+    const inFlight = this.inFlightRequests.get(cacheKey);
     if (inFlight) {
-      return inFlight
+      return inFlight;
     }
 
     // Create new request
@@ -46,18 +47,18 @@ export class DataLayersApiService {
       latitude,
       longitude,
       radiusMeters,
-      requiredQuality
-    )
-    this.inFlightRequests.set(cacheKey, requestPromise)
+      requiredQuality,
+    );
+    this.inFlightRequests.set(cacheKey, requestPromise);
 
     try {
-      const data = await requestPromise
+      const data = await requestPromise;
       // Cache the result
-      this.cachedData.set(cacheKey, data)
-      this.cacheTimestamp.set(cacheKey, Date.now())
-      return data
+      this.cachedData.set(cacheKey, data);
+      this.cacheTimestamp.set(cacheKey, Date.now());
+      return data;
     } finally {
-      this.inFlightRequests.delete(cacheKey)
+      this.inFlightRequests.delete(cacheKey);
     }
   }
 
@@ -68,7 +69,7 @@ export class DataLayersApiService {
     latitude: number,
     longitude: number,
     radiusMeters: number,
-    requiredQuality: 'LOW' | 'MEDIUM' | 'HIGH'
+    requiredQuality: "LOW" | "MEDIUM" | "HIGH",
   ): Promise<DataLayersResponse> {
     const requestBody: DataLayersRequest = {
       location: {
@@ -77,75 +78,87 @@ export class DataLayersApiService {
       },
       radiusMeters,
       requiredQuality,
-      view: 'IMAGERY_AND_ANNUAL_FLUX_LAYERS', // Focus on annual flux for now
+      view: "IMAGERY_AND_ANNUAL_FLUX_LAYERS", // Focus on annual flux for now
       pixelSizeMeters: 0.5, // High resolution
-    }
+    };
 
     const response = await fetch(this.baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
-    })
+    });
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to fetch data layers: ${response.status} - ${errorText}`)
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to fetch data layers: ${response.status} - ${errorText}`,
+      );
     }
 
-    const result: DataLayersApiResponse = await response.json()
+    const result: DataLayersApiResponse = await response.json();
 
     if (!result.success || !result.data) {
-      const errorMessage = result.error || 'Failed to get data layers'
-      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        throw new Error('Google Solar API does not have coverage for this location. Please try a different area (e.g., US, UK, or other supported regions).')
+      const errorMessage = result.error || "Failed to get data layers";
+      if (errorMessage.includes("404") || errorMessage.includes("not found")) {
+        throw new Error(
+          "Google Solar API does not have coverage for this location. Please try a different area (e.g., US, UK, or other supported regions).",
+        );
       }
-      throw new Error(errorMessage)
+      throw new Error(errorMessage);
     }
 
-    return result.data
+    return result.data;
   }
 
   /**
    * Get cache key for location and radius
    */
-  private getCacheKey(latitude: number, longitude: number, radiusMeters: number): string {
+  private getCacheKey(
+    latitude: number,
+    longitude: number,
+    radiusMeters: number,
+  ): string {
     // Round to 5 decimal places (~1m precision)
-    const lat = Math.round(latitude * 100000) / 100000
-    const lng = Math.round(longitude * 100000) / 100000
-    return `${lat},${lng},${radiusMeters}`
+    const lat = Math.round(latitude * 100000) / 100000;
+    const lng = Math.round(longitude * 100000) / 100000;
+    return `${lat},${lng},${radiusMeters}`;
   }
 
   /**
    * Check if cached data is still valid
    */
   private isCachedDataValid(cacheKey: string): boolean {
-    const timestamp = this.cacheTimestamp.get(cacheKey)
-    if (!timestamp) return false
+    const timestamp = this.cacheTimestamp.get(cacheKey);
+    if (!timestamp) return false;
 
-    const age = Date.now() - timestamp
-    return age < this.cacheTTL
+    const age = Date.now() - timestamp;
+    return age < this.cacheTTL;
   }
 
   /**
    * Clear all cached data
    */
   clearCache(): void {
-    this.cachedData.clear()
-    this.cacheTimestamp.clear()
-    this.inFlightRequests.clear()
+    this.cachedData.clear();
+    this.cacheTimestamp.clear();
+    this.inFlightRequests.clear();
   }
 
   /**
    * Clear cache for specific location
    */
-  clearLocationCache(latitude: number, longitude: number, radiusMeters: number = 50): void {
-    const cacheKey = this.getCacheKey(latitude, longitude, radiusMeters)
-    this.cachedData.delete(cacheKey)
-    this.cacheTimestamp.delete(cacheKey)
+  clearLocationCache(
+    latitude: number,
+    longitude: number,
+    radiusMeters: number = 50,
+  ): void {
+    const cacheKey = this.getCacheKey(latitude, longitude, radiusMeters);
+    this.cachedData.delete(cacheKey);
+    this.cacheTimestamp.delete(cacheKey);
   }
 }
 
 // Export singleton instance
-export const dataLayersApi = new DataLayersApiService()
+export const dataLayersApi = new DataLayersApiService();

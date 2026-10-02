@@ -1,41 +1,41 @@
 export interface DetectionBounds {
-  north: number
-  south: number
-  east: number
-  west: number
+  north: number;
+  south: number;
+  east: number;
+  west: number;
 }
 
 export interface CoordinateModel {
-  lat?: number
-  lng?: number
-  pitch?: number
-  azimuth?: number
-  padding?: number
+  lat?: number;
+  lng?: number;
+  pitch?: number;
+  azimuth?: number;
+  padding?: number;
 }
 
 export interface RoofModel {
-  coords: CoordinateModel[]
+  coords: CoordinateModel[];
 }
 
 export interface DetectionResponse {
-  success: boolean
-  roofs: RoofModel[]
-  objects: RoofModel[]
-  error?: string
+  success: boolean;
+  roofs: RoofModel[];
+  objects: RoofModel[];
+  error?: string;
 }
 
 export interface StaticMapParams {
-  center: string
-  zoom: number
-  size: string
-  maptype: string
-  format: string
-  style: string
+  center: string;
+  zoom: number;
+  size: string;
+  maptype: string;
+  format: string;
+  style: string;
 }
 
 export interface DetectionRequest {
-  image: StaticMapParams
-  bounds: DetectionBounds
-  conf?: number
-  epsilon?: number
+  image: StaticMapParams;
+  bounds: DetectionBounds;
+  conf?: number;
+  epsilon?: number;
 }

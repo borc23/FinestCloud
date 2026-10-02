@@ -8,121 +8,125 @@ import type {
   PVWattsSystemRequest,
   PVWattsResponse,
   MonthlyProductionData,
-  PVWattsCalculationParams
-} from '@/features/solar-analysis/types/pvwatts'
+  PVWattsCalculationParams,
+} from "@/features/solar-analysis/types/pvwatts";
 
 export class PVWattsApiService {
-  private baseUrl = '/api/pvwatts'
-  private cachedData: PVWattsResponse | null = null
-  private lastRequestParams: PVWattsCalculationParams | null = null
-  private cacheTimestamp: number | null = null
-  private cacheTTL: number = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-  private inFlightRequest: Promise<PVWattsResponse> | null = null
-  private inFlightParams: PVWattsCalculationParams | null = null
+  private baseUrl = "/api/pvwatts";
+  private cachedData: PVWattsResponse | null = null;
+  private lastRequestParams: PVWattsCalculationParams | null = null;
+  private cacheTimestamp: number | null = null;
+  private cacheTTL: number = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  private inFlightRequest: Promise<PVWattsResponse> | null = null;
+  private inFlightParams: PVWattsCalculationParams | null = null;
 
   /**
    * Calculate solar production using PVWatts API
    */
-  async calculateProduction(params: PVWattsCalculationParams): Promise<PVWattsResponse> {
+  async calculateProduction(
+    params: PVWattsCalculationParams,
+  ): Promise<PVWattsResponse> {
     // Check cache
     if (this.isCachedDataValid(params) && this.cachedData) {
-      return this.cachedData
+      return this.cachedData;
     }
 
     // Check if there's an in-flight request with the same parameters
     if (this.inFlightRequest && this.paramsMatch(this.inFlightParams, params)) {
-      return this.inFlightRequest
+      return this.inFlightRequest;
     }
 
     // Create new request
-    this.inFlightParams = params
-    this.inFlightRequest = this.executeCalculation(params)
+    this.inFlightParams = params;
+    this.inFlightRequest = this.executeCalculation(params);
 
     try {
-      const data = await this.inFlightRequest
+      const data = await this.inFlightRequest;
       // Cache the result with timestamp
-      this.cachedData = data
-      this.lastRequestParams = params
-      this.cacheTimestamp = Date.now()
-      return data
+      this.cachedData = data;
+      this.lastRequestParams = params;
+      this.cacheTimestamp = Date.now();
+      return data;
     } finally {
-      this.inFlightRequest = null
-      this.inFlightParams = null
+      this.inFlightRequest = null;
+      this.inFlightParams = null;
     }
   }
 
-  private async executeCalculation(params: PVWattsCalculationParams): Promise<PVWattsResponse> {
+  private async executeCalculation(
+    params: PVWattsCalculationParams,
+  ): Promise<PVWattsResponse> {
     const requestData: PVWattsRequest = {
       latitude: params.latitude,
       longitude: params.longitude,
       panel_count: params.panelCount,
       panel_wattage: params.panelWattage,
       tilt: params.tilt || 20,
-      azimuth: params.azimuth || 180
-    }
+      azimuth: params.azimuth || 180,
+    };
 
     const response = await fetch(`${this.baseUrl}/calculate`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestData)
-    })
+      body: JSON.stringify(requestData),
+    });
 
     if (!response.ok) {
-      let errorMessage = `PVWatts API request failed with status ${response.status}`
+      let errorMessage = `PVWatts API request failed with status ${response.status}`;
       try {
-        const error = await response.json()
-        errorMessage = error.detail || errorMessage
+        const error = await response.json();
+        errorMessage = error.detail || errorMessage;
       } catch {
         // Response is not JSON, use status text or default message
-        errorMessage = response.statusText || errorMessage
+        errorMessage = response.statusText || errorMessage;
       }
-      throw new Error(errorMessage)
+      throw new Error(errorMessage);
     }
 
-    return await response.json()
+    return await response.json();
   }
 
   /**
    * Calculate production by system capacity
    */
   async calculateBySystemCapacity(params: {
-    latitude: number
-    longitude: number
-    systemCapacity: number
-    tilt?: number
-    azimuth?: number
+    latitude: number;
+    longitude: number;
+    systemCapacity: number;
+    tilt?: number;
+    azimuth?: number;
   }): Promise<PVWattsResponse> {
     const requestData: PVWattsSystemRequest = {
       latitude: params.latitude,
       longitude: params.longitude,
       system_capacity: params.systemCapacity,
       tilt: params.tilt || 20,
-      azimuth: params.azimuth || 180
-    }
+      azimuth: params.azimuth || 180,
+    };
 
     const response = await fetch(`${this.baseUrl}/calculate_system`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestData)
-    })
+      body: JSON.stringify(requestData),
+    });
 
     if (!response.ok) {
-      let errorMessage = `PVWatts API request failed with status ${response.status}`
+      let errorMessage = `PVWatts API request failed with status ${response.status}`;
       try {
-        const error = await response.json()
-        errorMessage = error.detail || errorMessage
+        const error = await response.json();
+        errorMessage = error.detail || errorMessage;
       } catch {
         // Response is not JSON, use status text or default message
-        errorMessage = response.statusText || errorMessage
+        errorMessage = response.statusText || errorMessage;
       }
-      throw new Error(errorMessage)
+      throw new Error(errorMessage);
     }
 
-    return await response.json()
+    return await response.json();
   }
 
   /**
@@ -130,31 +134,31 @@ export class PVWattsApiService {
    */
   getMonthNames(): string[] {
     return [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ]
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
   }
 
   /**
    * Format monthly data for display
    */
   formatMonthlyData(monthlyProduction: number[]): MonthlyProductionData[] {
-    const months = this.getMonthNames()
+    const months = this.getMonthNames();
     return monthlyProduction.map((production, index) => ({
       month: months[index],
       production: Math.round(production),
-      productionKwh: production
-    }))
+      productionKwh: production,
+    }));
   }
 
   /**
@@ -162,10 +166,10 @@ export class PVWattsApiService {
    */
   private paramsMatch(
     params1: PVWattsCalculationParams | null,
-    params2: PVWattsCalculationParams
+    params2: PVWattsCalculationParams,
   ): boolean {
     if (!params1) {
-      return false
+      return false;
     }
 
     return (
@@ -175,7 +179,7 @@ export class PVWattsApiService {
       params1.panelWattage === params2.panelWattage &&
       (params1.tilt || 20) === (params2.tilt || 20) &&
       (params1.azimuth || 180) === (params2.azimuth || 180)
-    )
+    );
   }
 
   /**
@@ -183,49 +187,49 @@ export class PVWattsApiService {
    */
   private isCachedDataValid(params: PVWattsCalculationParams): boolean {
     if (!this.cachedData || !this.lastRequestParams || !this.cacheTimestamp) {
-      return false
+      return false;
     }
 
     // Check if cache has expired
-    const cacheAge = Date.now() - this.cacheTimestamp
+    const cacheAge = Date.now() - this.cacheTimestamp;
     if (cacheAge > this.cacheTTL) {
-      return false
+      return false;
     }
 
-    return this.paramsMatch(this.lastRequestParams, params)
+    return this.paramsMatch(this.lastRequestParams, params);
   }
 
   /**
    * Clear cached data
    */
   clearCache(): void {
-    this.cachedData = null
-    this.lastRequestParams = null
-    this.cacheTimestamp = null
+    this.cachedData = null;
+    this.lastRequestParams = null;
+    this.cacheTimestamp = null;
   }
 
   /**
    * Set cache TTL (time-to-live) in milliseconds
    */
   setCacheTTL(ttlMs: number): void {
-    this.cacheTTL = ttlMs
+    this.cacheTTL = ttlMs;
   }
 
   /**
    * Get current cache TTL in milliseconds
    */
   getCacheTTL(): number {
-    return this.cacheTTL
+    return this.cacheTTL;
   }
 
   /**
    * Get cached data if available
    */
   getCachedData(): PVWattsResponse | null {
-    return this.cachedData
+    return this.cachedData;
   }
 }
 
 // Export default instance for convenience
 // Consumers can import the class to create their own instances for testing/DI
-export const pvwattsApi = new PVWattsApiService()
+export const pvwattsApi = new PVWattsApiService();

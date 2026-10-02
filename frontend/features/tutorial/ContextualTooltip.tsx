@@ -1,15 +1,17 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTutorial } from '@/contexts/TutorialContext';
-import styles from './ContextualTooltip.module.css';
+import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTutorial } from "@/contexts/TutorialContext";
+import styles from "./ContextualTooltip.module.css";
 
 export function ContextualTooltip() {
   const { activeTooltip, hideTooltip, skipTutorial, nextStep } = useTutorial();
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [arrowPosition, setArrowPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
+  const [arrowPosition, setArrowPosition] = useState<
+    "top" | "bottom" | "left" | "right"
+  >("top");
   const [arrowOffset, setArrowOffset] = useState(0);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -23,47 +25,50 @@ export function ContextualTooltip() {
     if (!activeTooltip || !activeTooltip.targetElement) return;
 
     const updatePosition = () => {
-      const targetElement = document.querySelector(activeTooltip.targetElement!);
+      const targetElement = document.querySelector(
+        activeTooltip.targetElement!,
+      );
       if (!targetElement || !tooltipRef.current) return;
 
       const targetRect = targetElement.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
-      const preferredPosition = activeTooltip.position || 'bottom';
+      const preferredPosition = activeTooltip.position || "bottom";
 
       let top = 0;
       let left = 0;
-      let finalArrowPosition: 'top' | 'bottom' | 'left' | 'right' = preferredPosition;
+      let finalArrowPosition: "top" | "bottom" | "left" | "right" =
+        preferredPosition;
 
       const arrowGap = 27; // Gap between arrow tip and button
 
       switch (preferredPosition) {
-        case 'bottom':
+        case "bottom":
           top = targetRect.bottom + arrowGap;
-          left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
-          finalArrowPosition = 'top';
+          left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+          finalArrowPosition = "top";
           break;
 
-        case 'top':
+        case "top":
           top = targetRect.top - tooltipRect.height - arrowGap;
-          left = targetRect.left + (targetRect.width / 2) - (tooltipRect.width / 2);
-          finalArrowPosition = 'bottom';
+          left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+          finalArrowPosition = "bottom";
           break;
 
-        case 'right':
-          top = targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2);
+        case "right":
+          top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
           left = targetRect.right + arrowGap;
-          finalArrowPosition = 'left';
+          finalArrowPosition = "left";
           break;
 
-        case 'left':
-          top = targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2);
+        case "left":
+          top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
           left = targetRect.left - tooltipRect.width - arrowGap;
-          finalArrowPosition = 'right';
+          finalArrowPosition = "right";
           break;
       }
 
-      const buttonCenterX = targetRect.left + (targetRect.width / 2);
-      const tooltipCenterX = left + (tooltipRect.width / 2);
+      const buttonCenterX = targetRect.left + targetRect.width / 2;
+      const tooltipCenterX = left + tooltipRect.width / 2;
       const calculatedArrowOffset = buttonCenterX - tooltipCenterX;
 
       const padding = 16;
@@ -85,12 +90,12 @@ export function ContextualTooltip() {
     setTimeout(updatePosition, 50);
 
     // Recalculate on scroll or resize
-    window.addEventListener('scroll', updatePosition, true);
-    window.addEventListener('resize', updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
 
     return () => {
-      window.removeEventListener('scroll', updatePosition, true);
-      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
     };
   }, [activeTooltip]);
 
@@ -132,7 +137,7 @@ export function ContextualTooltip() {
             initial={{ opacity: 0, scale: 0.95, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
           >
             {/* Close button */}
             <button
@@ -144,35 +149,24 @@ export function ContextualTooltip() {
             </button>
 
             {/* Content */}
-            <div className={styles.content}>
-              {activeTooltip.content}
-            </div>
+            <div className={styles.content}>{activeTooltip.content}</div>
 
             {/* Action buttons */}
             <div className={styles.actions}>
               {activeTooltip.showSkip && (
-                <button
-                  className={styles.skipButton}
-                  onClick={handleSkip}
-                >
+                <button className={styles.skipButton} onClick={handleSkip}>
                   Skip Tutorial
                 </button>
               )}
 
               {activeTooltip.showNext && (
-                <button
-                  className={styles.nextButton}
-                  onClick={handleNext}
-                >
+                <button className={styles.nextButton} onClick={handleNext}>
                   Next
                 </button>
               )}
 
               {!activeTooltip.showNext && !activeTooltip.showSkip && (
-                <button
-                  className={styles.gotItButton}
-                  onClick={handleDismiss}
-                >
+                <button className={styles.gotItButton} onClick={handleDismiss}>
                   Got it
                 </button>
               )}
@@ -182,15 +176,15 @@ export function ContextualTooltip() {
             <div
               className={styles.arrow}
               style={{
-                ...(arrowPosition === 'top' || arrowPosition === 'bottom'
+                ...(arrowPosition === "top" || arrowPosition === "bottom"
                   ? { left: `calc(50% + ${arrowOffset}px)` }
-                  : {})
+                  : {}),
               }}
             />
           </motion.div>
         </>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }

@@ -3,8 +3,8 @@
  */
 
 export interface PolygonCoordinates {
-  lat: number
-  lng: number
+  lat: number;
+  lng: number;
 }
 
 /**
@@ -12,17 +12,19 @@ export interface PolygonCoordinates {
  * @param polygon - Google Maps Polygon
  * @returns Array of coordinates with lat/lng
  */
-export function extractPolygonCoordinates(polygon: google.maps.Polygon): PolygonCoordinates[] {
-  const path = polygon.getPath()
-  const coords: PolygonCoordinates[] = []
+export function extractPolygonCoordinates(
+  polygon: google.maps.Polygon,
+): PolygonCoordinates[] {
+  const path = polygon.getPath();
+  const coords: PolygonCoordinates[] = [];
 
   for (let i = 0; i < path.getLength(); i++) {
-    const point = path.getAt(i)
+    const point = path.getAt(i);
     coords.push({
       lat: point.lat(),
-      lng: point.lng()
-    })
+      lng: point.lng(),
+    });
   }
 
-  return coords
+  return coords;
 }

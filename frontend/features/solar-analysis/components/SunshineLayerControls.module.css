@@ -40,7 +40,12 @@
 
 .toggleText {
   flex: 1;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    "SF Pro Display",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.85);

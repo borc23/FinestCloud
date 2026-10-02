@@ -1,194 +1,197 @@
-import { useState, useCallback, useRef } from 'react'
-import { DetectionBounds, DetectionResponse, DetectionRequest } from '@/features/solar-analysis/types/detection'
+import { useState, useCallback, useRef } from "react";
+import {
+  DetectionBounds,
+  DetectionResponse,
+  DetectionRequest,
+} from "@/features/solar-analysis/types/detection";
 
 interface DetectionError {
-  code: 'NETWORK' | 'VALIDATION' | 'SERVER' | 'UNKNOWN'
-  message: string
-  isRetryable: boolean
-  timestamp: number
+  code: "NETWORK" | "VALIDATION" | "SERVER" | "UNKNOWN";
+  message: string;
+  isRetryable: boolean;
+  timestamp: number;
 }
 
 interface UseDetectionReturn {
-  error: DetectionError | null
-  isDetecting: boolean
+  error: DetectionError | null;
+  isDetecting: boolean;
   detectRoofs: (
-    map: google.maps.Map, 
-    bounds: google.maps.LatLngBounds, 
-    size?: { width: number; height: number }
-  ) => Promise<DetectionResponse | null>
-  clearError: () => void
+    map: google.maps.Map,
+    bounds: google.maps.LatLngBounds,
+    size?: { width: number; height: number },
+  ) => Promise<DetectionResponse | null>;
+  clearError: () => void;
 }
 
 export function useDetection(): UseDetectionReturn {
-  const [error, setError] = useState<DetectionError | null>(null)
-  const [isDetecting, setIsDetecting] = useState(false)
+  const [error, setError] = useState<DetectionError | null>(null);
+  const [isDetecting, setIsDetecting] = useState(false);
 
-  const createError = useCallback((
-    code: DetectionError['code'],
-    message: string,
-    isRetryable: boolean
-  ): DetectionError => ({
-    code,
-    message,
-    isRetryable,
-    timestamp: Date.now()
-  }), [])
+  const createError = useCallback(
+    (
+      code: DetectionError["code"],
+      message: string,
+      isRetryable: boolean,
+    ): DetectionError => ({
+      code,
+      message,
+      isRetryable,
+      timestamp: Date.now(),
+    }),
+    [],
+  );
 
-  const toDetectionBounds = useCallback((bounds: google.maps.LatLngBounds): DetectionBounds => {
-    const ne = bounds.getNorthEast()
-    const sw = bounds.getSouthWest()
+  const toDetectionBounds = useCallback(
+    (bounds: google.maps.LatLngBounds): DetectionBounds => {
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
 
-    return {
-      north: ne.lat(),
-      south: sw.lat(),
-      east: ne.lng(),
-      west: sw.lng()
-    }
-  }, [])
+      return {
+        north: ne.lat(),
+        south: sw.lat(),
+        east: ne.lng(),
+        west: sw.lng(),
+      };
+    },
+    [],
+  );
 
-  const detectRoofs = useCallback(async (
-    map: google.maps.Map,
-    bounds: google.maps.LatLngBounds,
-    size?: { width: number; height: number }
-  ): Promise<DetectionResponse | null> => {
-    if (isDetecting) {
-      setError(createError(
-        'VALIDATION',
-        'Detection already in progress',
-        false
-      ))
-      return null
-    }
-
-    setIsDetecting(true)
-    setError(null)
-
-    try {
-      const zoom = map.getZoom()
-
-      if (!zoom) {
-        throw createError(
-          'VALIDATION',
-          'Unable to get map zoom',
-          false
-        )
+  const detectRoofs = useCallback(
+    async (
+      map: google.maps.Map,
+      bounds: google.maps.LatLngBounds,
+      size?: { width: number; height: number },
+    ): Promise<DetectionResponse | null> => {
+      if (isDetecting) {
+        setError(
+          createError("VALIDATION", "Detection already in progress", false),
+        );
+        return null;
       }
 
-      const detectionBounds = toDetectionBounds(bounds)
-      const captureCenter = bounds.getCenter()
-      const imageSize = size ? `${size.width}x${size.height}` : '640x640'
-      
-      const requestData: DetectionRequest = {
-        image: {
-          center: `${captureCenter.lat()},${captureCenter.lng()}`,
-          zoom: zoom,
-          size: imageSize,
-          maptype: 'satellite',
-          format: 'jpg',
-          style: 'feature:all|color:0xffffff'
-        },
-        bounds: detectionBounds,
-        conf: 0.5,
-        epsilon: 0.0075
-      }
+      setIsDetecting(true);
+      setError(null);
 
-      const response = await fetch('/api/detect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      })
+      try {
+        const zoom = map.getZoom();
 
-      if (!response.ok) {
-        const isServerError = response.status >= 500
-        const isClientError = response.status >= 400 && response.status < 500
-
-        // Try to get error details from response body
-        let errorMessage = `Detection request failed (${response.status})`
-        try {
-          const errorBody = await response.json()
-          if (errorBody.error) {
-            errorMessage = errorBody.error
-          }
-          if (errorBody.details) {
-            errorMessage += `: ${errorBody.details}`
-          }
-        } catch {
-          // If we can't parse JSON, use statusText
-          if (response.statusText) {
-            errorMessage = `Detection request failed: ${response.statusText}`
-          }
+        if (!zoom) {
+          throw createError("VALIDATION", "Unable to get map zoom", false);
         }
 
-        throw createError(
-          isServerError ? 'SERVER' : isClientError ? 'VALIDATION' : 'UNKNOWN',
-          errorMessage,
-          isServerError
-        )
+        const detectionBounds = toDetectionBounds(bounds);
+        const captureCenter = bounds.getCenter();
+        const imageSize = size ? `${size.width}x${size.height}` : "640x640";
+
+        const requestData: DetectionRequest = {
+          image: {
+            center: `${captureCenter.lat()},${captureCenter.lng()}`,
+            zoom: zoom,
+            size: imageSize,
+            maptype: "satellite",
+            format: "jpg",
+            style: "feature:all|color:0xffffff",
+          },
+          bounds: detectionBounds,
+          conf: 0.5,
+          epsilon: 0.0075,
+        };
+
+        const response = await fetch("/api/detect", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        });
+
+        if (!response.ok) {
+          const isServerError = response.status >= 500;
+          const isClientError = response.status >= 400 && response.status < 500;
+
+          // Try to get error details from response body
+          let errorMessage = `Detection request failed (${response.status})`;
+          try {
+            const errorBody = await response.json();
+            if (errorBody.error) {
+              errorMessage = errorBody.error;
+            }
+            if (errorBody.details) {
+              errorMessage += `: ${errorBody.details}`;
+            }
+          } catch {
+            // If we can't parse JSON, use statusText
+            if (response.statusText) {
+              errorMessage = `Detection request failed: ${response.statusText}`;
+            }
+          }
+
+          throw createError(
+            isServerError ? "SERVER" : isClientError ? "VALIDATION" : "UNKNOWN",
+            errorMessage,
+            isServerError,
+          );
+        }
+
+        const result: DetectionResponse = await response.json();
+
+        if (!result.success) {
+          throw createError("SERVER", result.error || "Detection failed", true);
+        }
+
+        return result;
+      } catch (err) {
+        if (isDetectionError(err)) {
+          setError(err);
+          console.error("Detection error:", err);
+          return null;
+        }
+
+        if (err instanceof TypeError && err.message.includes("fetch")) {
+          const networkError = createError(
+            "NETWORK",
+            "Network request failed. Please check your connection.",
+            true,
+          );
+          setError(networkError);
+          console.error("Network error:", err);
+          return null;
+        }
+
+        const unknownError = createError(
+          "UNKNOWN",
+          err instanceof Error ? err.message : "An unexpected error occurred",
+          false,
+        );
+        setError(unknownError);
+        console.error("Unknown error:", err);
+        return null;
+      } finally {
+        setIsDetecting(false);
       }
-
-      const result: DetectionResponse = await response.json()
-
-      if (!result.success) {
-        throw createError(
-          'SERVER',
-          result.error || 'Detection failed',
-          true
-        )
-      }
-
-      return result
-    } catch (err) {
-      if (isDetectionError(err)) {
-        setError(err)
-        console.error('Detection error:', err)
-        return null
-      }
-
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        const networkError = createError(
-          'NETWORK',
-          'Network request failed. Please check your connection.',
-          true
-        )
-        setError(networkError)
-        console.error('Network error:', err)
-        return null
-      }
-
-      const unknownError = createError(
-        'UNKNOWN',
-        err instanceof Error ? err.message : 'An unexpected error occurred',
-        false
-      )
-      setError(unknownError)
-      console.error('Unknown error:', err)
-      return null
-    } finally {
-      setIsDetecting(false)
-    }
-  }, [isDetecting, toDetectionBounds, createError])
+    },
+    [isDetecting, toDetectionBounds, createError],
+  );
 
   const clearError = useCallback(() => {
-    setError(null)
-  }, [])
+    setError(null);
+  }, []);
 
   return {
     error,
     isDetecting,
     detectRoofs,
-    clearError
-  }
+    clearError,
+  };
 }
 
 function isDetectionError(error: unknown): error is DetectionError {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    'message' in error &&
-    'isRetryable' in error &&
-    'timestamp' in error
-  )
+    "code" in error &&
+    "message" in error &&
+    "isRetryable" in error &&
+    "timestamp" in error
+  );
 }

@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
+import { useOrganizationTheme } from "../hooks/useOrganizationTheme";
 
 /**
  * Client component that applies organization theme to the app
@@ -8,7 +8,7 @@ import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // This hook will dynamically inject CSS variables based on organization settings
-  useOrganizationTheme()
+  useOrganizationTheme();
 
-  return <>{children}</>
+  return <>{children}</>;
 }

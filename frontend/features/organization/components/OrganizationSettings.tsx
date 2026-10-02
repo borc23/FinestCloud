@@ -1,132 +1,140 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
-import { Icon } from '@/shared/components/ui/Icon'
-import { getUserOrganization, updateOrganization } from '../lib/organizationApi'
-import { uploadOrganizationLogo, deleteOrganizationLogo } from '../lib/logoUpload'
-import type { Organization } from '../types/organization'
-import styles from './OrganizationSettings.module.css'
+import { useState, useEffect, useRef } from "react";
+import { Icon } from "@/shared/components/ui/Icon";
+import {
+  getUserOrganization,
+  updateOrganization,
+} from "../lib/organizationApi";
+import {
+  uploadOrganizationLogo,
+  deleteOrganizationLogo,
+} from "../lib/logoUpload";
+import type { Organization } from "../types/organization";
+import styles from "./OrganizationSettings.module.css";
 
 interface OrganizationSettingsProps {
-  userId: string
+  userId: string;
 }
 
-export default function OrganizationSettings({ userId }: OrganizationSettingsProps) {
-  const [organization, setOrganization] = useState<Organization | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [uploadingLogo, setUploadingLogo] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+export default function OrganizationSettings({
+  userId,
+}: OrganizationSettingsProps) {
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form fields
-  const [name, setName] = useState('')
-  const [companyEmail, setCompanyEmail] = useState('')
-  const [companyPhone, setCompanyPhone] = useState('')
-  const [companyWebsite, setCompanyWebsite] = useState('')
-  const [companyAddress, setCompanyAddress] = useState('')
-  const [primaryColor, setPrimaryColor] = useState('#3B82F6')
-  const [secondaryColor, setSecondaryColor] = useState('#1E40AF')
-  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [name, setName] = useState("");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#3B82F6");
+  const [secondaryColor, setSecondaryColor] = useState("#1E40AF");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    loadOrganization()
-  }, [userId])
+    loadOrganization();
+  }, [userId]);
 
   const loadOrganization = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const org = await getUserOrganization(userId)
+      const org = await getUserOrganization(userId);
       if (org) {
-        setOrganization(org)
-        setName(org.name)
-        setCompanyEmail(org.company_email || '')
-        setCompanyPhone(org.company_phone || '')
-        setCompanyWebsite(org.company_website || '')
-        setCompanyAddress(org.company_address || '')
-        setPrimaryColor(org.primary_color)
-        setSecondaryColor(org.secondary_color)
-        setLogoUrl(org.logo_url || null)
+        setOrganization(org);
+        setName(org.name);
+        setCompanyEmail(org.company_email || "");
+        setCompanyPhone(org.company_phone || "");
+        setCompanyWebsite(org.company_website || "");
+        setCompanyAddress(org.company_address || "");
+        setPrimaryColor(org.primary_color);
+        setSecondaryColor(org.secondary_color);
+        setLogoUrl(org.logo_url || null);
       }
     } catch (err: any) {
-      setError('Failed to load organization')
+      setError("Failed to load organization");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !organization) return
+    const file = e.target.files?.[0];
+    if (!file || !organization) return;
 
-    setUploadingLogo(true)
-    setError(null)
+    setUploadingLogo(true);
+    setError(null);
 
     try {
       // Delete old logo if exists
       if (logoUrl) {
         try {
-          await deleteOrganizationLogo(logoUrl, organization.id)
+          await deleteOrganizationLogo(logoUrl, organization.id);
         } catch (err) {
-          console.error('Failed to delete old logo:', err)
+          console.error("Failed to delete old logo:", err);
           // Continue with upload even if deletion fails
         }
       }
 
       // Upload new logo
-      const newLogoUrl = await uploadOrganizationLogo(file, organization.id)
-      setLogoUrl(newLogoUrl)
+      const newLogoUrl = await uploadOrganizationLogo(file, organization.id);
+      setLogoUrl(newLogoUrl);
 
       // Save logo URL to database
       await updateOrganization(organization.id, {
         logo_url: newLogoUrl,
-      })
+      });
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to upload logo')
+      setError(err.message || "Failed to upload logo");
     } finally {
-      setUploadingLogo(false)
+      setUploadingLogo(false);
       // Reset file input
       if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+        fileInputRef.current.value = "";
       }
     }
-  }
+  };
 
   const handleRemoveLogo = async () => {
-    if (!organization || !logoUrl) return
+    if (!organization || !logoUrl) return;
 
-    setUploadingLogo(true)
-    setError(null)
+    setUploadingLogo(true);
+    setError(null);
 
     try {
-      await deleteOrganizationLogo(logoUrl, organization.id)
+      await deleteOrganizationLogo(logoUrl, organization.id);
       await updateOrganization(organization.id, {
         logo_url: null,
-      })
+      });
 
-      setLogoUrl(null)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      setLogoUrl(null);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to remove logo')
+      setError(err.message || "Failed to remove logo");
     } finally {
-      setUploadingLogo(false)
+      setUploadingLogo(false);
     }
-  }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!organization) return
+    e.preventDefault();
+    if (!organization) return;
 
-    setSaving(true)
-    setError(null)
-    setSuccess(false)
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
 
     try {
       await updateOrganization(organization.id, {
@@ -137,17 +145,17 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
         company_address: companyAddress.trim() || null,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
-      })
+      });
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
-      await loadOrganization()
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      await loadOrganization();
     } catch (err: any) {
-      setError('Failed to save organization settings')
+      setError("Failed to save organization settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -155,7 +163,7 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
         <div className={styles.spinner}></div>
         <p>Loading organization...</p>
       </div>
-    )
+    );
   }
 
   if (!organization) {
@@ -165,7 +173,7 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
         <h3>No Organization</h3>
         <p>You are not part of any organization yet.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -298,7 +306,7 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
             accept="image/png,image/jpeg,image/jpg,image/svg+xml"
             onChange={handleLogoUpload}
             disabled={uploadingLogo}
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
           />
           <button
             type="button"
@@ -306,8 +314,12 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
             disabled={uploadingLogo}
             className={styles.uploadButton}
           >
-            <Icon name={uploadingLogo ? 'spinner' : 'upload'} />
-            {uploadingLogo ? 'Uploading...' : logoUrl ? 'Change Logo' : 'Upload Logo'}
+            <Icon name={uploadingLogo ? "spinner" : "upload"} />
+            {uploadingLogo
+              ? "Uploading..."
+              : logoUrl
+                ? "Change Logo"
+                : "Upload Logo"}
           </button>
           <small>PNG, JPEG, or SVG. Max 5MB.</small>
         </div>
@@ -356,14 +368,10 @@ export default function OrganizationSettings({ userId }: OrganizationSettingsPro
       </div>
 
       <div className={styles.actions}>
-        <button
-          type="submit"
-          className={styles.saveButton}
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save Changes'}
+        <button type="submit" className={styles.saveButton} disabled={saving}>
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </form>
-  )
+  );
 }

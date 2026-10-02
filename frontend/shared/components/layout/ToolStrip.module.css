@@ -33,7 +33,7 @@
 }
 
 .profileButton::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0;
   top: 50%;
@@ -60,7 +60,7 @@
 }
 
 .searchButton::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -150,13 +150,14 @@
 }
 
 .suggestions::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     transparent 0%,
     rgba(255, 255, 255, 0.4) 20%,
     rgba(255, 255, 255, 0.6) 50%,
@@ -342,9 +343,10 @@
   border-radius: var(--radius-full);
   background: rgba(120, 120, 128, 0.32);
   pointer-events: none;
-  transition: transform var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              height var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              width var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition:
+    transform var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    height var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    width var(--transition-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1;
   top: 0;
   left: 0;
@@ -470,7 +472,8 @@
   white-space: nowrap;
   pointer-events: none;
   z-index: 10000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
-              0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2);
   letter-spacing: -0.01em;
 }

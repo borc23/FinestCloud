@@ -3,33 +3,33 @@
  * Parses and decodes GeoTIFF files from Google Solar API data layers
  */
 
-import { fromUrl, fromArrayBuffer, GeoTIFF } from 'geotiff'
-import proj4 from 'proj4'
+import { fromUrl, fromArrayBuffer, GeoTIFF } from "geotiff";
+import proj4 from "proj4";
 
 export interface GeoTIFFData {
-  width: number
-  height: number
-  rasters: Float32Array[]
+  width: number;
+  height: number;
+  rasters: Float32Array[];
   bounds: {
-    north: number
-    south: number
-    east: number
-    west: number
-  }
-  min: number
-  max: number
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  min: number;
+  max: number;
 }
 
 export interface GeoTIFFMetadata {
-  width: number
-  height: number
+  width: number;
+  height: number;
   bounds: {
-    north: number
-    south: number
-    east: number
-    west: number
-  }
-  resolution: number
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  resolution: number;
 }
 
 /**
@@ -37,33 +37,32 @@ export interface GeoTIFFMetadata {
  */
 export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
   try {
-
-    const tiff: GeoTIFF = await fromUrl(url)
-    const image = await tiff.getImage()
+    const tiff: GeoTIFF = await fromUrl(url);
+    const image = await tiff.getImage();
 
     // Get image dimensions
-    const width = image.getWidth()
-    const height = image.getHeight()
+    const width = image.getWidth();
+    const height = image.getHeight();
 
     // Read raster data
-    const rasters = await image.readRasters()
+    const rasters = await image.readRasters();
 
     // Get bounding box
-    const bbox = image.getBoundingBox()
+    const bbox = image.getBoundingBox();
     const bounds = {
       west: bbox[0],
       south: bbox[1],
       east: bbox[2],
-      north: bbox[3]
-    }
+      north: bbox[3],
+    };
 
     // Calculate min/max values for normalization
-    const data = rasters[0] as Float32Array
-    let min = Infinity
-    let max = -Infinity
+    const data = rasters[0] as Float32Array;
+    let min = Infinity;
+    let max = -Infinity;
 
     for (let i = 0; i < data.length; i++) {
-      const value = data[i]
+      const value = data[i];
       if (!isNaN(value)) {
         min = Math.min(min, value);
         max = Math.max(max, value);
@@ -76,109 +75,137 @@ export async function parseGeoTIFFFromUrl(url: string): Promise<GeoTIFFData> {
       rasters: [data],
       bounds,
       min: min === Infinity ? 0 : min,
-      max: max === -Infinity ? 0 : max
-    }
+      max: max === -Infinity ? 0 : max,
+    };
   } catch (error) {
-    console.error('Error parsing GeoTIFF:', error)
-    throw new Error(`Failed to parse GeoTIFF: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error("Error parsing GeoTIFF:", error);
+    throw new Error(
+      `Failed to parse GeoTIFF: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
+    );
   }
 }
 
 /**
  * Parse GeoTIFF from ArrayBuffer (for already downloaded data)
  */
-export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTIFFData> {
+export async function parseGeoTIFFFromBuffer(
+  buffer: ArrayBuffer,
+): Promise<GeoTIFFData> {
   try {
-    const tiff: GeoTIFF = await fromArrayBuffer(buffer)
-    const image = await tiff.getImage()
-    const width = image.getWidth()
-    const height = image.getHeight()
-    const rasters = await image.readRasters()
-    const bbox = image.getBoundingBox()
-    const geoKeys = image.getGeoKeys()
+    const tiff: GeoTIFF = await fromArrayBuffer(buffer);
+    const image = await tiff.getImage();
+    const width = image.getWidth();
+    const height = image.getHeight();
+    const rasters = await image.readRasters();
+    const bbox = image.getBoundingBox();
+    const geoKeys = image.getGeoKeys();
 
     let bounds = {
       west: bbox[0],
       south: bbox[1],
       east: bbox[2],
-      north: bbox[3]
-    }
+      north: bbox[3],
+    };
 
-    let needsReprojection = false
-    let sourceEpsg: number | null = null
+    let needsReprojection = false;
+    let sourceEpsg: number | null = null;
 
     if (geoKeys.ProjectedCSTypeGeoKey) {
-      sourceEpsg = geoKeys.ProjectedCSTypeGeoKey
-      needsReprojection = true
-    }
-    else if (geoKeys.GeographicTypeGeoKey && geoKeys.GeographicTypeGeoKey !== 4326) {
-      sourceEpsg = geoKeys.GeographicTypeGeoKey
-      needsReprojection = true
-    }
-    else if (Math.abs(bbox[0]) > 180 || Math.abs(bbox[2]) > 180) {
-      console.warn('GeoTIFF appears to be in projected coordinates but no EPSG code found')
-      console.warn('This may cause alignment issues - check GeoTIFF metadata')
+      sourceEpsg = geoKeys.ProjectedCSTypeGeoKey;
+      needsReprojection = true;
+    } else if (
+      geoKeys.GeographicTypeGeoKey &&
+      geoKeys.GeographicTypeGeoKey !== 4326
+    ) {
+      sourceEpsg = geoKeys.GeographicTypeGeoKey;
+      needsReprojection = true;
+    } else if (Math.abs(bbox[0]) > 180 || Math.abs(bbox[2]) > 180) {
+      console.warn(
+        "GeoTIFF appears to be in projected coordinates but no EPSG code found",
+      );
+      console.warn("This may cause alignment issues - check GeoTIFF metadata");
     }
 
     if (needsReprojection && sourceEpsg) {
       try {
-        const fromProj = `EPSG:${sourceEpsg}`
-        const toProj = 'EPSG:4326' // WGS84 lat/lng for Google Maps
+        const fromProj = `EPSG:${sourceEpsg}`;
+        const toProj = "EPSG:4326"; // WGS84 lat/lng for Google Maps
 
-        const centerX = (bbox[0] + bbox[2]) / 2
-        const centerY = (bbox[1] + bbox[3]) / 2
-        const [centerLng, centerLat] = proj4(fromProj, toProj, [centerX, centerY])
+        const centerX = (bbox[0] + bbox[2]) / 2;
+        const centerY = (bbox[1] + bbox[3]) / 2;
+        const [centerLng, centerLat] = proj4(fromProj, toProj, [
+          centerX,
+          centerY,
+        ]);
 
-        const extentX = bbox[2] - bbox[0] // meters
-        const extentY = bbox[3] - bbox[1] // meters
-        const sampleCount = 5
-        let minLng = Infinity, maxLng = -Infinity
-        let minLat = Infinity, maxLat = -Infinity
+        const extentX = bbox[2] - bbox[0]; // meters
+        const extentY = bbox[3] - bbox[1]; // meters
+        const sampleCount = 5;
+        let minLng = Infinity,
+          maxLng = -Infinity;
+        let minLat = Infinity,
+          maxLat = -Infinity;
 
         for (let i = 0; i < sampleCount; i++) {
-          const t = i / (sampleCount - 1)
+          const t = i / (sampleCount - 1);
 
           // Bottom edge
-          const [lngB, latB] = proj4(fromProj, toProj, [bbox[0] + extentX * t, bbox[1]])
+          const [lngB, latB] = proj4(fromProj, toProj, [
+            bbox[0] + extentX * t,
+            bbox[1],
+          ]);
           // Top edge
-          const [lngT, latT] = proj4(fromProj, toProj, [bbox[0] + extentX * t, bbox[3]])
+          const [lngT, latT] = proj4(fromProj, toProj, [
+            bbox[0] + extentX * t,
+            bbox[3],
+          ]);
           // Left edge
-          const [lngL, latL] = proj4(fromProj, toProj, [bbox[0], bbox[1] + extentY * t])
+          const [lngL, latL] = proj4(fromProj, toProj, [
+            bbox[0],
+            bbox[1] + extentY * t,
+          ]);
           // Right edge
-          const [lngR, latR] = proj4(fromProj, toProj, [bbox[2], bbox[1] + extentY * t])
+          const [lngR, latR] = proj4(fromProj, toProj, [
+            bbox[2],
+            bbox[1] + extentY * t,
+          ]);
 
-          minLng = Math.min(minLng, lngB, lngT, lngL, lngR)
-          maxLng = Math.max(maxLng, lngB, lngT, lngL, lngR)
-          minLat = Math.min(minLat, latB, latT, latL, latR)
-          maxLat = Math.max(maxLat, latB, latT, latL, latR)
+          minLng = Math.min(minLng, lngB, lngT, lngL, lngR);
+          maxLng = Math.max(maxLng, lngB, lngT, lngL, lngR);
+          minLat = Math.min(minLat, latB, latT, latL, latR);
+          maxLat = Math.max(maxLat, latB, latT, latL, latR);
         }
 
         bounds = {
           west: minLng,
           south: minLat,
           east: maxLng,
-          north: maxLat
-        }
-
+          north: maxLat,
+        };
       } catch (error) {
-        console.error('Failed to reproject coordinates:', error)
-        console.error('Source EPSG:', sourceEpsg)
-        console.warn('Using untransformed bounds - overlay WILL be misaligned')
+        console.error("Failed to reproject coordinates:", error);
+        console.error("Source EPSG:", sourceEpsg);
+        console.warn("Using untransformed bounds - overlay WILL be misaligned");
       }
-    } else if (geoKeys.GeographicTypeGeoKey === 4326 || (!geoKeys.ProjectedCSTypeGeoKey && !geoKeys.GeographicTypeGeoKey)) {
-      console.info('GeoTIFF is already in WGS84 (EPSG:4326) or assumed to be')
+    } else if (
+      geoKeys.GeographicTypeGeoKey === 4326 ||
+      (!geoKeys.ProjectedCSTypeGeoKey && !geoKeys.GeographicTypeGeoKey)
+    ) {
+      console.info("GeoTIFF is already in WGS84 (EPSG:4326) or assumed to be");
     }
 
-    let data = rasters[0] as Float32Array
+    let data = rasters[0] as Float32Array;
 
-    let min = Infinity
-    let max = -Infinity
+    let min = Infinity;
+    let max = -Infinity;
 
     for (let i = 0; i < data.length; i++) {
-      const value = data[i]
+      const value = data[i];
       if (value !== null && value !== undefined && !isNaN(value)) {
-        if (value < min) min = value
-        if (value > max) max = value
+        if (value < min) min = value;
+        if (value > max) max = value;
       }
     }
 
@@ -188,45 +215,55 @@ export async function parseGeoTIFFFromBuffer(buffer: ArrayBuffer): Promise<GeoTI
       rasters: [data],
       bounds,
       min: min === Infinity ? 0 : min,
-      max: max === -Infinity ? 0 : max
-    }
+      max: max === -Infinity ? 0 : max,
+    };
   } catch (error) {
-    console.error('Error parsing GeoTIFF from buffer:', error)
-    throw new Error(`Failed to parse GeoTIFF: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error("Error parsing GeoTIFF from buffer:", error);
+    throw new Error(
+      `Failed to parse GeoTIFF: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
+    );
   }
 }
 
 /**
  * Get metadata from GeoTIFF without loading full raster data
  */
-export async function getGeoTIFFMetadata(url: string): Promise<GeoTIFFMetadata> {
+export async function getGeoTIFFMetadata(
+  url: string,
+): Promise<GeoTIFFMetadata> {
   try {
-    const tiff: GeoTIFF = await fromUrl(url)
-    const image = await tiff.getImage()
+    const tiff: GeoTIFF = await fromUrl(url);
+    const image = await tiff.getImage();
 
-    const width = image.getWidth()
-    const height = image.getHeight()
+    const width = image.getWidth();
+    const height = image.getHeight();
 
-    const bbox = image.getBoundingBox()
+    const bbox = image.getBoundingBox();
     const bounds = {
       west: bbox[0],
       south: bbox[1],
       east: bbox[2],
-      north: bbox[3]
-    }
+      north: bbox[3],
+    };
 
     // Calculate resolution in meters per pixel
-    const resolution = image.getResolution()[0]
+    const resolution = image.getResolution()[0];
 
     return {
       width,
       height,
       bounds,
-      resolution
-    }
+      resolution,
+    };
   } catch (error) {
-    console.error('Error getting GeoTIFF metadata:', error)
-    throw new Error(`Failed to get GeoTIFF metadata: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error("Error getting GeoTIFF metadata:", error);
+    throw new Error(
+      `Failed to get GeoTIFF metadata: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
+    );
   }
 }
 
@@ -240,36 +277,36 @@ export function geotiffToRGBA(
   height: number,
   min: number,
   max: number,
-  colorScale: 'viridis' | 'heat' | 'sunshine' = 'sunshine'
+  colorScale: "viridis" | "heat" | "sunshine" = "sunshine",
 ): Uint8ClampedArray {
-  const rgba = new Uint8ClampedArray(width * height * 4)
+  const rgba = new Uint8ClampedArray(width * height * 4);
 
   for (let i = 0; i < data.length; i++) {
-    const value = data[i]
-    const idx = i * 4
+    const value = data[i];
+    const idx = i * 4;
 
     // Handle no-data values
     if (value === null || value === undefined || isNaN(value)) {
-      rgba[idx] = 0     // R
-      rgba[idx + 1] = 0 // G
-      rgba[idx + 2] = 0 // B
-      rgba[idx + 3] = 0 // A (transparent)
-      continue
+      rgba[idx] = 0; // R
+      rgba[idx + 1] = 0; // G
+      rgba[idx + 2] = 0; // B
+      rgba[idx + 3] = 0; // A (transparent)
+      continue;
     }
 
     // Normalize value to 0-1 range
-    const normalized = max > min ? (value - min) / (max - min) : 0
+    const normalized = max > min ? (value - min) / (max - min) : 0;
 
     // Apply color scale
-    const color = getColorFromScale(normalized, colorScale)
+    const color = getColorFromScale(normalized, colorScale);
 
-    rgba[idx] = color.r
-    rgba[idx + 1] = color.g
-    rgba[idx + 2] = color.b
-    rgba[idx + 3] = 200 // Semi-transparent overlay
+    rgba[idx] = color.r;
+    rgba[idx + 1] = color.g;
+    rgba[idx + 2] = color.b;
+    rgba[idx + 3] = 200; // Semi-transparent overlay
   }
 
-  return rgba
+  return rgba;
 }
 
 /**
@@ -283,7 +320,7 @@ export function geotiffToRGBA(
 export function getValueAtCoordinate(
   geotiffData: GeoTIFFData,
   lat: number,
-  lng: number
+  lng: number,
 ): number | null {
   // Check if coordinates are within bounds
   if (
@@ -292,31 +329,35 @@ export function getValueAtCoordinate(
     lng < geotiffData.bounds.west ||
     lng > geotiffData.bounds.east
   ) {
-    return null
+    return null;
   }
 
   // Convert lat/lng to pixel coordinates
   const x = Math.floor(
-    ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
-  )
+    ((lng - geotiffData.bounds.west) /
+      (geotiffData.bounds.east - geotiffData.bounds.west)) *
+      geotiffData.width,
+  );
   const y = Math.floor(
-    ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
-  )
+    ((geotiffData.bounds.north - lat) /
+      (geotiffData.bounds.north - geotiffData.bounds.south)) *
+      geotiffData.height,
+  );
 
   // Clamp to valid pixel range
-  const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x))
-  const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y))
+  const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x));
+  const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y));
 
   // Get value from raster data
-  const index = clampedY * geotiffData.width + clampedX
-  const value = geotiffData.rasters[0][index]
+  const index = clampedY * geotiffData.width + clampedX;
+  const value = geotiffData.rasters[0][index];
 
   // Return null for no-data values
   if (value === null || value === undefined || isNaN(value)) {
-    return null
+    return null;
   }
 
-  return value
+  return value;
 }
 
 /**
@@ -329,7 +370,7 @@ export function getValueAtCoordinate(
  */
 export function getValuesAtCoordinates(
   geotiffData: GeoTIFFData,
-  coordinates: { lat: number; lng: number }[]
+  coordinates: { lat: number; lng: number }[],
 ): (number | null)[] {
   return coordinates.map(({ lat, lng }) => {
     // Check bounds
@@ -339,43 +380,50 @@ export function getValuesAtCoordinates(
       lng < geotiffData.bounds.west ||
       lng > geotiffData.bounds.east
     ) {
-      return null
+      return null;
     }
 
     // Convert to pixel coordinates
     const x = Math.floor(
-      ((lng - geotiffData.bounds.west) / (geotiffData.bounds.east - geotiffData.bounds.west)) * geotiffData.width
-    )
+      ((lng - geotiffData.bounds.west) /
+        (geotiffData.bounds.east - geotiffData.bounds.west)) *
+        geotiffData.width,
+    );
     const y = Math.floor(
-      ((geotiffData.bounds.north - lat) / (geotiffData.bounds.north - geotiffData.bounds.south)) * geotiffData.height
-    )
+      ((geotiffData.bounds.north - lat) /
+        (geotiffData.bounds.north - geotiffData.bounds.south)) *
+        geotiffData.height,
+    );
 
     // Clamp and get value
-    const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x))
-    const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y))
-    const index = clampedY * geotiffData.width + clampedX
-    const value = geotiffData.rasters[0][index]
+    const clampedX = Math.max(0, Math.min(geotiffData.width - 1, x));
+    const clampedY = Math.max(0, Math.min(geotiffData.height - 1, y));
+    const index = clampedY * geotiffData.width + clampedX;
+    const value = geotiffData.rasters[0][index];
 
-    return (value === null || value === undefined || isNaN(value)) ? null : value
-  })
+    return value === null || value === undefined || isNaN(value) ? null : value;
+  });
 }
 
 /**
  * Calculate centroid of a polygon
  */
-export function calculateCentroid(coords: { lat: number; lng: number }[]): { lat: number; lng: number } {
+export function calculateCentroid(coords: { lat: number; lng: number }[]): {
+  lat: number;
+  lng: number;
+} {
   const total = coords.reduce(
     (acc, coord) => ({
       lat: acc.lat + coord.lat,
-      lng: acc.lng + coord.lng
+      lng: acc.lng + coord.lng,
     }),
-    { lat: 0, lng: 0 }
-  )
+    { lat: 0, lng: 0 },
+  );
 
   return {
     lat: total.lat / coords.length,
-    lng: total.lng / coords.length
-  }
+    lng: total.lng / coords.length,
+  };
 }
 
 /**
@@ -383,79 +431,79 @@ export function calculateCentroid(coords: { lat: number; lng: number }[]): { lat
  */
 function getColorFromScale(
   normalized: number,
-  scale: 'viridis' | 'heat' | 'sunshine'
+  scale: "viridis" | "heat" | "sunshine",
 ): { r: number; g: number; b: number } {
   // Clamp to 0-1
-  const t = Math.max(0, Math.min(1, normalized))
+  const t = Math.max(0, Math.min(1, normalized));
 
   switch (scale) {
-    case 'sunshine':
+    case "sunshine":
       // Blue (low) -> Yellow (medium) -> Red (high)
       if (t < 0.5) {
         // Blue to yellow
-        const t2 = t * 2
+        const t2 = t * 2;
         return {
           r: Math.round(t2 * 255),
           g: Math.round(t2 * 255),
-          b: Math.round((1 - t2) * 255)
-        }
+          b: Math.round((1 - t2) * 255),
+        };
       } else {
         // Yellow to red
-        const t2 = (t - 0.5) * 2
+        const t2 = (t - 0.5) * 2;
         return {
           r: 255,
           g: Math.round((1 - t2) * 255),
-          b: 0
-        }
+          b: 0,
+        };
       }
 
-    case 'heat':
+    case "heat":
       // Black -> Red -> Yellow -> White
       if (t < 0.33) {
-        const t2 = t * 3
-        return { r: Math.round(t2 * 255), g: 0, b: 0 }
+        const t2 = t * 3;
+        return { r: Math.round(t2 * 255), g: 0, b: 0 };
       } else if (t < 0.67) {
-        const t2 = (t - 0.33) * 3
-        return { r: 255, g: Math.round(t2 * 255), b: 0 }
+        const t2 = (t - 0.33) * 3;
+        return { r: 255, g: Math.round(t2 * 255), b: 0 };
       } else {
-        const t2 = (t - 0.67) * 3
-        return { r: 255, g: 255, b: Math.round(t2 * 255) }
+        const t2 = (t - 0.67) * 3;
+        return { r: 255, g: 255, b: Math.round(t2 * 255) };
       }
 
-    case 'viridis':
+    case "viridis":
       // Approximate viridis color scale
       // Purple -> Blue -> Green -> Yellow
       if (t < 0.25) {
-        const t2 = t * 4
+        const t2 = t * 4;
         return {
           r: Math.round(68 + t2 * (32 - 68)),
           g: Math.round(1 + t2 * (79 - 1)),
-          b: Math.round(84 + t2 * (138 - 84))
-        }
+          b: Math.round(84 + t2 * (138 - 84)),
+        };
       } else if (t < 0.5) {
-        const t2 = (t - 0.25) * 4
+        const t2 = (t - 0.25) * 4;
         return {
           r: Math.round(32 + t2 * (42 - 32)),
           g: Math.round(79 + t2 * (120 - 79)),
-          b: Math.round(138 + t2 * (142 - 138))
-        }
+          b: Math.round(138 + t2 * (142 - 138)),
+        };
       } else if (t < 0.75) {
-        const t2 = (t - 0.5) * 4
+        const t2 = (t - 0.5) * 4;
         return {
           r: Math.round(42 + t2 * (138 - 42)),
           g: Math.round(120 + t2 * (176 - 120)),
-          b: Math.round(142 + t2 * (64 - 142))
-        }
+          b: Math.round(142 + t2 * (64 - 142)),
+        };
       } else {
-        const t2 = (t - 0.75) * 4
+        const t2 = (t - 0.75) * 4;
         return {
           r: Math.round(138 + t2 * (253 - 138)),
           g: Math.round(176 + t2 * (231 - 176)),
-          b: Math.round(64 + t2 * (37 - 64))
-        }
+          b: Math.round(64 + t2 * (37 - 64)),
+        };
       }
 
     default:
-      return { r: 255, g: 0, b: 0 }
+      return { r: 255, g: 0, b: 0 };
   }
 }

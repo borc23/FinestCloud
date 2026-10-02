@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { signIn } from '@/features/auth/lib/authApi'
-import { createClient } from '@/shared/lib/supabase/client'
-import { Icon } from '@/shared/components/ui/Icon'
-import styles from './AuthModal.module.css'
+import { useState } from "react";
+import { signIn } from "@/features/auth/lib/authApi";
+import { createClient } from "@/shared/lib/supabase/client";
+import { Icon } from "@/shared/components/ui/Icon";
+import styles from "./AuthModal.module.css";
 
 interface LoginModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSwitchToSignUp: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSwitchToSignUp: () => void;
 }
 
 export default function LoginModal({
@@ -17,29 +17,29 @@ export default function LoginModal({
   onClose,
   onSwitchToSignUp,
 }: LoginModalProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
-      await signIn(email, password)
-      onClose()
-      setEmail('')
-      setPassword('')
+      await signIn(email, password);
+      onClose();
+      setEmail("");
+      setPassword("");
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in')
+      setError(err.message || "Failed to sign in");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -85,12 +85,12 @@ export default function LoginModal({
             className={styles.submitButton}
             disabled={loading}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
 
           <div className={styles.footer}>
             <p>
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <button
                 type="button"
                 onClick={onSwitchToSignUp}
@@ -103,5 +103,5 @@ export default function LoginModal({
         </form>
       </div>
     </div>
-  )
+  );
 }

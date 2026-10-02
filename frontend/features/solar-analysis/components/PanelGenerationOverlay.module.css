@@ -43,7 +43,8 @@
   font-weight: 500;
   color: rgba(0, 0, 0, 0.85);
   letter-spacing: -0.02em;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    Roboto, sans-serif;
 }
 
 @keyframes fadeIn {
