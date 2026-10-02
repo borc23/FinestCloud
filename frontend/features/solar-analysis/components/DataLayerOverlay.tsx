@@ -41,95 +41,111 @@ interface DataLayerOverlayProps {
 }
 
 /**
- * Custom overlay class that extends Google Maps OverlayView
+ * Custom overlay class that extends Google Maps OverlayView.
+ * Defined lazily: the Maps script loads async, so google.maps.OverlayView
+ * may not exist yet when this module is evaluated.
  */
-class GeoTIFFOverlay extends google.maps.OverlayView {
-  private bounds: google.maps.LatLngBounds;
-  private canvas: HTMLCanvasElement;
-  private div: HTMLDivElement | null = null;
-  private visible: boolean;
-  private opacity: number;
+function createGeoTIFFOverlayClass() {
+  return class GeoTIFFOverlay extends google.maps.OverlayView {
+    private bounds: google.maps.LatLngBounds;
+    private canvas: HTMLCanvasElement;
+    private div: HTMLDivElement | null = null;
+    private visible: boolean;
+    private opacity: number;
 
-  constructor(
-    bounds: google.maps.LatLngBounds,
-    canvas: HTMLCanvasElement,
-    map: google.maps.Map,
-    visible: boolean = true,
-    opacity: number = 1.0,
-  ) {
-    super();
-    this.bounds = bounds;
-    this.canvas = canvas;
-    this.visible = visible;
-    this.opacity = opacity;
-    this.setMap(map);
-  }
-
-  onAdd() {
-    const div = document.createElement("div");
-    div.style.borderStyle = "none";
-    div.style.borderWidth = "0px";
-    div.style.position = "absolute";
-    div.style.opacity = this.opacity.toString();
-
-    // Add canvas to div
-    div.appendChild(this.canvas);
-    this.div = div;
-
-    // Add to overlay layer
-    const panes = this.getPanes();
-    if (panes) {
-      panes.overlayLayer.appendChild(div);
+    constructor(
+      bounds: google.maps.LatLngBounds,
+      canvas: HTMLCanvasElement,
+      map: google.maps.Map,
+      visible: boolean = true,
+      opacity: number = 1.0,
+    ) {
+      super();
+      this.bounds = bounds;
+      this.canvas = canvas;
+      this.visible = visible;
+      this.opacity = opacity;
+      this.setMap(map);
     }
-  }
 
-  draw() {
-    if (!this.div) return;
+    onAdd() {
+      const div = document.createElement("div");
+      div.style.borderStyle = "none";
+      div.style.borderWidth = "0px";
+      div.style.position = "absolute";
+      div.style.opacity = this.opacity.toString();
 
-    const overlayProjection = this.getProjection();
-    if (!overlayProjection) return;
+      // Add canvas to div
+      div.appendChild(this.canvas);
+      this.div = div;
 
-    // Get pixel coordinates of bounds
-    const sw = overlayProjection.fromLatLngToDivPixel(
-      this.bounds.getSouthWest(),
-    );
-    const ne = overlayProjection.fromLatLngToDivPixel(
-      this.bounds.getNorthEast(),
-    );
-
-    if (!sw || !ne) return;
-
-    // Position the div
-    this.div.style.left = sw.x + "px";
-    this.div.style.top = ne.y + "px";
-    this.div.style.width = ne.x - sw.x + "px";
-    this.div.style.height = sw.y - ne.y + "px";
-
-    // Update canvas size to match
-    this.canvas.style.width = "100%";
-    this.canvas.style.height = "100%";
-  }
-
-  onRemove() {
-    if (this.div && this.div.parentNode) {
-      this.div.parentNode.removeChild(this.div);
-      this.div = null;
+      // Add to overlay layer
+      const panes = this.getPanes();
+      if (panes) {
+        panes.overlayLayer.appendChild(div);
+      }
     }
-  }
 
-  setVisible(visible: boolean) {
-    this.visible = visible;
-    if (this.div) {
-      this.div.style.display = visible ? "block" : "none";
-    }
-  }
+    draw() {
+      if (!this.div) return;
 
-  setOpacity(opacity: number) {
-    this.opacity = opacity;
-    if (this.div) {
-      this.div.style.opacity = opacity.toString();
+      const overlayProjection = this.getProjection();
+      if (!overlayProjection) return;
+
+      // Get pixel coordinates of bounds
+      const sw = overlayProjection.fromLatLngToDivPixel(
+        this.bounds.getSouthWest(),
+      );
+      const ne = overlayProjection.fromLatLngToDivPixel(
+        this.bounds.getNorthEast(),
+      );
+
+      if (!sw || !ne) return;
+
+      // Position the div
+      this.div.style.left = sw.x + "px";
+      this.div.style.top = ne.y + "px";
+      this.div.style.width = ne.x - sw.x + "px";
+      this.div.style.height = sw.y - ne.y + "px";
+
+      // Update canvas size to match
+      this.canvas.style.width = "100%";
+      this.canvas.style.height = "100%";
     }
+
+    onRemove() {
+      if (this.div && this.div.parentNode) {
+        this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+
+    setVisible(visible: boolean) {
+      this.visible = visible;
+      if (this.div) {
+        this.div.style.display = visible ? "block" : "none";
+      }
+    }
+
+    setOpacity(opacity: number) {
+      this.opacity = opacity;
+      if (this.div) {
+        this.div.style.opacity = opacity.toString();
+      }
+    }
+  };
+}
+
+type GeoTIFFOverlayClass = ReturnType<typeof createGeoTIFFOverlayClass>;
+type GeoTIFFOverlay = InstanceType<GeoTIFFOverlayClass>;
+
+let geoTIFFOverlayClass: GeoTIFFOverlayClass | null = null;
+
+function getGeoTIFFOverlayClass(): GeoTIFFOverlayClass {
+  if (!geoTIFFOverlayClass) {
+    geoTIFFOverlayClass = createGeoTIFFOverlayClass();
   }
+  return geoTIFFOverlayClass;
 }
 
 export default function DataLayerOverlay({
@@ -253,6 +269,7 @@ export default function DataLayerOverlay({
       }
 
       // Create new overlay
+      const GeoTIFFOverlay = getGeoTIFFOverlayClass();
       const overlay = new GeoTIFFOverlay(bounds, canvas, map, visible, opacity);
       overlayRef.current = overlay;
 
