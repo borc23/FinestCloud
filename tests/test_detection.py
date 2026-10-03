@@ -1,8 +1,11 @@
+import cv2
+import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from finestcloud.main import create_app
+from finestcloud.services import image_service
 from finestcloud.services.detection_service import _simplify, _to_geo
 
 BOUNDS = {"north": 46.0505, "south": 46.0495, "east": 14.5007, "west": 14.4993}
@@ -34,9 +37,58 @@ def test_to_geo_maps_image_corners_to_bounds():
     assert bottom_right == pytest.approx({"lat": 46.0495, "lng": 14.5007})
 
 
-def test_detect_requires_bounds():
+VIEW = {"lat": 46.05, "lng": 14.5, "zoom": 20, "width": 500, "height": 500}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"view": VIEW},  # no bounds
+        # A client-supplied URL (e.g. cloud metadata) is no longer accepted at all
+        {"image": "http://169.254.169.254/latest/meta-data/", "bounds": BOUNDS},
+        {"view": {**VIEW, "width": 4000}, "bounds": BOUNDS},  # beyond Static Maps max
+    ],
+)
+def test_detect_rejects_invalid_requests(body):
     # Validation runs before the handler, so no model is needed
-    response = TestClient(create_app()).post(
-        "/api/detect", json={"image": "https://example.com/map.jpg"}
-    )
+    response = TestClient(create_app()).post("/api/detect", json=body)
     assert response.status_code == 422
+
+
+@pytest.fixture
+def static_maps(monkeypatch):
+    """Fake Google Static Maps; records the request, the test sets the status."""
+    seen = {"status": 200}
+    jpeg = cv2.imencode(".jpg", np.zeros((500, 500, 3), np.uint8))[1].tobytes()
+
+    def fake_get(url, params, timeout):
+        request = httpx.Request("GET", url, params=params)
+        seen["url"] = request.url
+        return httpx.Response(seen["status"], content=jpeg, request=request)
+
+    monkeypatch.setattr(image_service.httpx, "get", fake_get)
+    return seen
+
+
+def test_static_map_url_is_built_server_side(static_maps):
+    image = image_service.load_static_map(**VIEW)
+
+    url = static_maps["url"]
+    assert image.shape == (500, 500, 3)
+    assert (url.scheme, url.host, url.path) == (
+        "https",
+        "maps.googleapis.com",
+        "/maps/api/staticmap",
+    )
+    assert url.params["center"] == "46.05,14.5"
+    assert url.params["zoom"] == "20"
+    assert url.params["size"] == "500x500"
+    assert url.params["key"] == "test-google-key"
+
+
+def test_static_map_errors_never_include_the_key(static_maps):
+    static_maps["status"] = 403
+
+    with pytest.raises(ValueError, match="Static Maps returned 403") as error:
+        image_service.load_static_map(**VIEW)
+    assert "test-google-key" not in str(error.value)

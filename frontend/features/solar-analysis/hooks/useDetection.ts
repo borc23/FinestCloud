@@ -30,13 +30,12 @@ export function useDetection() {
       const sw = bounds.getSouthWest();
       const center = bounds.getCenter();
       const requestData: DetectionRequest = {
-        image: {
-          center: `${center.lat()},${center.lng()}`,
+        view: {
+          lat: center.lat(),
+          lng: center.lng(),
           zoom,
-          size: size ? `${size.width}x${size.height}` : "640x640",
-          maptype: "satellite",
-          format: "jpg",
-          style: "feature:all|color:0xffffff",
+          width: size?.width ?? 640,
+          height: size?.height ?? 640,
         },
         bounds: {
           north: ne.lat(),

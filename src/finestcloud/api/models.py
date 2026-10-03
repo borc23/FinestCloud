@@ -28,9 +28,19 @@ class RoofModel(BaseModel):
 
 
 # Detection
+class MapViewModel(BaseModel):
+    """Captured map view; the backend fetches its satellite image itself."""
+
+    lat: float = Field(..., ge=-90, le=90, description="Center latitude")
+    lng: float = Field(..., ge=-180, le=180, description="Center longitude")
+    zoom: float = Field(..., ge=0, le=22)
+    width: int = Field(default=640, ge=1, le=640, description="Image width in px")
+    height: int = Field(default=640, ge=1, le=640, description="Image height in px")
+
+
 class DetectRequest(BaseModel):
-    image: str = Field(..., description="URL of the image to detect roofs in")
-    bounds: BoundsModel = Field(..., description="Geographic bounds of the image")
+    view: MapViewModel
+    bounds: BoundsModel = Field(..., description="Geographic bounds of the view")
     conf: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence threshold")
     epsilon: float = Field(
         default=0.0075, ge=0.0, description="Polygon simplification epsilon"
