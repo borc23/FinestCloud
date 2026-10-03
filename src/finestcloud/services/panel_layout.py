@@ -20,24 +20,27 @@ def place_panels(
     The grid is aligned with the roof's longest edge. A regular grid repeats every
     panel size + spacing, so trying each offset within one period (at
     OFFSET_STEP_CM) for each allowed (width, height) covers every distinct layout.
-    Panels must lie inside the roof, within its padded bounding box, and must not
-    touch an obstacle.
+    Panels must keep at least padding_cm from every roof edge and must not touch
+    an obstacle.
     """
     angle = _longest_edge_angle(roof)
     center = (roof.min(axis=0) + roof.max(axis=0)) / 2
     to_grid = _rotation(-angle)
-    roof_poly = Polygon((roof - center) @ to_grid.T)
-    shapely.prepare(roof_poly)
+    # Usable area: the roof shrunk inward by the padding on every edge
+    usable = Polygon((roof - center) @ to_grid.T).buffer(-padding_cm)
+    if usable.is_empty:
+        return []
+    shapely.prepare(usable)
     obstacle_polys = [
         Polygon((o - center) @ to_grid.T) for o in obstacles if len(o) > 2
     ]
     tree = shapely.STRtree(obstacle_polys) if obstacle_polys else None
-    min_x, min_y, max_x, max_y = roof_poly.bounds
+    min_x, min_y, max_x, max_y = usable.bounds
 
     best = np.empty((0, 4, 2))
     for w, h in panel_dims:
-        xs = _grid_positions(min_x + padding_cm, max_x - padding_cm - w, w + spacing_cm)
-        ys = _grid_positions(min_y + padding_cm, max_y - padding_cm - h, h + spacing_cm)
+        xs = _grid_positions(min_x, max_x - w, w + spacing_cm)
+        ys = _grid_positions(min_y, max_y - h, h + spacing_cm)
         if xs.size == 0 or ys.size == 0:
             continue
         # One x-offset at a time keeps memory bounded on large roofs
@@ -48,7 +51,7 @@ def place_panels(
             x0, y0 = x[offset_idx, row, col], y[offset_idx, row, col]
             boxes = shapely.box(x0, y0, x0 + w, y0 + h)
 
-            fits = shapely.contains(roof_poly, boxes)
+            fits = shapely.contains(usable, boxes)
             if tree is not None:
                 fits[tree.query(boxes, predicate="intersects")[0]] = False
 

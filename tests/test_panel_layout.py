@@ -49,7 +49,9 @@ def test_rotated_l_shape_layout_is_valid_and_deterministic():
     polys = [Polygon(p) for p in panels]
 
     assert len(polys) > 20
-    assert all(roof_poly.buffer(1e-6).contains(p) for p in polys)
+    # Inside the roof with the 20 cm padding kept from every edge, inner corner too
+    assert all(roof_poly.contains(p) for p in polys)
+    assert min(roof_poly.exterior.distance(p) for p in polys) >= 20 - 1e-6
     assert not any(p.intersects(obstacle) for p in polys)
     # No overlaps, and at least the requested spacing between panels
     for i, a in enumerate(polys):
