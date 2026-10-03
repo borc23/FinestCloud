@@ -12,10 +12,10 @@ router = APIRouter()
 def generate_panels(request: GeneratePanelsRequest) -> PanelGenerationResponse:
     """Generate optimally placed solar panels on the provided roof polygons."""
     generator = PanelService(
-        bounds=request.mapBounds.model_dump(),
+        bounds=request.map_bounds.model_dump(),
         edge_padding_cm=request.padding,
         spacing_cm=request.spacing,
-        panel_orientation=request.panelOrientation,
+        panel_orientation=request.panel_orientation,
         panel_specs=request.panel_specs.model_dump(),
     )
     results = generator.generate_panels(

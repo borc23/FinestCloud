@@ -65,10 +65,10 @@ class GeneratePanelsRequest(BaseModel):
     objects: list[RoofModel] = Field(
         default_factory=list, description="Obstacle polygons"
     )
-    mapBounds: BoundsModel = Field(..., description="Map bounds")
+    map_bounds: BoundsModel = Field(..., description="Map bounds")
     spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing in cm")
     padding: float = Field(default=20, ge=0.0, description="Edge padding in cm")
-    panelOrientation: Literal["best", "vertical", "horizontal"] = "best"
+    panel_orientation: Literal["best", "vertical", "horizontal"] = "best"
     panel_specs: PanelSpecsModel
 
 

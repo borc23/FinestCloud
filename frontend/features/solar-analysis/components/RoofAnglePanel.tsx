@@ -154,7 +154,6 @@ export default function RoofAnglePanel({
       })),
       solarData,
       mapBounds,
-      module: "standard",
       spacing: 0.5,
     };
 
