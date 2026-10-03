@@ -3,14 +3,15 @@
  * Displays string configuration, inverter selection, and electrical calculations
  */
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import styles from "./ElectricalDesignPanel.module.css";
+import panel from "@/shared/styles/panel.module.css";
 import {
   calculateElectricalDesign,
-  compareInverterTypes,
+  INVERTER_OPTIONS,
   STANDARD_PANEL_SPECS,
 } from "../utils/electricalCalculations";
-import type { ElectricalInputs } from "../types/electrical";
+import type { InverterKind } from "../types/electrical";
 
 interface ElectricalDesignPanelProps {
   panelWattage: number;
@@ -29,60 +30,104 @@ export default function ElectricalDesignPanel({
   const closestWattage = [400, 450, 500].reduce((prev, curr) =>
     Math.abs(curr - panelWattage) < Math.abs(prev - panelWattage) ? curr : prev,
   );
-  const defaultPanelSpecs = STANDARD_PANEL_SPECS[closestWattage];
+  const panelSpecs = STANDARD_PANEL_SPECS[closestWattage];
 
-  const [inverterType, setInverterType] = useState<
-    "string" | "microinverter" | "optimizer"
-  >("string");
+  const [inverterType, setInverterType] = useState<InverterKind>("string");
   const [showComparison, setShowComparison] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [dcCableLength, setDcCableLength] = useState(15);
   const [acCableLength, setAcCableLength] = useState(10);
   const [roofTemp, setRoofTemp] = useState(60);
 
   // Calculate electrical design
-  const design = useMemo(() => {
-    const inputs: ElectricalInputs = {
-      panelSpecs: defaultPanelSpecs,
+  const design = useMemo(
+    () =>
+      calculateElectricalDesign({
+        panelSpecs,
+        totalPanels,
+        systemSizeKw,
+        inverterType,
+        dcCableLength,
+        acCableLength,
+        roofTemp,
+      }),
+    [
+      panelSpecs,
       totalPanels,
       systemSizeKw,
       inverterType,
       dcCableLength,
       acCableLength,
       roofTemp,
-    };
-    return calculateElectricalDesign(inputs);
-  }, [
-    defaultPanelSpecs,
-    totalPanels,
-    systemSizeKw,
-    inverterType,
-    dcCableLength,
-    acCableLength,
-    roofTemp,
-  ]);
+    ],
+  );
+  const { stringConfig, inverter, wiring } = design;
 
-  // Compare all inverter types
-  const comparison = useMemo(() => {
-    return compareInverterTypes(defaultPanelSpecs, totalPanels, systemSizeKw);
-  }, [defaultPanelSpecs, totalPanels, systemSizeKw]);
+  const configItems = [
+    [
+      "Configuration",
+      `${stringConfig.numberOfStrings} × ${stringConfig.panelsPerString} panels`,
+    ],
+    ["String Voltage (Vmp)", `${Math.round(stringConfig.stringVoltageVmp)}V`],
+    ["String Voltage (Voc)", `${Math.round(stringConfig.stringVoltageVoc)}V`],
+    ["String Current", `${stringConfig.stringCurrent.toFixed(1)}A`],
+    ["Total System Current", `${stringConfig.totalSystemCurrent.toFixed(1)}A`],
+  ];
+
+  const inverterSpecs = [
+    ["Model Type", inverter.model],
+    ["Efficiency", `${inverter.efficiency}%`],
+    [
+      "MPPT Range",
+      `${inverter.mppVoltageRange[0]}-${inverter.mppVoltageRange[1]}V`,
+    ],
+    ["Max Input Voltage", `${inverter.maxInputVoltage}V`],
+    ["Units Required", inverter.unitCount],
+    ...(inverter.numberOfMPPTs
+      ? [["MPPT Trackers", inverter.numberOfMPPTs]]
+      : []),
+  ];
+
+  const wireSections = [
+    {
+      title: "DC Wiring (Array to Inverter)",
+      cableType: wiring.dcCableType,
+      length: wiring.dcCableLengthOneWay,
+      drop: wiring.dcVoltageDrop,
+      maxDrop: 3,
+    },
+    {
+      title: "AC Wiring (Inverter to Grid)",
+      cableType: wiring.acCableType,
+      length: wiring.acCableLengthOneWay,
+      drop: wiring.acVoltageDrop,
+      maxDrop: 1,
+    },
+  ];
+
+  const advancedInputs = [
+    ["DC Cable Length (m)", dcCableLength, setDcCableLength, 1, 100],
+    ["AC Cable Length (m)", acCableLength, setAcCableLength, 1, 100],
+    ["Roof Temperature (°C)", roofTemp, setRoofTemp, 25, 80],
+  ] as const;
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>⚡ Electrical System Design</h3>
-        <button className={styles.closeButton} onClick={onClose}>
+      <div className={panel.header}>
+        <h3 className={panel.title}>⚡ Electrical System Design</h3>
+        <button className={panel.closeButton} onClick={onClose}>
           ×
         </button>
       </div>
 
-      <div className={styles.scrollableContent}>
+      <div className={panel.scrollableContent}>
         {/* Warnings */}
         {design.warnings.length > 0 && (
-          <div className={styles.warningBox}>
-            <div className={styles.warningIcon}>⚠️</div>
-            <div className={styles.warningContent}>
-              <div className={styles.warningTitle}>Design Considerations</div>
-              {design.warnings.map((warning: string, idx: number) => (
+          <div className={panel.warningBox}>
+            <div className={panel.warningIcon}>⚠️</div>
+            <div className={panel.warningContent}>
+              <div className={panel.warningTitle}>Design Considerations</div>
+              {design.warnings.map((warning, idx) => (
                 <p key={idx} className={styles.warningText}>
                   {warning}
                 </p>
@@ -92,10 +137,10 @@ export default function ElectricalDesignPanel({
         )}
 
         {/* Inverter Type Selection */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Inverter Type</h4>
+        <div className={panel.section}>
+          <h4 className={panel.sectionTitle}>Inverter Type</h4>
           <div className={styles.inverterSelector}>
-            {(["string", "microinverter", "optimizer"] as const).map((type) => (
+            {INVERTER_OPTIONS.map(({ type, icon, name, estimateCost }) => (
               <button
                 key={type}
                 className={`${styles.inverterButton} ${
@@ -104,12 +149,13 @@ export default function ElectricalDesignPanel({
                 onClick={() => setInverterType(type)}
               >
                 <div className={styles.inverterName}>
-                  {type === "string" && "🔌 String Inverter"}
-                  {type === "microinverter" && "🔋 Microinverters"}
-                  {type === "optimizer" && "⚙️ Power Optimizers"}
+                  {icon} {name}
                 </div>
                 <div className={styles.inverterCost}>
-                  ~€{comparison[type].cost.toLocaleString()}
+                  ~€
+                  {Math.round(
+                    estimateCost(systemSizeKw, totalPanels),
+                  ).toLocaleString()}
                 </div>
               </button>
             ))}
@@ -123,193 +169,92 @@ export default function ElectricalDesignPanel({
 
           {showComparison && (
             <div className={styles.comparisonGrid}>
-              {(["string", "microinverter", "optimizer"] as const).map(
-                (type) => (
-                  <div key={type} className={styles.comparisonCard}>
-                    <h5 className={styles.comparisonTitle}>
-                      {type === "string" && "String Inverter"}
-                      {type === "microinverter" && "Microinverters"}
-                      {type === "optimizer" && "Power Optimizers"}
-                    </h5>
-                    <div className={styles.comparisonSection}>
-                      <strong className={styles.prosTitle}>✓ Pros:</strong>
-                      <ul className={styles.comparisonList}>
-                        {comparison[type].pros.map((pro, idx) => (
-                          <li key={idx}>{pro}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className={styles.comparisonSection}>
-                      <strong className={styles.consTitle}>✗ Cons:</strong>
-                      <ul className={styles.comparisonList}>
-                        {comparison[type].cons.map((con, idx) => (
-                          <li key={idx}>{con}</li>
-                        ))}
-                      </ul>
-                    </div>
+              {INVERTER_OPTIONS.map(({ type, name, pros, cons }) => (
+                <div key={type} className={styles.comparisonCard}>
+                  <h5 className={styles.comparisonTitle}>{name}</h5>
+                  <div className={styles.comparisonSection}>
+                    <strong className={styles.prosTitle}>✓ Pros:</strong>
+                    <ul className={styles.comparisonList}>
+                      {pros.map((pro) => (
+                        <li key={pro}>{pro}</li>
+                      ))}
+                    </ul>
                   </div>
-                ),
-              )}
+                  <div className={styles.comparisonSection}>
+                    <strong className={styles.consTitle}>✗ Cons:</strong>
+                    <ul className={styles.comparisonList}>
+                      {cons.map((con) => (
+                        <li key={con}>{con}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         {/* String Configuration */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>String Configuration</h4>
+        <div className={panel.section}>
+          <h4 className={panel.sectionTitle}>String Configuration</h4>
           <div className={styles.configGrid}>
-            <div className={styles.configItem}>
-              <span className={styles.configLabel}>Configuration</span>
-              <span className={styles.configValue}>
-                {design.stringConfig.numberOfStrings} ×{" "}
-                {design.stringConfig.panelsPerString} panels
-              </span>
-            </div>
-            <div className={styles.configItem}>
-              <span className={styles.configLabel}>String Voltage (Vmp)</span>
-              <span className={styles.configValue}>
-                {Math.round(design.stringConfig.stringVoltageVmp)}V
-              </span>
-            </div>
-            <div className={styles.configItem}>
-              <span className={styles.configLabel}>String Voltage (Voc)</span>
-              <span className={styles.configValue}>
-                {Math.round(design.stringConfig.stringVoltageVoc)}V
-              </span>
-            </div>
-            <div className={styles.configItem}>
-              <span className={styles.configLabel}>String Current</span>
-              <span className={styles.configValue}>
-                {design.stringConfig.stringCurrent.toFixed(1)}A
-              </span>
-            </div>
-            <div className={styles.configItem}>
-              <span className={styles.configLabel}>Total System Voltage</span>
-              <span className={styles.configValue}>
-                {Math.round(design.stringConfig.totalSystemVoltage)}V
-              </span>
-            </div>
-            <div className={styles.configItem}>
-              <span className={styles.configLabel}>Total System Current</span>
-              <span className={styles.configValue}>
-                {design.stringConfig.totalSystemCurrent.toFixed(1)}A
-              </span>
-            </div>
+            {configItems.map(([label, value]) => (
+              <div key={label} className={styles.configItem}>
+                <span className={styles.configLabel}>{label}</span>
+                <span className={styles.configValue}>{value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Inverter Specifications */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Inverter Specifications</h4>
+        <div className={panel.section}>
+          <h4 className={panel.sectionTitle}>Inverter Specifications</h4>
           <div className={styles.inverterSpecs}>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>Model Type</span>
-              <span className={styles.specValue}>{design.inverter.model}</span>
-            </div>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>Efficiency</span>
-              <span className={styles.specValue}>
-                {design.inverter.efficiency}%
-              </span>
-            </div>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>MPPT Range</span>
-              <span className={styles.specValue}>
-                {design.inverter.mppVoltageRange[0]}-
-                {design.inverter.mppVoltageRange[1]}V
-              </span>
-            </div>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>Max Input Voltage</span>
-              <span className={styles.specValue}>
-                {design.inverter.maxInputVoltage}V
-              </span>
-            </div>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>Units Required</span>
-              <span className={styles.specValue}>
-                {design.inverter.unitCount}
-              </span>
-            </div>
-            {design.inverter.numberOfMPPTs && (
-              <div className={styles.specItem}>
-                <span className={styles.specLabel}>MPPT Trackers</span>
-                <span className={styles.specValue}>
-                  {design.inverter.numberOfMPPTs}
-                </span>
+            {inverterSpecs.map(([label, value]) => (
+              <div key={label} className={styles.specItem}>
+                <span className={styles.specLabel}>{label}</span>
+                <span className={styles.specValue}>{value}</span>
               </div>
-            )}
+            ))}
           </div>
         </div>
 
         {/* Wire Sizing */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Wire Sizing & Voltage Drop</h4>
+        <div className={panel.section}>
+          <h4 className={panel.sectionTitle}>Wire Sizing & Voltage Drop</h4>
           <div className={styles.wireGrid}>
-            <div className={styles.wireSection}>
-              <h5 className={styles.wireTitle}>
-                DC Wiring (Array to Inverter)
-              </h5>
-              <div className={styles.wireItem}>
-                <span className={styles.wireLabel}>Cable Type</span>
-                <span className={styles.wireValue}>
-                  {design.wiring.dcCableType}
-                </span>
+            {wireSections.map(({ title, cableType, length, drop, maxDrop }) => (
+              <div key={title} className={styles.wireSection}>
+                <h5 className={styles.wireTitle}>{title}</h5>
+                <div className={styles.wireItem}>
+                  <span className={styles.wireLabel}>Cable Type</span>
+                  <span className={styles.wireValue}>{cableType}</span>
+                </div>
+                <div className={styles.wireItem}>
+                  <span className={styles.wireLabel}>
+                    Cable Length (one-way)
+                  </span>
+                  <span className={styles.wireValue}>{length}m</span>
+                </div>
+                <div className={styles.wireItem}>
+                  <span className={styles.wireLabel}>Voltage Drop</span>
+                  <span
+                    className={`${styles.wireValue} ${
+                      drop > maxDrop ? styles.warning : styles.good
+                    }`}
+                  >
+                    {drop}% {drop <= maxDrop ? "✓" : "⚠️"}
+                  </span>
+                </div>
               </div>
-              <div className={styles.wireItem}>
-                <span className={styles.wireLabel}>Cable Length (one-way)</span>
-                <span className={styles.wireValue}>
-                  {design.wiring.dcCableLengthOneWay}m
-                </span>
-              </div>
-              <div className={styles.wireItem}>
-                <span className={styles.wireLabel}>Voltage Drop</span>
-                <span
-                  className={`${styles.wireValue} ${
-                    design.wiring.dcVoltageDrop > 3
-                      ? styles.warning
-                      : styles.good
-                  }`}
-                >
-                  {design.wiring.dcVoltageDrop}%{" "}
-                  {design.wiring.dcVoltageDrop <= 3 ? "✓" : "⚠️"}
-                </span>
-              </div>
-            </div>
-            <div className={styles.wireSection}>
-              <h5 className={styles.wireTitle}>AC Wiring (Inverter to Grid)</h5>
-              <div className={styles.wireItem}>
-                <span className={styles.wireLabel}>Cable Type</span>
-                <span className={styles.wireValue}>
-                  {design.wiring.acCableType}
-                </span>
-              </div>
-              <div className={styles.wireItem}>
-                <span className={styles.wireLabel}>Cable Length (one-way)</span>
-                <span className={styles.wireValue}>
-                  {design.wiring.acCableLengthOneWay}m
-                </span>
-              </div>
-              <div className={styles.wireItem}>
-                <span className={styles.wireLabel}>Voltage Drop</span>
-                <span
-                  className={`${styles.wireValue} ${
-                    design.wiring.acVoltageDrop > 1
-                      ? styles.warning
-                      : styles.good
-                  }`}
-                >
-                  {design.wiring.acVoltageDrop}%{" "}
-                  {design.wiring.acVoltageDrop <= 1 ? "✓" : "⚠️"}
-                </span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Breaker Sizing */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Breaker & Protection</h4>
+        <div className={panel.section}>
+          <h4 className={panel.sectionTitle}>Breaker & Protection</h4>
           <div className={styles.breakerGrid}>
             <div className={styles.breakerItem}>
               <span className={styles.breakerLabel}>DC Array Disconnect</span>
@@ -327,62 +272,34 @@ export default function ElectricalDesignPanel({
         </div>
 
         {/* Advanced Settings */}
-        <div className={styles.controls}>
+        <div className={panel.controls}>
           <button
-            className={styles.toggleButton}
-            onClick={() => {
-              const inputs = document.getElementById("advanced-inputs");
-              if (inputs) {
-                inputs.style.display =
-                  inputs.style.display === "none" ? "grid" : "none";
-              }
-            }}
+            className={panel.toggleButton}
+            onClick={() => setShowAdvanced(!showAdvanced)}
           >
             ⚙️ Advanced Settings
           </button>
-          <div
-            id="advanced-inputs"
-            className={styles.inputs}
-            style={{ display: "none" }}
-          >
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>DC Cable Length (m)</label>
-              <input
-                type="number"
-                className={styles.input}
-                value={dcCableLength}
-                onChange={(e) => setDcCableLength(Number(e.target.value))}
-                min={1}
-                max={100}
-              />
+          {showAdvanced && (
+            <div className={styles.inputs}>
+              {advancedInputs.map(([label, value, setValue, min, max]) => (
+                <div key={label} className={panel.inputGroup}>
+                  <label className={styles.inputLabel}>{label}</label>
+                  <input
+                    type="number"
+                    className={styles.input}
+                    value={value}
+                    onChange={(e) => setValue(Number(e.target.value))}
+                    min={min}
+                    max={max}
+                  />
+                </div>
+              ))}
             </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>AC Cable Length (m)</label>
-              <input
-                type="number"
-                className={styles.input}
-                value={acCableLength}
-                onChange={(e) => setAcCableLength(Number(e.target.value))}
-                min={1}
-                max={100}
-              />
-            </div>
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Roof Temperature (°C)</label>
-              <input
-                type="number"
-                className={styles.input}
-                value={roofTemp}
-                onChange={(e) => setRoofTemp(Number(e.target.value))}
-                min={25}
-                max={80}
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Disclaimer */}
-        <div className={styles.disclaimer}>
+        <div className={panel.disclaimer}>
           <p>
             <strong>Note:</strong> This is a preliminary electrical design.
             Final system design must be performed by a certified electrician

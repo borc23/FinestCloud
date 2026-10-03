@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import styles from "./MapContainer.module.css";
 import CaptureOverlay from "./CaptureOverlay";
 import EditDrawTabBar from "./EditDrawTabBar";
@@ -17,6 +17,10 @@ import { usePolygons } from "@/features/map-drawing/hooks/usePolygons";
 import { useEditMode } from "@/features/map-drawing/hooks/useEditMode";
 import { usePolygonManager } from "@/features/map-drawing/hooks/usePolygonManager";
 import { useDrawingMode } from "@/features/map-drawing/hooks/useDrawingMode";
+import {
+  calculateCentroid,
+  extractPolygonCoordinates,
+} from "@/features/map-drawing/utils/polygonUtils";
 import { usePanelGeneration } from "@/features/solar-panels/hooks/usePanelGeneration";
 import { usePanelPlacement } from "@/features/solar-panels/hooks/usePanelPlacement";
 import { tagPanelWithGrid } from "@/features/solar-panels/utils/gridSnapping";
@@ -24,19 +28,17 @@ import { usePanelContext } from "@/features/solar-panels/context/PanelContext";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getDefaultLocation } from "@/features/auth/lib/profilesApi";
 import { getProject } from "@/features/projects/lib/projectsApi";
+import type { ProjectWithData } from "@/features/auth/types/database";
+import type {
+  ModuleSpecs,
+  PanelGenerationResponse,
+} from "@/features/solar-panels/types/panel";
 import { Icon } from "@/shared/components/ui/Icon";
-
-declare global {
-  interface Window {
-    google: typeof google;
-    initMap: () => void;
-  }
-}
 
 interface MapContainerProps {
   activeTool: string;
-  onMapReady?: (map: any) => void;
-  onToolChange?: (tool: string) => void;
+  onMapReady?: (map: google.maps.Map) => void;
+  onToolChange: (tool: string) => void;
   onPanelsAvailable?: (available: boolean) => void;
   onDashboardMinimizeChange?: (minimized: boolean) => void;
   onRoofAnglePanelChange?: (isOpen: boolean) => void;
@@ -46,6 +48,60 @@ interface MapContainerProps {
   ) => void;
   isAuthenticated?: boolean;
   onSaveProject?: () => void;
+}
+
+/** Rebuild generated-panel data from a saved project (DB → generator format) */
+function projectToPanelData({
+  roofAnalyses,
+  panelConfigurations,
+}: ProjectWithData): PanelGenerationResponse {
+  return {
+    roofs: roofAnalyses.map((roof) => {
+      const config = panelConfigurations.find(
+        (c) => c.roofAnalysisId === roof.id,
+      );
+
+      // Positions are saved either as coordinate arrays or as { coords, annualSunshineKwh }
+      const panels = (config?.panelPositions ?? []).map((pos) => {
+        const coords = Array.isArray(pos) ? pos : pos.coords;
+        return {
+          coords,
+          ...calculateCentroid(coords ?? []),
+          annualSunshineKwh: Array.isArray(pos)
+            ? undefined
+            : pos.annualSunshineKwh,
+        };
+      });
+
+      // Older saves use power/width/height instead of power_w/width_cm/height_cm
+      const specs = config?.moduleSpecs as
+        | Record<string, number | undefined>
+        | undefined;
+      const moduleSpecs = (
+        specs
+          ? {
+              power_w: specs.power_w || specs.power || roof.panelWattage,
+              width_cm: specs.width_cm || specs.width || 100,
+              height_cm: specs.height_cm || specs.height || 170,
+              efficiency: specs.efficiency || 0.2,
+            }
+          : { power_w: roof.panelWattage }
+      ) as ModuleSpecs;
+
+      return {
+        roof_id: roof.roofIndex,
+        panels,
+        panel_count: roof.panelCount,
+        module_type: config?.moduleType || "custom",
+        module_specs: moduleSpecs,
+        coords: roof.roofPolygon,
+        azimuth: roof.azimuth,
+        pitch: roof.pitch,
+      };
+    }),
+    max_panels: roofAnalyses.reduce((sum, r) => sum + r.panelCount, 0),
+    module: "custom",
+  };
 }
 
 export default function MapContainer({
@@ -65,25 +121,20 @@ export default function MapContainer({
   // ========================================
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
-  const [showCaptureOverlay, setShowCaptureOverlay] = useState(false);
   const [drawingTypeSelection, setDrawingTypeSelection] = useState<
     "roof" | "object" | "panel"
   >("roof");
-  const [isDashboardMinimized, setIsDashboardMinimized] = useState(true);
   const [showSunshineLayer, setShowSunshineLayer] = useState(false);
   const [hidePanelsInSunshineMode, setHidePanelsInSunshineMode] =
     useState(false);
-
-  // Ref to access dashboard minimize function
-  const dashboardMinimizeRef = useRef<(() => void) | null>(null);
   const [defaultCenter, setDefaultCenter] = useState<
     { lat: number; lng: number } | undefined
   >(undefined);
+  // Unified panel state - single source of truth for all panels
+  const [allPanels, setAllPanels] = useState<google.maps.Polygon[]>([]);
 
   const activeTab: "edit" | "draw" = activeTool === "draw" ? "draw" : "edit";
-
-  // Panel context
-  const { registerPanelChangeCallback } = usePanelContext();
+  const { selectedPanel } = usePanelContext();
 
   // Fetch user's default location
   useEffect(() => {
@@ -95,11 +146,6 @@ export default function MapContainer({
       });
     }
   }, [user?.id]);
-
-  // Notify parent when dashboard minimize state changes
-  useEffect(() => {
-    onDashboardMinimizeChange?.(isDashboardMinimized);
-  }, [isDashboardMinimized, onDashboardMinimizeChange]);
 
   // ========================================
   // Custom Hooks
@@ -115,83 +161,58 @@ export default function MapContainer({
     }
   }, [map, defaultCenter]);
 
-  // Detection
   const { error: detectionError, detectRoofs, clearError } = useDetection();
 
-  // Polygons
   const {
     roofPolygons,
     objectPolygons,
     renderPolygons,
     clearAllPolygons,
-    togglePolygonVisibility,
-    toggleRoofPolygonsVisibility,
-    toggleObjectPolygonsVisibility,
-    removeClickListener,
+    setPolygonsVisible,
     removePolygons,
-    hasRoofs,
   } = usePolygons(map);
 
-  // Note: GeoTIFF data is now loaded during panel generation and cached in usePanelGeneration
-  // The DataLayerOverlay component will use the cached geotiffData directly
+  const allPolygons = useMemo(
+    () => [...roofPolygons, ...objectPolygons, ...allPanels],
+    [roofPolygons, objectPolygons, allPanels],
+  );
 
-  // Get panel markers first (temporary workaround - will be populated after panels are generated)
-  const [allPolygonsForEdit, setAllPolygonsForEdit] = useState<
-    google.maps.Polygon[]
-  >([]);
-
-  // Edit mode
-  const {
-    isEditMode,
-    selectedPolygons,
-    isCtrlPressed,
-    toggleEditMode,
-    selectPolygon,
-    deleteSelected,
-  } = useEditMode({
-    map,
-    onDeletePolygons: (deletedPolygons) => {
+  const handleDeletePolygons = useCallback(
+    (deletedPolygons: google.maps.Polygon[]) => {
       removePolygons(deletedPolygons);
-      // Remove from unified panel array
       setAllPanels((prev) => prev.filter((p) => !deletedPolygons.includes(p)));
     },
-    allPolygons: allPolygonsForEdit,
-  });
+    [removePolygons],
+  );
+
+  const { isEditMode, setIsEditMode, selectedPolygons, selectPolygon } =
+    useEditMode({ map, onDeletePolygons: handleDeletePolygons, allPolygons });
 
   // Handle polygon creation from drawing
   const handlePolygonComplete = useCallback(
     (path: google.maps.LatLng[], isRoof: boolean) => {
-      if (!map) return;
       const coords = path.map((p) => ({ lat: p.lat(), lng: p.lng() }));
-
-      const enableHover = activeTool !== "draw";
-      renderPolygons([{ coords }], isRoof, enableHover);
+      renderPolygons([{ coords }], isRoof, activeTool !== "draw");
     },
-    [map, renderPolygons, activeTool],
+    [renderPolygons, activeTool],
   );
 
-  // Drawing mode
   const { isDrawing, startDrawing, stopDrawing } = useDrawingMode({
     map,
     isEditMode,
     onPolygonComplete: handlePolygonComplete,
   });
 
-  // Polygon manager
-  const { updateAllPolygons } = usePolygonManager({
-    map,
+  usePolygonManager({
+    roofPolygons,
+    objectPolygons,
+    panels: allPanels,
     isEditMode,
-    selectedPolygons,
-    isCtrlPressed,
     isDrawing,
+    selectedPolygons,
     onSelectPolygon: selectPolygon,
-    removeClickListener,
   });
 
-  // Unified panel state - single source of truth for all panels
-  const [allPanels, setAllPanels] = useState<google.maps.Polygon[]>([]);
-
-  // Panel generation
   const {
     isGenerating,
     progress,
@@ -200,7 +221,6 @@ export default function MapContainer({
     showAnglePanel,
     panelMarkers,
     geotiffData,
-    isLoadingGeotiff,
     annualFluxUrl,
     startPanelGeneration,
     handleAngleConfirm: handleAngleConfirmHook,
@@ -210,22 +230,18 @@ export default function MapContainer({
   } = usePanelGeneration({
     map,
     roofPolygons,
-    objectPolygons,
-    onPanelsGenerated: (data) => togglePolygonVisibility(false),
+    onPanelsGenerated: () => setPolygonsVisible(false),
   });
 
-  // Sync generated panels to unified array
+  // Replace previously generated panels with new ones; keep manually placed panels
+  const generatedPanelsRef = useRef<google.maps.Polygon[]>([]);
   useEffect(() => {
-    setAllPanels((prev) => {
-      // Remove old generated panels, keep manually placed ones
-      const manualPanels = prev.filter((p) => !(p as any).__isGenerated);
-      // Add new generated panels with marker
-      const markedGeneratedPanels = panelMarkers.map((p) => {
-        (p as any).__isGenerated = true;
-        return p;
-      });
-      return [...manualPanels, ...markedGeneratedPanels];
-    });
+    const previous = new Set(generatedPanelsRef.current);
+    generatedPanelsRef.current = panelMarkers;
+    setAllPanels((prev) => [
+      ...prev.filter((p) => !previous.has(p)),
+      ...panelMarkers,
+    ]);
   }, [panelMarkers]);
 
   // Notify parent when roof angle panel state changes
@@ -237,26 +253,20 @@ export default function MapContainer({
   useEffect(() => {
     if (!onRegisterProjectDataGetter || !map) return;
 
-    const getProjectData = () => {
-      const mapCenter = map.getCenter();
-      const mapZoom = map.getZoom();
-
-      // Extract roof data
-      const roofs = roofPolygons.map((polygon, index) => {
-        const path = polygon.getPath();
-        const coords = [];
-        for (let i = 0; i < path.getLength(); i++) {
-          const point = path.getAt(i);
-          coords.push({ lat: point.lat(), lng: point.lng() });
-        }
-
+    onRegisterProjectDataGetter(() => ({
+      mapCenter: {
+        lat: map.getCenter()?.lat() ?? 0,
+        lng: map.getCenter()?.lng() ?? 0,
+      },
+      mapZoom: map.getZoom() ?? 18,
+      annualFluxUrl: annualFluxUrl ?? null,
+      roofs: roofPolygons.map((polygon, index) => {
         const roofPanelData = panelData?.roofs?.find(
           (r) => r.roof_id === index,
         );
-
         return {
           roofIndex: index,
-          polygon: coords,
+          polygon: extractPolygonCoordinates(polygon),
           azimuth: roofPanelData?.azimuth ?? 0,
           pitch: roofPanelData?.pitch ?? 0,
           panelCount: roofPanelData?.panel_count ?? 0,
@@ -268,32 +278,11 @@ export default function MapContainer({
           moduleType: roofPanelData?.module_type,
           moduleSpecs: roofPanelData?.module_specs,
         };
-      });
-
-      // Extract object polygons
-      const objects = objectPolygons.map((polygon) => {
-        const path = polygon.getPath();
-        const coords = [];
-        for (let i = 0; i < path.getLength(); i++) {
-          const point = path.getAt(i);
-          coords.push({ lat: point.lat(), lng: point.lng() });
-        }
-        return { coords };
-      });
-
-      return {
-        mapCenter: {
-          lat: mapCenter?.lat() ?? 0,
-          lng: mapCenter?.lng() ?? 0,
-        },
-        mapZoom: mapZoom ?? 18,
-        annualFluxUrl: annualFluxUrl ?? null,
-        roofs,
-        objects,
-      };
-    };
-
-    onRegisterProjectDataGetter(getProjectData);
+      }),
+      objects: objectPolygons.map((polygon) => ({
+        coords: extractPolygonCoordinates(polygon),
+      })),
+    }));
   }, [
     map,
     roofPolygons,
@@ -308,258 +297,72 @@ export default function MapContainer({
   useEffect(() => {
     if (!onRegisterProjectLoader || !map) return;
 
-    const loadProject = async (projectId: string) => {
+    onRegisterProjectLoader(async (projectId: string) => {
       try {
-        console.log("=== PROJECT LOADING DEBUG ===");
-        console.log("Loading project ID:", projectId);
-
         const projectWithData = await getProject(projectId);
         if (!projectWithData) {
           throw new Error("Project not found");
         }
-
-        console.log(
-          "Full projectWithData:",
-          JSON.stringify(projectWithData, null, 2),
-        );
-        console.log("Project:", projectWithData.project);
-        console.log(
-          "Roof Analyses count:",
-          projectWithData.roofAnalyses.length,
-        );
-        console.log("Roof Analyses data:", projectWithData.roofAnalyses);
-        console.log(
-          "Object Polygons count:",
-          projectWithData.objectPolygons.length,
-        );
-        console.log("Object Polygons data:", projectWithData.objectPolygons);
-        console.log(
-          "Panel Configurations count:",
-          projectWithData.panelConfigurations.length,
-        );
-        console.log(
-          "Panel Configurations data:",
-          projectWithData.panelConfigurations,
-        );
+        const { project, roofAnalyses, objectPolygons } = projectWithData;
 
         clearAllPolygons();
         clearPanels();
 
-        map.setCenter({
-          lat: projectWithData.project.mapCenterLat,
-          lng: projectWithData.project.mapCenterLng,
-        });
-        map.setZoom(projectWithData.project.mapZoom);
+        map.setCenter({ lat: project.mapCenterLat, lng: project.mapCenterLng });
+        map.setZoom(project.mapZoom);
 
-        // Render roof polygons
-        const roofCoords = projectWithData.roofAnalyses.map((roof) => ({
-          coords: roof.roofPolygon,
-        }));
-        console.log("Roof coords to render:", roofCoords.length, roofCoords);
-        if (roofCoords.length > 0) {
-          renderPolygons(roofCoords, true, false);
-          console.log("Roof polygons rendered, now hiding them");
-          // Hide roof outlines after rendering
-          toggleRoofPolygonsVisibility(false);
-        } else {
-          console.log("No roof coords to render");
+        // Roof outlines are rendered hidden; objects stay visible
+        if (roofAnalyses.length > 0) {
+          renderPolygons(
+            roofAnalyses.map((roof) => ({ coords: roof.roofPolygon })),
+            true,
+            false,
+          );
+          setPolygonsVisible(false, true);
+        }
+        if (objectPolygons.length > 0) {
+          renderPolygons(
+            objectPolygons.map((obj) => ({ coords: obj.polygonCoords })),
+            false,
+            false,
+          );
         }
 
-        // Render object polygons
-        const objectCoords = projectWithData.objectPolygons.map((obj) => ({
-          coords: obj.polygonCoords,
-        }));
-        console.log(
-          "Object coords to render:",
-          objectCoords.length,
-          objectCoords,
-        );
-        if (objectCoords.length > 0) {
-          renderPolygons(objectCoords, false, false);
-          console.log("Object polygons rendered and should be visible");
-          // Keep object polygons visible
-        } else {
-          console.log("No object polygons to render");
-        }
-
-        // Load GeoTIFF data if available
-        if (projectWithData.project.annualFluxUrl) {
-          loadGeotiffDataFromUrl(projectWithData.project.annualFluxUrl);
+        if (project.annualFluxUrl) {
+          loadGeotiffDataFromUrl(project.annualFluxUrl);
         }
 
         setTimeout(() => {
-          if (!window.google?.maps) return;
-
-          console.log("=== PANEL DATA GENERATION DEBUG ===");
-
-          // Helper function to calculate panel center point
-          const calculatePanelCenter = (
-            coords: { lat: number; lng: number }[],
-          ): { lat: number; lng: number } => {
-            if (!coords || coords.length === 0) return { lat: 0, lng: 0 };
-            const sum = coords.reduce(
-              (acc, coord) => ({
-                lat: acc.lat + coord.lat,
-                lng: acc.lng + coord.lng,
-              }),
-              { lat: 0, lng: 0 },
-            );
-            return {
-              lat: sum.lat / coords.length,
-              lng: sum.lng / coords.length,
-            };
-          };
-
-          const mockPanelData: any = {
-            success: true,
-            roofs: projectWithData.roofAnalyses.map((roof, index) => {
-              console.log(
-                `\n--- Processing Roof ${index} (roofIndex: ${roof.roofIndex}) ---`,
-              );
-
-              const config = projectWithData.panelConfigurations.find(
-                (c) =>
-                  projectWithData.roofAnalyses.find(
-                    (r) => r.id === c.roofAnalysisId,
-                  )?.roofIndex === roof.roofIndex,
-              );
-
-              console.log("Found config for roof:", config ? "YES" : "NO");
-              if (config) {
-                console.log("Config roofAnalysisId:", config.roofAnalysisId);
-                console.log(
-                  "Config panelPositions (raw from DB):",
-                  config.panelPositions,
-                );
-                console.log(
-                  "Config panelPositions count:",
-                  config.panelPositions?.length || 0,
-                );
-                console.log(
-                  "Config moduleSpecs (raw from DB):",
-                  config.moduleSpecs,
-                );
-                console.log("Config moduleType:", config.moduleType);
-              }
-
-              // Transform panel positions from database format to Panel format
-              // Handle both formats: Coordinate[][] (2D array) OR Array<{coords: Coordinate[]}>
-              const panels = config?.panelPositions
-                ? config.panelPositions.map((panelPos, pIndex) => {
-                    // Check if panelPos is already a coordinate array or an object with coords property
-                    const coords = Array.isArray(panelPos)
-                      ? panelPos
-                      : panelPos.coords;
-                    console.log(`  Panel ${pIndex} - coords:`, coords);
-                    console.log(
-                      `  Panel ${pIndex} - coords type:`,
-                      Array.isArray(panelPos)
-                        ? "Array (2D)"
-                        : "Object with coords property",
-                    );
-                    const center = calculatePanelCenter(coords);
-                    console.log(
-                      `  Panel ${pIndex} - calculated center:`,
-                      center,
-                    );
-                    return {
-                      coords: coords,
-                      lat: center.lat,
-                      lng: center.lng,
-                      annualSunshineKwh: Array.isArray(panelPos)
-                        ? undefined
-                        : panelPos.annualSunshineKwh,
-                    };
-                  })
-                : [];
-
-              console.log("Transformed panels count:", panels.length);
-              console.log("Transformed panels (first 2):", panels.slice(0, 2));
-
-              // Transform moduleSpecs - handle both old format (power) and new format (power_w)
-              const moduleSpecs = config?.moduleSpecs
-                ? {
-                    power_w:
-                      (config.moduleSpecs as any).power_w ||
-                      (config.moduleSpecs as any).power ||
-                      roof.panelWattage,
-                    width_cm:
-                      (config.moduleSpecs as any).width_cm ||
-                      (config.moduleSpecs as any).width ||
-                      100,
-                    height_cm:
-                      (config.moduleSpecs as any).height_cm ||
-                      (config.moduleSpecs as any).height ||
-                      170,
-                    efficiency: config.moduleSpecs.efficiency || 0.2,
-                  }
-                : { power_w: roof.panelWattage };
-
-              console.log("Transformed moduleSpecs:", moduleSpecs);
-
-              const roofData = {
-                roof_id: roof.roofIndex,
-                panels: panels,
-                panel_count: roof.panelCount,
-                module_type: config?.moduleType || "custom",
-                module_specs: moduleSpecs,
-                coords: roof.roofPolygon,
-                azimuth: roof.azimuth,
-                pitch: roof.pitch,
-              };
-
-              console.log("Final roof data object:", roofData);
-              return roofData;
-            }),
-            max_panels: projectWithData.roofAnalyses.reduce(
-              (sum, r) => sum + r.panelCount,
-              0,
-            ),
-            module: "custom",
-            electrical_system: null,
-          };
-
-          console.log("\n=== FINAL MOCK PANEL DATA ===");
-          console.log("mockPanelData:", JSON.stringify(mockPanelData, null, 2));
-
-          console.log("\n=== CALLING handleAngleConfirmHook ===");
-          console.log(
-            "Angles:",
-            projectWithData.roofAnalyses.map((r) => r.pitch),
-          );
-          console.log("EdgePadding:", 0.5);
-          console.log("PanelData passed to hook:", mockPanelData);
-
           handleAngleConfirmHook({
-            angles: projectWithData.roofAnalyses.map((r) => r.pitch),
+            angles: roofAnalyses.map((r) => r.pitch),
             edgePadding: 0.5,
-            panelData: mockPanelData,
+            panelData: projectToPanelData(projectWithData),
           });
-
-          console.log(
-            "handleAngleConfirmHook called - check for panel rendering",
-          );
         }, 300);
       } catch (error) {
         console.error("Error loading project:", error);
         throw error;
       }
-    };
-
-    onRegisterProjectLoader(loadProject);
+    });
   }, [
     map,
     clearAllPolygons,
     clearPanels,
     renderPolygons,
     onRegisterProjectLoader,
-    startPanelGeneration,
     loadGeotiffDataFromUrl,
     handleAngleConfirmHook,
-    toggleRoofPolygonsVisibility,
+    setPolygonsVisible,
   ]);
 
-  // Panel placement
+  const handlePanelPlaced = useCallback(
+    (panel: google.maps.Polygon, gridId: number) => {
+      tagPanelWithGrid(panel, gridId);
+      setAllPanels((prev) => [...prev, panel]);
+    },
+    [],
+  );
+
   const {
     isPlacing,
     startPlacement,
@@ -572,259 +375,133 @@ export default function MapContainer({
     isEditMode,
     existingPanels: allPanels,
     panelData,
-    onPanelPlaced: (panel, gridId) => {
-      tagPanelWithGrid(panel, gridId);
-      setAllPanels((prev) => [...prev, panel]);
-    },
+    onPanelPlaced: handlePanelPlaced,
   });
 
   // ========================================
   // Event Handlers
   // ========================================
 
-  const handleTabChange = useCallback(
-    (tab: "edit" | "draw") => {
-      onToolChange?.(tab);
-    },
-    [onToolChange],
-  );
+  const handleDrawingTypeChange = (type: "roof" | "object" | "panel") => {
+    if (type === drawingTypeSelection) return;
 
-  const handleDrawingTypeChange = useCallback(
-    (type: "roof" | "object" | "panel") => {
-      if (type === drawingTypeSelection) return;
+    setDrawingTypeSelection(type);
 
-      setDrawingTypeSelection(type);
-
-      if (isDrawing) stopDrawing();
-      if (isPlacing) stopPlacement();
-
-      type === "panel" ? startPlacement() : startDrawing(type);
-    },
-    [
-      drawingTypeSelection,
-      isDrawing,
-      isPlacing,
-      stopDrawing,
-      startDrawing,
-      startPlacement,
-      stopPlacement,
-    ],
-  );
-
-  const handleAngleConfirm = useCallback(
-    async (data: any) => {
-      await handleAngleConfirmHook(data);
-      togglePolygonVisibility(false);
-    },
-    [handleAngleConfirmHook, togglePolygonVisibility],
-  );
-
-  const handleAngleCancel = useCallback(() => {
-    handleAngleCancelHook();
-    onToolChange?.("");
-  }, [handleAngleCancelHook, onToolChange]);
-
-  const handlePanelConfigChange = useCallback(() => {
-    if (panelData && solarData && roofPolygons.length > 0) {
-      setAllPanels((prevPanels) => {
-        prevPanels.forEach((panel) => panel.setMap(null));
-        return [];
-      });
-
-      clearPanels();
-
-      requestAnimationFrame(() => {
-        startPanelGeneration();
-      });
-    }
-  }, [panelData, solarData, roofPolygons, clearPanels, startPanelGeneration]);
-
-  // Register callback for panel config changes
-  useEffect(() => {
-    registerPanelChangeCallback(handlePanelConfigChange);
-  }, [registerPanelChangeCallback, handlePanelConfigChange]);
-
-  const handleReset = useCallback(() => {
-    // Clear all polygons
-    clearAllPolygons();
-
-    // Clear panel markers
-    clearPanels();
-
-    // Clear all panels
-    allPanels.forEach((panel) => panel.setMap(null));
-    setAllPanels([]);
-
-    // Clear capture overlay
-    setShowCaptureOverlay(false);
-
-    // Clear sunshine layer visualization
-    setShowSunshineLayer(false);
-
-    // Reset tool to default
-    onToolChange?.("");
-
-    // Exit edit/draw mode if active
-    if (isEditMode) toggleEditMode();
     if (isDrawing) stopDrawing();
     if (isPlacing) stopPlacement();
-  }, [
-    clearAllPolygons,
-    clearPanels,
-    allPanels,
-    onToolChange,
-    isEditMode,
-    isDrawing,
-    isPlacing,
-    toggleEditMode,
-    stopDrawing,
-    stopPlacement,
-  ]);
 
-  const handleDetection = useCallback(
-    async (
-      bounds: google.maps.LatLngBounds | null,
-      size?: { width: number; height: number },
-    ) => {
-      if (!map || !bounds) return;
+    if (type === "panel") startPlacement();
+    else startDrawing(type);
+  };
 
-      try {
-        const result = await detectRoofs(map, bounds, size);
+  const handleAngleConfirm = async (
+    data: Parameters<typeof handleAngleConfirmHook>[0],
+  ) => {
+    await handleAngleConfirmHook(data);
+    setPolygonsVisible(false);
+  };
 
-        if (result?.success) {
-          clearAllPolygons();
-          const enableHover = activeTool !== "draw";
+  const handleAngleCancel = () => {
+    handleAngleCancelHook();
+    onToolChange("");
+  };
 
-          if (result.roofs) {
-            renderPolygons(result.roofs, true, enableHover);
-          }
-          if (result.objects) {
-            renderPolygons(result.objects, false, enableHover);
-          }
+  const handleReset = () => {
+    clearAllPolygons();
+    clearPanels();
+    allPanels.forEach((panel) => panel.setMap(null));
+    setAllPanels([]);
+    setShowSunshineLayer(false);
+    onToolChange("");
+    setIsEditMode(false);
+    if (isDrawing) stopDrawing();
+    if (isPlacing) stopPlacement();
+  };
 
-          setShowCaptureOverlay(false);
-        }
-      } catch (err) {
-        console.error("Detection failed:", err);
-      }
-    },
-    [map, detectRoofs, clearAllPolygons, renderPolygons, activeTool],
-  );
+  const handleDetection = async (
+    bounds: google.maps.LatLngBounds | null,
+    size?: { width: number; height: number },
+  ) => {
+    if (!map || !bounds) return;
+
+    const result = await detectRoofs(map, bounds, size);
+    if (result?.success) {
+      clearAllPolygons();
+      const enableHover = activeTool !== "draw";
+      if (result.roofs) renderPolygons(result.roofs, true, enableHover);
+      if (result.objects) renderPolygons(result.objects, false, enableHover);
+      // Closes the capture overlay
+      onToolChange("");
+    }
+  };
 
   // ========================================
   // Effects
   // ========================================
 
-  // Show/hide capture overlay based on active tool
+  // Regenerate panels when a different panel model is selected
   useEffect(() => {
-    setShowCaptureOverlay(activeTool === "select");
-  }, [activeTool]);
+    if (!panelData || !solarData || roofPolygons.length === 0) return;
+    allPanels.forEach((panel) => panel.setMap(null));
+    setAllPanels([]);
+    clearPanels();
+    requestAnimationFrame(() => startPanelGeneration());
+    // Only a panel model change should trigger regeneration
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPanel]);
 
   // Notify parent about panels availability
   useEffect(() => {
-    onPanelsAvailable?.(hasRoofs);
-  }, [hasRoofs, onPanelsAvailable]);
+    onPanelsAvailable?.(roofPolygons.length > 0);
+  }, [roofPolygons.length, onPanelsAvailable]);
 
-  // Manage edit/draw mode based on active tool
+  // Manage edit/draw/placement mode based on active tool
   useEffect(() => {
-    if (activeTool === "edit") {
-      if (!isEditMode) toggleEditMode();
-      if (isDrawing) stopDrawing();
-      if (isPlacing) stopPlacement();
-    } else if (activeTool === "draw") {
-      if (!isEditMode) toggleEditMode();
-      if (drawingTypeSelection === "panel") {
-        if (!isPlacing) startPlacement();
-        if (isDrawing) stopDrawing();
-      } else {
-        if (!isDrawing) startDrawing(drawingTypeSelection as "roof" | "object");
-        if (isPlacing) stopPlacement();
-      }
-    } else if (activeTool === "panels") {
-      startPanelGeneration();
-      if (isEditMode) toggleEditMode();
-      if (isDrawing) stopDrawing();
-      if (isPlacing) stopPlacement();
-    } else {
-      if (isEditMode) toggleEditMode();
-      if (isDrawing) stopDrawing();
-      if (isPlacing) stopPlacement();
+    const isDrawTool = activeTool === "draw";
+    const wantsPlacing = isDrawTool && drawingTypeSelection === "panel";
+    const wantsDrawing = isDrawTool && drawingTypeSelection !== "panel";
+
+    if (activeTool === "panels") startPanelGeneration();
+    setIsEditMode(activeTool === "edit" || isDrawTool);
+
+    if (wantsDrawing && !isDrawing) {
+      startDrawing(drawingTypeSelection as "roof" | "object");
+    } else if (!wantsDrawing && isDrawing) {
+      stopDrawing();
     }
+    if (wantsPlacing && !isPlacing) startPlacement();
+    else if (!wantsPlacing && isPlacing) stopPlacement();
+    // startPlacement is omitted on purpose: its identity changes with
+    // panelData, which must not re-trigger panel generation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeTool,
     isEditMode,
     isDrawing,
     isPlacing,
     drawingTypeSelection,
-    toggleEditMode,
     stopDrawing,
     stopPlacement,
     startDrawing,
     startPanelGeneration,
   ]);
 
-  // Sync polygon refs and update polygon states
-  const roofPolygonsRef = useRef<google.maps.Polygon[]>([]);
-  const objectPolygonsRef = useRef<google.maps.Polygon[]>([]);
-  const allPanelsRef = useRef<google.maps.Polygon[]>([]);
-
+  // Lock map panning/zooming while editing, drawing or placing panels
+  const isMapLocked = isEditMode || isDrawing || isPlacing;
   useEffect(() => {
-    roofPolygonsRef.current = roofPolygons;
-    objectPolygonsRef.current = objectPolygons;
-    allPanelsRef.current = allPanels;
-  }, [roofPolygons, objectPolygons, allPanels]);
-
-  // Update all polygons including panels
-  useEffect(() => {
-    const allPolygons = [
-      ...roofPolygonsRef.current,
-      ...objectPolygonsRef.current,
-      ...allPanelsRef.current,
-    ];
-
-    allPolygons.forEach((polygon) => {
-      if (polygon) {
-        polygon.setOptions({ clickable: !isDrawing && !isPlacing });
-      }
+    map?.setOptions({
+      draggable: !isMapLocked,
+      scrollwheel: !isMapLocked,
+      gestureHandling: isMapLocked ? "none" : "greedy",
+      disableDoubleClickZoom: isMapLocked,
+      clickableIcons: !isMapLocked,
     });
+  }, [map, isMapLocked]);
 
-    if (roofPolygonsRef.current.length > 0) {
-      updateAllPolygons(roofPolygonsRef.current, true);
-    }
-    if (objectPolygonsRef.current.length > 0) {
-      updateAllPolygons(objectPolygonsRef.current, false);
-    }
-    if (allPanelsRef.current.length > 0) {
-      // Treat panels as "non-roof" but they'll be identified by isPanelElement
-      updateAllPolygons(allPanelsRef.current, false);
-    }
-  }, [
-    isEditMode,
-    selectedPolygons,
-    isDrawing,
-    isPlacing,
-    updateAllPolygons,
-    allPanels,
-  ]);
-
-  // Update allPolygonsForEdit when any polygon set changes
+  // Hide panels while the sunshine layer is shown, if requested
   useEffect(() => {
-    setAllPolygonsForEdit([...roofPolygons, ...objectPolygons, ...allPanels]);
-  }, [roofPolygons, objectPolygons, allPanels]);
-
-  // Hide/show panels when sunshine layer mode changes
-  useEffect(() => {
-    if (showSunshineLayer && hidePanelsInSunshineMode) {
-      // Hide panels
-      allPanels.forEach((panel) => {
-        panel.setVisible(false);
-      });
-    } else {
-      // Show panels
-      allPanels.forEach((panel) => {
-        panel.setVisible(true);
-      });
-    }
+    const visible = !(showSunshineLayer && hidePanelsInSunshineMode);
+    allPanels.forEach((panel) => panel.setVisible(visible));
   }, [showSunshineLayer, hidePanelsInSunshineMode, allPanels]);
 
   // ========================================
@@ -833,21 +510,15 @@ export default function MapContainer({
 
   return (
     <div className={styles.mapContainer}>
-      {/* Map */}
       <div ref={mapRef} className={styles.map} />
 
-      {/* Capture Overlay */}
       <CaptureOverlay
-        isVisible={showCaptureOverlay}
+        isVisible={activeTool === "select"}
         onCapture={handleDetection}
-        onToggle={() => {
-          setShowCaptureOverlay(false);
-          onToolChange?.("");
-        }}
+        onToggle={() => onToolChange("")}
         map={map}
       />
 
-      {/* Grid Selector */}
       <GridSelector
         selectedGridId={selectedGridId}
         availableGrids={availableGrids}
@@ -855,18 +526,16 @@ export default function MapContainer({
         isVisible={isPlacing}
       />
 
-      {/* Edit/Draw Tab Bar */}
       {isEditMode && (
         <EditDrawTabBar
           activeTab={activeTab}
           drawingType={drawingTypeSelection}
-          onTabChange={handleTabChange}
+          onTabChange={onToolChange}
           onDrawingTypeChange={handleDrawingTypeChange}
           hasPanels={allPanels.length > 0}
         />
       )}
 
-      {/* Roof Angle Panel */}
       {showAnglePanel && (
         <RoofAnglePanel
           roofPolygons={roofPolygons}
@@ -877,57 +546,40 @@ export default function MapContainer({
         />
       )}
 
-      {/* Results Dashboard */}
       {panelData && map && (
         <SolarResultsDashboard
           panelGenerationData={panelData}
-          mapCenter={
-            map.getCenter()
-              ? {
-                  lat: map.getCenter()!.lat(),
-                  lng: map.getCenter()!.lng(),
-                }
-              : undefined
-          }
+          mapCenter={map.getCenter()?.toJSON()}
           isEditMode={
             isEditMode || (activeTool !== "" && activeTool !== "panels")
           }
-          minimizeRef={dashboardMinimizeRef}
-          onMinimizeChange={(minimized) => {
-            setIsDashboardMinimized(minimized);
-          }}
+          onMinimizeChange={onDashboardMinimizeChange}
           currentPanelCount={allPanels.length}
           onSaveProject={onSaveProject}
           isAuthenticated={isAuthenticated}
         />
       )}
 
-      {/* Sunshine Layer Controls */}
       <SunshineLayerControls
         visible={showSunshineLayer && allPanels.length > 0}
         hidePanels={hidePanelsInSunshineMode}
         onToggleHidePanels={setHidePanelsInSunshineMode}
       />
 
-      {/* Annual Sunshine Data Layer */}
       <DataLayerOverlay
         map={map}
         geotiffData={geotiffData}
         visible={showSunshineLayer}
-        colorScale="sunshine"
-        opacity={1.0}
         clipToPolygons={roofPolygons}
       />
 
-      {/* Panel Generation Overlay */}
       <PanelGenerationOverlay isVisible={isGenerating} progress={progress} />
 
-      {/* Error Notification */}
       {detectionError && (
         <div className={styles.errorNotification}>
           <div className={styles.errorCard}>
             <Icon name="warning" />
-            <span>{detectionError.message}</span>
+            <span>{detectionError}</span>
             <button onClick={clearError} className={styles.errorClose}>
               <Icon name="times" />
             </button>
@@ -935,7 +587,6 @@ export default function MapContainer({
         </div>
       )}
 
-      {/* Map Controls */}
       <MapControls
         map={map}
         hasPolygons={
@@ -944,7 +595,7 @@ export default function MapContainer({
           panelData !== null
         }
         hasPanels={allPanels.length > 0}
-        hasGeotiffData={geotiffData !== null && geotiffData !== undefined}
+        hasGeotiffData={geotiffData != null}
         sunshineLayerEnabled={showSunshineLayer}
         onClearAll={handleReset}
         onToggleSunshineLayer={() => setShowSunshineLayer(!showSunshineLayer)}

@@ -1,197 +1,91 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import {
-  DetectionBounds,
   DetectionResponse,
   DetectionRequest,
 } from "@/features/solar-analysis/types/detection";
 
-interface DetectionError {
-  code: "NETWORK" | "VALIDATION" | "SERVER" | "UNKNOWN";
-  message: string;
-  isRetryable: boolean;
-  timestamp: number;
-}
+/** Roof/object detection for a captured map area; exposes the last error message */
+export function useDetection() {
+  const [error, setError] = useState<string | null>(null);
+  const isDetectingRef = useRef(false);
 
-interface UseDetectionReturn {
-  error: DetectionError | null;
-  isDetecting: boolean;
-  detectRoofs: (
+  const detectRoofs = async (
     map: google.maps.Map,
     bounds: google.maps.LatLngBounds,
     size?: { width: number; height: number },
-  ) => Promise<DetectionResponse | null>;
-  clearError: () => void;
-}
+  ): Promise<DetectionResponse | null> => {
+    if (isDetectingRef.current) {
+      setError("Detection already in progress");
+      return null;
+    }
 
-export function useDetection(): UseDetectionReturn {
-  const [error, setError] = useState<DetectionError | null>(null);
-  const [isDetecting, setIsDetecting] = useState(false);
+    isDetectingRef.current = true;
+    setError(null);
 
-  const createError = useCallback(
-    (
-      code: DetectionError["code"],
-      message: string,
-      isRetryable: boolean,
-    ): DetectionError => ({
-      code,
-      message,
-      isRetryable,
-      timestamp: Date.now(),
-    }),
-    [],
-  );
+    try {
+      const zoom = map.getZoom();
+      if (!zoom) throw new Error("Unable to get map zoom");
 
-  const toDetectionBounds = useCallback(
-    (bounds: google.maps.LatLngBounds): DetectionBounds => {
       const ne = bounds.getNorthEast();
       const sw = bounds.getSouthWest();
-
-      return {
-        north: ne.lat(),
-        south: sw.lat(),
-        east: ne.lng(),
-        west: sw.lng(),
+      const center = bounds.getCenter();
+      const requestData: DetectionRequest = {
+        image: {
+          center: `${center.lat()},${center.lng()}`,
+          zoom,
+          size: size ? `${size.width}x${size.height}` : "640x640",
+          maptype: "satellite",
+          format: "jpg",
+          style: "feature:all|color:0xffffff",
+        },
+        bounds: {
+          north: ne.lat(),
+          south: sw.lat(),
+          east: ne.lng(),
+          west: sw.lng(),
+        },
+        conf: 0.5,
+        epsilon: 0.0075,
       };
-    },
-    [],
-  );
 
-  const detectRoofs = useCallback(
-    async (
-      map: google.maps.Map,
-      bounds: google.maps.LatLngBounds,
-      size?: { width: number; height: number },
-    ): Promise<DetectionResponse | null> => {
-      if (isDetecting) {
-        setError(
-          createError("VALIDATION", "Detection already in progress", false),
-        );
-        return null;
-      }
+      const response = await fetch("/api/detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
 
-      setIsDetecting(true);
-      setError(null);
-
-      try {
-        const zoom = map.getZoom();
-
-        if (!zoom) {
-          throw createError("VALIDATION", "Unable to get map zoom", false);
-        }
-
-        const detectionBounds = toDetectionBounds(bounds);
-        const captureCenter = bounds.getCenter();
-        const imageSize = size ? `${size.width}x${size.height}` : "640x640";
-
-        const requestData: DetectionRequest = {
-          image: {
-            center: `${captureCenter.lat()},${captureCenter.lng()}`,
-            zoom: zoom,
-            size: imageSize,
-            maptype: "satellite",
-            format: "jpg",
-            style: "feature:all|color:0xffffff",
-          },
-          bounds: detectionBounds,
-          conf: 0.5,
-          epsilon: 0.0075,
-        };
-
-        const response = await fetch("/api/detect", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestData),
-        });
-
-        if (!response.ok) {
-          const isServerError = response.status >= 500;
-          const isClientError = response.status >= 400 && response.status < 500;
-
-          // Try to get error details from response body
-          let errorMessage = `Detection request failed (${response.status})`;
-          try {
-            const errorBody = await response.json();
-            if (errorBody.error) {
-              errorMessage = errorBody.error;
-            }
-            if (errorBody.details) {
-              errorMessage += `: ${errorBody.details}`;
-            }
-          } catch {
-            // If we can't parse JSON, use statusText
-            if (response.statusText) {
-              errorMessage = `Detection request failed: ${response.statusText}`;
-            }
+      if (!response.ok) {
+        // Prefer error details from the response body
+        let message = `Detection request failed (${response.status})`;
+        try {
+          const errorBody = await response.json();
+          if (errorBody.error) message = errorBody.error;
+          if (errorBody.details) message += `: ${errorBody.details}`;
+        } catch {
+          if (response.statusText) {
+            message = `Detection request failed: ${response.statusText}`;
           }
-
-          throw createError(
-            isServerError ? "SERVER" : isClientError ? "VALIDATION" : "UNKNOWN",
-            errorMessage,
-            isServerError,
-          );
         }
-
-        const result: DetectionResponse = await response.json();
-
-        if (!result.success) {
-          throw createError("SERVER", result.error || "Detection failed", true);
-        }
-
-        return result;
-      } catch (err) {
-        if (isDetectionError(err)) {
-          setError(err);
-          console.error("Detection error:", err);
-          return null;
-        }
-
-        if (err instanceof TypeError && err.message.includes("fetch")) {
-          const networkError = createError(
-            "NETWORK",
-            "Network request failed. Please check your connection.",
-            true,
-          );
-          setError(networkError);
-          console.error("Network error:", err);
-          return null;
-        }
-
-        const unknownError = createError(
-          "UNKNOWN",
-          err instanceof Error ? err.message : "An unexpected error occurred",
-          false,
-        );
-        setError(unknownError);
-        console.error("Unknown error:", err);
-        return null;
-      } finally {
-        setIsDetecting(false);
+        throw new Error(message);
       }
-    },
-    [isDetecting, toDetectionBounds, createError],
-  );
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  return {
-    error,
-    isDetecting,
-    detectRoofs,
-    clearError,
+      const result: DetectionResponse = await response.json();
+      if (!result.success) throw new Error(result.error || "Detection failed");
+      return result;
+    } catch (err) {
+      console.error("Detection error:", err);
+      setError(
+        err instanceof TypeError && err.message.includes("fetch")
+          ? "Network request failed. Please check your connection."
+          : err instanceof Error
+            ? err.message
+            : "An unexpected error occurred",
+      );
+      return null;
+    } finally {
+      isDetectingRef.current = false;
+    }
   };
-}
 
-function isDetectionError(error: unknown): error is DetectionError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    "message" in error &&
-    "isRetryable" in error &&
-    "timestamp" in error
-  );
+  return { error, detectRoofs, clearError: () => setError(null) };
 }

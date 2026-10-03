@@ -1,6 +1,7 @@
 "use client";
 
 import type { Project } from "@/features/auth/types/database";
+import { Icon } from "@/shared/components/ui/Icon";
 import styles from "./ProjectCard.module.css";
 
 interface ProjectCardProps {
@@ -16,17 +17,12 @@ export default function ProjectCard({
   onDelete,
   isDeleting = false,
 }: ProjectCardProps) {
-  const createdDate = new Date(project.createdAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-
-  const updatedDate = new Date(project.updatedAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
 
   return (
     <div className={styles.card}>
@@ -39,15 +35,15 @@ export default function ProjectCard({
 
       <div className={styles.meta}>
         <div className={styles.metaItem}>
-          <i className="fas fa-calendar-plus"></i>
-          <span>Created {createdDate}</span>
+          <Icon name="calendar-plus" />
+          <span>Created {formatDate(project.createdAt)}</span>
         </div>
         <div className={styles.metaItem}>
-          <i className="fas fa-clock"></i>
-          <span>Updated {updatedDate}</span>
+          <Icon name="clock" />
+          <span>Updated {formatDate(project.updatedAt)}</span>
         </div>
         <div className={styles.metaItem}>
-          <i className="fas fa-map-marker-alt"></i>
+          <Icon name="map-marker-alt" />
           <span>
             {project.mapCenterLat.toFixed(4)}, {project.mapCenterLng.toFixed(4)}
           </span>
@@ -60,7 +56,7 @@ export default function ProjectCard({
           className={styles.loadButton}
           disabled={isDeleting}
         >
-          <i className="fas fa-folder-open"></i>
+          <Icon name="folder-open" />
           <span>Load</span>
         </button>
         <button
@@ -75,7 +71,7 @@ export default function ProjectCard({
             </>
           ) : (
             <>
-              <i className="fas fa-trash"></i>
+              <Icon name="trash" />
               <span>Delete</span>
             </>
           )}

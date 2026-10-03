@@ -75,11 +75,6 @@
   }
 }
 
-.iconContainer i {
-  font-size: 36px;
-  color: var(--accent-primary);
-}
-
 .content h2 {
   font-size: 28px;
   font-weight: 600;
@@ -124,10 +119,6 @@
   box-shadow: 0 4px 16px rgba(255, 128, 0, 0.35);
 }
 
-.signInButton i {
-  font-size: 18px;
-}
-
 /* Responsive */
 @media (max-width: 640px) {
   .content {
@@ -145,9 +136,5 @@
   .iconContainer {
     width: 70px;
     height: 70px;
-  }
-
-  .iconContainer i {
-    font-size: 32px;
   }
 }

@@ -1,15 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, LayoutGroup } from "framer-motion";
 import { Icon } from "@/shared/components/ui/Icon";
 import styles from "./ToolStrip.module.css";
-
-declare global {
-  interface Window {
-    google: typeof google;
-  }
-}
 
 interface ToolStripProps {
   activeTool: string;
@@ -26,161 +20,16 @@ const mainToolsDefinition = [
   { id: "edit", icon: "pen-to-square", label: "Edit" },
 ] as const;
 
-// Profile button component - static, no motion
-const ProfileButton = ({
-  onHover,
-  onClick,
-  isAuthenticated,
-  showTooltip,
-  tooltipText,
-}: {
-  onHover: () => void;
-  onClick: () => void;
-  isAuthenticated: boolean;
-  showTooltip: boolean;
-  tooltipText: string;
-}) => (
-  <div
-    className={styles.profileButton}
-    onMouseEnter={onHover}
-    onClick={onClick}
+const Tooltip = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    className={styles.tooltip}
+    initial={{ opacity: 0, y: 5, x: "-50%" }}
+    animate={{ opacity: 1, y: 0, x: "-50%" }}
+    transition={{ duration: 0.2 }}
   >
-    <button className={styles.tool} aria-label="User Profile">
-      <Icon name={isAuthenticated ? "user-circle" : "user"} />
-    </button>
-    {showTooltip && (
-      <motion.div
-        className={styles.tooltip}
-        initial={{ opacity: 0, y: 5, x: "-50%" }}
-        animate={{ opacity: 1, y: 0, x: "-50%" }}
-        exit={{ opacity: 0, y: 5, x: "-50%" }}
-        transition={{ duration: 0.2 }}
-      >
-        {tooltipText}
-      </motion.div>
-    )}
-  </div>
+    {children}
+  </motion.div>
 );
-
-// Search button component - static, no motion
-const SearchButton = ({
-  isActive,
-  onHover,
-  onClick,
-  showTooltip,
-  tooltipText,
-}: {
-  isActive: boolean;
-  onHover: () => void;
-  onClick: () => void;
-  showTooltip: boolean;
-  tooltipText: string;
-}) => (
-  <div className={styles.searchButton} onMouseEnter={onHover} onClick={onClick}>
-    <button
-      id="search-button"
-      className={styles.tool}
-      aria-label="Search"
-      aria-pressed={isActive}
-    >
-      <Icon name="search" />
-    </button>
-    {showTooltip && (
-      <motion.div
-        className={styles.tooltip}
-        initial={{ opacity: 0, y: 5, x: "-50%" }}
-        animate={{ opacity: 1, y: 0, x: "-50%" }}
-        exit={{ opacity: 0, y: 5, x: "-50%" }}
-        transition={{ duration: 0.2 }}
-      >
-        {tooltipText}
-      </motion.div>
-    )}
-  </div>
-);
-
-// Middle icon strip component - with motion
-const MiddleIconStrip = ({
-  tools,
-  activeTool,
-  hoveredTool,
-  showPanelsTool,
-  onHover,
-  onClick,
-  showTooltipFor,
-  getTooltipText,
-}: {
-  tools: readonly (typeof mainToolsDefinition)[number][];
-  activeTool: string;
-  hoveredTool: string | null;
-  showPanelsTool: boolean;
-  onHover: (toolId: string | null) => void;
-  onClick: (toolId: string) => void;
-  showTooltipFor: string | null;
-  getTooltipText: (toolId: string) => string;
-}) => {
-  const getActiveToolIndex = (targetTool: string | null = null): number => {
-    const targetToolId = targetTool || activeTool;
-    return tools.findIndex((tool) => tool.id === targetToolId);
-  };
-
-  const activeIndex = getActiveToolIndex(hoveredTool);
-
-  return (
-    <div className={styles.middleStrip}>
-      <LayoutGroup>
-        <div className={styles.iconsContainer}>
-          {tools.map((tool) => (
-            <motion.div
-              key={tool.id}
-              layout
-              transition={{
-                type: "spring",
-                stiffness: 350,
-                damping: 25,
-              }}
-              className={styles.iconWrapper}
-              onMouseEnter={() => onHover(tool.id)}
-              onClick={() => onClick(tool.id)}
-            >
-              <button
-                className={styles.tool}
-                aria-label={tool.label}
-                aria-pressed={activeTool === tool.id}
-                data-tool={tool.id}
-              >
-                <Icon name={tool.icon} />
-              </button>
-              {showTooltipFor === tool.id && (
-                <motion.div
-                  className={styles.tooltip}
-                  initial={{ opacity: 0, y: 5, x: "-50%" }}
-                  animate={{ opacity: 1, y: 0, x: "-50%" }}
-                  exit={{ opacity: 0, y: 5, x: "-50%" }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {getTooltipText(tool.id)}
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </LayoutGroup>
-
-      {/* Frosted Overlay - only for middle strip */}
-      <div
-        className={styles.frostedOverlay}
-        style={
-          {
-            "--tool-count": tools.length,
-            "--tool-index": Math.max(activeIndex, 0),
-            opacity: activeIndex === -1 ? 0 : 1,
-          } as React.CSSProperties
-        }
-      />
-    </div>
-  );
-};
 
 export default function ToolStrip({
   activeTool,
@@ -199,26 +48,16 @@ export default function ToolStrip({
   const [showTooltipFor, setShowTooltipFor] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const geocoder = useRef<google.maps.Geocoder | null>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
-  const tools = useMemo(
-    () =>
-      mainToolsDefinition.filter((tool) => {
-        // Filter out panels tool if not available
-        if (tool.id === "panels" && !showPanelsTool) return false;
-        return true;
-      }),
-    [showPanelsTool],
+  const tools = showPanelsTool
+    ? mainToolsDefinition
+    : mainToolsDefinition.filter((tool) => tool.id !== "panels");
+  // The frosted highlight follows the hovered tool, else the active one
+  const highlightIndex = tools.findIndex(
+    (tool) => tool.id === (hoveredTool || activeTool),
   );
-
-  useEffect(() => {
-    if (window.google?.maps) {
-      geocoder.current = new window.google.maps.Geocoder();
-    }
-  }, []);
 
   useEffect(() => {
     if (searchQuery.length < 3) {
@@ -228,10 +67,9 @@ export default function ToolStrip({
 
     const timer = setTimeout(async () => {
       try {
-        const { AutocompleteSuggestion } =
-          (await window.google.maps.importLibrary(
-            "places",
-          )) as google.maps.PlacesLibrary;
+        const { AutocompleteSuggestion } = (await google.maps.importLibrary(
+          "places",
+        )) as google.maps.PlacesLibrary;
 
         const { suggestions: fetchedSuggestions } =
           await AutocompleteSuggestion.fetchAutocompleteSuggestions({
@@ -253,87 +91,56 @@ export default function ToolStrip({
           .slice(0, 5);
 
         setSuggestions(predictions);
-      } catch (error) {}
+      } catch {
+        // Maps API not loaded or request failed: no suggestions
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const handleToolHover = useCallback((toolId: string | null) => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
+  const clearTimeouts = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+  };
 
-    if (tooltipTimeoutRef.current) {
-      clearTimeout(tooltipTimeoutRef.current);
-      tooltipTimeoutRef.current = null;
-    }
+  useEffect(() => clearTimeouts, []);
 
-    if (toolId) {
-      setHoveredTool(toolId);
-      // Show tooltip after a short delay (iOS-style)
-      tooltipTimeoutRef.current = setTimeout(() => {
-        setShowTooltipFor(toolId);
-      }, 600);
-    } else {
-      hoverTimeoutRef.current = setTimeout(() => {
-        setHoveredTool(null);
-        setShowTooltipFor(null);
-      }, 100);
-    }
-  }, []);
-
-  const handleContainerMouseLeave = useCallback(() => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    if (tooltipTimeoutRef.current) {
-      clearTimeout(tooltipTimeoutRef.current);
-    }
+  const clearHoverAfter = (delay: number) => {
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredTool(null);
       setShowTooltipFor(null);
-    }, 150);
-  }, []);
+    }, delay);
+  };
 
-  const handleToolClick = (toolId: string) => {
-    if (toolId === "profile") {
-      onOpenProfile?.();
-    } else if (toolId === "search") {
-      if (!geocoder.current && window.google?.maps) {
-        geocoder.current = new window.google.maps.Geocoder();
-      }
-      setIsSearchMode(true);
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 300);
-    } else {
-      onToolSelect(toolId);
-    }
+  const handleToolHover = (toolId: string) => {
+    clearTimeouts();
+    setHoveredTool(toolId);
+    // Show tooltip after a short delay (iOS-style)
+    tooltipTimeoutRef.current = setTimeout(
+      () => setShowTooltipFor(toolId),
+      600,
+    );
+  };
+
+  const handleContainerMouseLeave = () => {
+    clearTimeouts();
+    clearHoverAfter(150);
+  };
+
+  const openSearch = () => {
+    setIsSearchMode(true);
+    setTimeout(() => searchInputRef.current?.focus(), 300);
   };
 
   const searchLocation = (address: string) => {
     if (!map) return;
-
-    if (!geocoder.current && window.google?.maps) {
-      geocoder.current = new window.google.maps.Geocoder();
-    }
-
-    if (!geocoder.current) return;
-
-    geocoder.current.geocode(
-      { address },
-      (
-        results: google.maps.GeocoderResult[] | null,
-        status: google.maps.GeocoderStatus,
-      ) => {
-        if (status === "OK" && results && results[0]) {
-          const location = results[0].geometry.location;
-          map.setCenter(location);
-          map.setZoom(20);
-        }
-      },
-    );
+    geocoderRef.current ??= new google.maps.Geocoder();
+    geocoderRef.current.geocode({ address }, (results, status) => {
+      if (status === "OK" && results?.[0]) {
+        map.setCenter(results[0].geometry.location);
+        map.setZoom(20);
+      }
+    });
   };
 
   const handleExitSearch = () => {
@@ -342,65 +149,21 @@ export default function ToolStrip({
     setSuggestions([]);
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  const searchAndExit = (address: string) => {
+    searchLocation(address);
+    setSuggestions([]);
+    setTimeout(handleExitSearch, 500);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
-    searchLocation(searchQuery.trim());
-    setSuggestions([]);
     searchInputRef.current?.blur();
-    setTimeout(() => {
-      handleExitSearch();
-    }, 500);
-  };
-
-  const handleSuggestionClick = (
-    prediction: google.maps.places.PlacePrediction,
-  ) => {
-    const description = prediction.text.toString();
-
-    setSuggestions([]);
-    searchLocation(description);
-    setTimeout(() => {
-      handleExitSearch();
-    }, 500);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      handleExitSearch();
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-      if (tooltipTimeoutRef.current) {
-        clearTimeout(tooltipTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const getTooltipText = (toolId: string): string => {
-    if (toolId === "profile") {
-      return isAuthenticated ? "Profile" : "Sign In";
-    }
-    if (toolId === "search") {
-      return "Search Location";
-    }
-    const tool = tools.find((t) => t.id === toolId);
-    return tool?.label || "";
+    searchAndExit(searchQuery.trim());
   };
 
   return (
     <div
-      ref={containerRef}
       className={`${styles.toolStrip} ${isSearchMode ? styles.searchMode : ""}`}
       onMouseLeave={handleContainerMouseLeave}
     >
@@ -430,8 +193,8 @@ export default function ToolStrip({
                 className={styles.searchInput}
                 placeholder="Search..."
                 value={searchQuery}
-                onChange={handleSearchChange}
-                onKeyDown={handleKeyDown}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && handleExitSearch()}
                 autoComplete="off"
                 aria-label="Search location"
                 aria-autocomplete="list"
@@ -445,7 +208,6 @@ export default function ToolStrip({
             {suggestions.length > 0 && (
               <div
                 id="search-suggestions"
-                ref={suggestionsRef}
                 className={styles.suggestions}
                 role="listbox"
               >
@@ -454,7 +216,7 @@ export default function ToolStrip({
                     key={prediction.placeId}
                     type="button"
                     className={styles.suggestion}
-                    onClick={() => handleSuggestionClick(prediction)}
+                    onClick={() => searchAndExit(prediction.text.toString())}
                     role="option"
                   >
                     <Icon
@@ -485,32 +247,75 @@ export default function ToolStrip({
       ) : (
         <>
           {/* Normal Mode Layout */}
-          <ProfileButton
-            onHover={() => handleToolHover("profile")}
-            onClick={() => handleToolClick("profile")}
-            isAuthenticated={isAuthenticated}
-            showTooltip={showTooltipFor === "profile"}
-            tooltipText={getTooltipText("profile")}
-          />
+          <div
+            className={styles.profileButton}
+            onMouseEnter={() => handleToolHover("profile")}
+            onClick={onOpenProfile}
+          >
+            <button className={styles.tool} aria-label="User Profile">
+              <Icon name={isAuthenticated ? "user-circle" : "user"} />
+            </button>
+            {showTooltipFor === "profile" && (
+              <Tooltip>{isAuthenticated ? "Profile" : "Sign In"}</Tooltip>
+            )}
+          </div>
 
-          <MiddleIconStrip
-            tools={tools}
-            activeTool={activeTool}
-            hoveredTool={hoveredTool}
-            showPanelsTool={showPanelsTool}
-            onHover={handleToolHover}
-            onClick={handleToolClick}
-            showTooltipFor={showTooltipFor}
-            getTooltipText={getTooltipText}
-          />
+          <div className={styles.middleStrip}>
+            <LayoutGroup>
+              <div className={styles.iconsContainer}>
+                {tools.map((tool) => (
+                  <motion.div
+                    key={tool.id}
+                    layout
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    className={styles.iconWrapper}
+                    onMouseEnter={() => handleToolHover(tool.id)}
+                    onClick={() => onToolSelect(tool.id)}
+                  >
+                    <button
+                      className={styles.tool}
+                      aria-label={tool.label}
+                      aria-pressed={activeTool === tool.id}
+                      data-tool={tool.id}
+                    >
+                      <Icon name={tool.icon} />
+                    </button>
+                    {showTooltipFor === tool.id && (
+                      <Tooltip>{tool.label}</Tooltip>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </LayoutGroup>
 
-          <SearchButton
-            isActive={activeTool === "search"}
-            onHover={() => handleToolHover("search")}
-            onClick={() => handleToolClick("search")}
-            showTooltip={showTooltipFor === "search"}
-            tooltipText={getTooltipText("search")}
-          />
+            {/* Frosted Overlay - only for middle strip */}
+            <div
+              className={styles.frostedOverlay}
+              style={
+                {
+                  "--tool-count": tools.length,
+                  "--tool-index": Math.max(highlightIndex, 0),
+                  opacity: highlightIndex === -1 ? 0 : 1,
+                } as React.CSSProperties
+              }
+            />
+          </div>
+
+          <div
+            className={styles.searchButton}
+            onMouseEnter={() => handleToolHover("search")}
+            onClick={openSearch}
+          >
+            <button
+              id="search-button"
+              className={styles.tool}
+              aria-label="Search"
+              aria-pressed={false}
+            >
+              <Icon name="search" />
+            </button>
+            {showTooltipFor === "search" && <Tooltip>Search Location</Tooltip>}
+          </div>
         </>
       )}
     </div>

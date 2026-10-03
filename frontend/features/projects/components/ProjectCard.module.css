@@ -72,7 +72,7 @@
   letter-spacing: -0.01em;
 }
 
-.metaItem i {
+.metaItem svg {
   width: 14px;
   text-align: center;
   color: rgba(255, 128, 0, 0.9);

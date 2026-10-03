@@ -4,56 +4,32 @@ import { useEffect } from "react";
 import styles from "./SolarResultsDashboard.module.css";
 import MonthlyProductionChart from "./MonthlyProductionChart";
 import FinancialCalculator from "@/features/financial/components/FinancialCalculator";
-import ElectricalDesignPanel from "@/features/electrical/components//ElectricalDesignPanel";
+import ElectricalDesignPanel from "@/features/electrical/components/ElectricalDesignPanel";
 import DashboardActions from "./DashboardActions";
 import { useSolarDashboardData } from "@/features/solar-analysis/hooks/useSolarDashboardData";
 import { useDashboardModals } from "@/features/solar-analysis/hooks/useDashboardModals";
 import { useSolarReportGenerator } from "@/features/solar-analysis/hooks/useSolarReportGenerator";
-import {
-  SolarResultsDashboardProps,
-  DashboardSummaryProps,
-  MetricItemProps,
-} from "@/features/solar-analysis/types/result_dashboard";
+import type { SolarResultsDashboardProps } from "@/features/solar-analysis/types/dashboard";
 
 export default function SolarResultsDashboard(
-  props: SolarResultsDashboardProps & {
-    onMinimizeChange?: (minimized: boolean) => void;
-    onSaveProject?: () => void;
-    isAuthenticated?: boolean;
-    minimizeRef?: React.MutableRefObject<(() => void) | null>;
-  },
+  props: SolarResultsDashboardProps,
 ) {
   // Extract and prepare all dashboard data
-  const {
-    panelData,
-    location,
-    pvwattsData,
-    isLoading,
-    annualProduction,
-    costEstimate,
-  } = useSolarDashboardData(props);
+  const { panelData, location, pvwattsData, isLoading, annualProduction } =
+    useSolarDashboardData(props);
 
   // Manage modal states
-  const {
-    showMonthlyChart,
-    setShowMonthlyChart,
-    showFinancials,
-    setShowFinancials,
-    showElectrical,
-    setShowElectrical,
-    isMinimized,
-    setIsMinimized,
-  } = useDashboardModals({
-    isEditMode: props.isEditMode,
-    onMinimizeChange: props.onMinimizeChange,
-  });
+  const { openModal, open, close, isMinimized, setIsMinimized } =
+    useDashboardModals({
+      isEditMode: props.isEditMode,
+      onMinimizeChange: props.onMinimizeChange,
+    });
 
   // PDF report generation
   const { handleGeneratePDF } = useSolarReportGenerator({
     panelData: panelData!,
     annualProduction,
     location,
-    costEstimate,
     pvwatts: pvwattsData,
   });
 
@@ -113,21 +89,15 @@ export default function SolarResultsDashboard(
                   value={`${pvwattsData.capacity_factor.toFixed(1)}%`}
                 />
               )}
-              {costEstimate && (
-                <MetricItem
-                  label="Estimated Cost"
-                  value={`$${costEstimate.toLocaleString()}`}
-                />
-              )}
             </div>
 
             {pvwattsData && annualProduction && (
               <DashboardActions
                 isAuthenticated={props.isAuthenticated}
                 onSaveProject={props.onSaveProject}
-                onViewMonthly={() => setShowMonthlyChart(true)}
-                onViewFinancials={() => setShowFinancials(true)}
-                onViewElectrical={() => setShowElectrical(true)}
+                onViewMonthly={() => open("monthly")}
+                onViewFinancials={() => open("financials")}
+                onViewElectrical={() => open("electrical")}
                 onGeneratePDF={handleGeneratePDF}
               />
             )}
@@ -135,67 +105,39 @@ export default function SolarResultsDashboard(
         )}
       </div>
 
-      {showMonthlyChart && pvwattsData && (
-        <MonthlyProductionChart
-          data={pvwattsData}
-          onClose={() => {
-            setShowMonthlyChart(false);
-            setIsMinimized(false);
-          }}
-        />
+      {openModal === "monthly" && pvwattsData && (
+        <MonthlyProductionChart data={pvwattsData} onClose={close} />
       )}
 
-      {showFinancials && annualProduction && (
+      {openModal === "financials" && annualProduction && (
         <FinancialCalculator
           annualProduction={annualProduction}
           systemSize={panelData.systemSize}
-          panelCount={panelData.totalPanels}
-          panelWattage={panelData.panelWattage}
-          onClose={() => {
-            setShowFinancials(false);
-            setIsMinimized(false);
-          }}
+          onClose={close}
         />
       )}
 
-      {showElectrical && (
+      {openModal === "electrical" && (
         <ElectricalDesignPanel
           panelWattage={panelData.panelWattage}
           totalPanels={panelData.totalPanels}
           systemSizeKw={panelData.systemSize}
-          onClose={() => {
-            setShowElectrical(false);
-            setIsMinimized(false);
-          }}
+          onClose={close}
         />
       )}
     </>
   );
 }
 
-function DashboardSummary({
-  panelCount,
-  systemSize,
-  annualProduction,
-}: DashboardSummaryProps) {
-  return (
-    <div className={styles.summary}>
-      <span className={styles.metric}>{panelCount} panels</span>
-      <span className={styles.separator}>|</span>
-      <span className={styles.metric}>{systemSize.toFixed(1)} kW</span>
-      {annualProduction && (
-        <>
-          <span className={styles.separator}>|</span>
-          <span className={styles.metric}>
-            {annualProduction.toLocaleString()} kWh/year
-          </span>
-        </>
-      )}
-    </div>
-  );
-}
-
-function MetricItem({ label, value, isLoading = false }: MetricItemProps) {
+function MetricItem({
+  label,
+  value,
+  isLoading = false,
+}: {
+  label: string;
+  value: string | number;
+  isLoading?: boolean;
+}) {
   return (
     <div className={styles.detailItem}>
       <span className={styles.label}>{label}</span>

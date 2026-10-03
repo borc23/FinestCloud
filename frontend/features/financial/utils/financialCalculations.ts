@@ -6,7 +6,6 @@
 import type {
   FinancialInputs,
   FinancialResults,
-  YearlyBreakdown,
 } from "@/features/financial/types/financial";
 import { safeDivide } from "./validation";
 
@@ -17,6 +16,11 @@ export const FINANCIAL_DEFAULTS = {
   selfConsumptionRate: 30,
 };
 
+/** VAT saved by the 0% rate (Nullsteuersatz, since Jan 2023) for systems ≤30kWp */
+export function calculateVatSavings(systemSize: number, grossCost: number) {
+  return systemSize <= 30 ? grossCost * 0.19 : 0;
+}
+
 /**
  * Calculate comprehensive financial analysis for solar system (German market)
  * @throws {Error} If critical input values are invalid
@@ -26,14 +30,15 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     annualProduction,
     systemSize,
     utilityRates,
-    systemCost,
-    incentives,
-    financing,
+    systemCost: grossSystemCost,
+    stateGrant = 0,
+    municipalGrant = 0,
     systemDegradation = 0.5, // 0.5% per year is industry standard
     analysisYears = 25,
     selfConsumptionRate = 30, // 30% is typical for German households without battery
     discountRate = 4, // 4% discount rate for NPV
   } = inputs;
+  const { feedInTariff } = utilityRates;
 
   // Validate critical inputs to prevent calculation errors
   if (!Number.isFinite(systemSize) || systemSize <= 0) {
@@ -42,7 +47,7 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   if (!Number.isFinite(annualProduction) || annualProduction <= 0) {
     throw new Error("Annual production must be a positive number");
   }
-  if (!Number.isFinite(systemCost.totalCost) || systemCost.totalCost <= 0) {
+  if (!Number.isFinite(grossSystemCost) || grossSystemCost <= 0) {
     throw new Error("System cost must be a positive number");
   }
   if (
@@ -52,35 +57,26 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     throw new Error("Electricity cost must be a positive number");
   }
 
-  // Calculate gross and net system costs
-  const grossSystemCost = systemCost.totalCost;
-
-  // VAT reduction (0% since Jan 2023 for systems ≤30kWp)
-  const vatSavings = systemSize <= 30 ? grossSystemCost * 0.19 : 0; // 19% VAT saved
-
-  // State and municipal grants
-  const stateGrant = incentives?.stateGrant || 0;
-  const municipalGrant = incentives?.municipalGrant || 0;
-
-  const totalIncentives = vatSavings + stateGrant + municipalGrant;
-  const netSystemCost = grossSystemCost - totalIncentives;
+  const vatSavings = calculateVatSavings(systemSize, grossSystemCost);
+  const netSystemCost =
+    grossSystemCost - (vatSavings + stateGrant + municipalGrant);
 
   // Calculate effective cost per watt (safe division to prevent divide by zero)
   const effectiveCostPerWatt = safeDivide(netSystemCost, systemSize * 1000, 0); // convert kW to W
 
-  // Self-consumption and feed-in amounts
+  // Self-consumption and feed-in amounts (first year: no degradation, no escalation yet)
   const selfConsumptionAmount = annualProduction * (selfConsumptionRate / 100);
   const gridFeedInAmount = annualProduction - selfConsumptionAmount;
+  const firstYearSavings = selfConsumptionAmount * utilityRates.costPerKwh;
+  const firstYearFeedInRevenue = gridFeedInAmount * feedInTariff;
 
-  // Feed-in tariff (FIT) - April 2025 rate: 16.23p/kWh = 0.1623 €/kWh (applies to all systems 0-5,000kW)
-  const feedInTariff = utilityRates.feedInTariff || 0.1623;
-
-  // Calculate yearly breakdown with degradation and escalation
-  const yearlyBreakdown: YearlyBreakdown[] = [];
+  // Yearly cash flows with degradation and escalation
+  const cashFlows = [-netSystemCost];
   let cumulativeSavings = 0;
   let totalSavings = 0;
   let totalFeedInRevenue = 0;
   let paybackYear = analysisYears;
+  let prevNetCost = 0; // previous year's rounded net cost (0 = none yet)
   let npv = -netSystemCost; // Start with negative initial investment
 
   for (let year = 1; year <= analysisYears; year++) {
@@ -106,9 +102,8 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     const feedInRevenue = yearGridFeedIn * feedInTariff;
 
     // Calculate NPV: discount future cash flows to present value
-    const yearCashFlow = savings + feedInRevenue;
     const discountFactor = Math.pow(1 + discountRate / 100, year);
-    npv += yearCashFlow / discountFactor;
+    npv += (savings + feedInRevenue) / discountFactor;
 
     cumulativeSavings += savings + feedInRevenue;
     totalSavings += savings;
@@ -118,37 +113,17 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     const netCost = netSystemCost - cumulativeSavings;
     if (netCost <= 0 && paybackYear === analysisYears) {
       // Interpolate to find exact payback
-      const prevNetCost = yearlyBreakdown[year - 2]?.netCost || netSystemCost;
-      const fractionOfYear = prevNetCost / (prevNetCost - netCost);
-      paybackYear = year - 1 + fractionOfYear;
+      const prev = prevNetCost || netSystemCost;
+      paybackYear = year - 1 + prev / (prev - netCost);
     }
 
-    yearlyBreakdown.push({
-      year,
-      production: Math.round(production),
-      savings: Math.round(savings),
-      feedInRevenue: Math.round(feedInRevenue),
-      cumulativeSavings: Math.round(cumulativeSavings),
-      netCost: Math.round(netCost),
-    });
+    prevNetCost = Math.round(netCost);
+    cashFlows.push(Math.round(savings) + Math.round(feedInRevenue));
   }
-
-  // First year calculations (no degradation, no escalation yet)
-  const firstYearSelfConsumption =
-    annualProduction * (selfConsumptionRate / 100);
-  const firstYearGridFeedIn = annualProduction - firstYearSelfConsumption;
-  const firstYearSavings = firstYearSelfConsumption * utilityRates.costPerKwh;
-  const firstYearFeedInRevenue = firstYearGridFeedIn * feedInTariff;
-
-  // Average annual savings over analysis period
-  const annualSavings = totalSavings / analysisYears;
 
   // Calculate ROI (including feed-in revenue) - safe division
   const totalReturn = totalSavings + totalFeedInRevenue;
   const roi = safeDivide((totalReturn - netSystemCost) * 100, netSystemCost, 0);
-
-  // Calculate IRR (Internal Rate of Return)
-  const irr = calculateIRR(netSystemCost, yearlyBreakdown);
 
   // Calculate energy offset percentage (German household average: ~3,500 kWh/year) - safe division
   const avgHouseholdUsage = utilityRates.avgMonthlyBill
@@ -166,65 +141,29 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   // Calculate CO2 offset (485g CO2 per kWh is German grid average 2024)
   const lifetimeCO2Offset = (annualProduction * analysisYears * 0.485) / 1000; // convert kg to tons
 
-  // Monthly bill calculations - safe divisions
+  // Monthly bill calculations
   const avgMonthlyBillBefore =
     utilityRates.avgMonthlyBill ||
-    safeDivide(avgHouseholdUsage * utilityRates.costPerKwh, 12, 0);
+    (avgHouseholdUsage * utilityRates.costPerKwh) / 12;
   const remainingPurchase = Math.max(
     0,
     avgHouseholdUsage - selfConsumptionAmount,
   );
-  const avgMonthlyBillAfter = safeDivide(
-    remainingPurchase * utilityRates.costPerKwh,
-    12,
-    0,
-  );
-  const avgMonthlySavings = avgMonthlyBillBefore - avgMonthlyBillAfter;
-  const avgMonthlyFeedInRevenue = safeDivide(firstYearFeedInRevenue, 12, 0);
-
-  // Loan calculations if applicable (including KfW loans)
-  let monthlyLoanPayment: number | undefined;
-  let totalLoanCost: number | undefined;
-
-  if (financing?.type === "loan" || financing?.type === "kfw") {
-    const principal = financing.loanAmount || netSystemCost;
-    const monthlyRate = safeDivide(
-      financing.interestRate || (financing.type === "kfw" ? 2.5 : 4.5),
-      100 * 12,
-      0,
-    );
-    const numPayments = (financing.loanTerm || 15) * 12;
-
-    if (monthlyRate > 0 && numPayments > 0) {
-      // Standard loan payment formula - safe calculation
-      const powerTerm = Math.pow(1 + monthlyRate, numPayments);
-      monthlyLoanPayment = safeDivide(
-        principal * monthlyRate * powerTerm,
-        powerTerm - 1,
-        0,
-      );
-      totalLoanCost = monthlyLoanPayment * numPayments;
-    } else if (numPayments > 0) {
-      monthlyLoanPayment = safeDivide(principal, numPayments, 0);
-      totalLoanCost = principal;
-    } else {
-      monthlyLoanPayment = 0;
-      totalLoanCost = 0;
-    }
-  }
+  const avgMonthlyBillAfter =
+    (remainingPurchase * utilityRates.costPerKwh) / 12;
 
   return {
     grossSystemCost: Math.round(grossSystemCost),
+    vatSavings: Math.round(vatSavings),
     netSystemCost: Math.round(netSystemCost),
     effectiveCostPerWatt: Math.round(effectiveCostPerWatt * 100) / 100,
     firstYearSavings: Math.round(firstYearSavings),
     firstYearFeedInRevenue: Math.round(firstYearFeedInRevenue),
-    annualSavings: Math.round(annualSavings),
     paybackPeriod: Math.round(paybackYear * 10) / 10,
     twentyFiveYearSavings: Math.round(totalSavings),
     twentyFiveYearFeedInRevenue: Math.round(totalFeedInRevenue),
     roi: Math.round(roi * 10) / 10,
-    irr: Math.round(irr * 10) / 10,
+    irr: Math.round(calculateIRR(cashFlows) * 10) / 10,
     npv: Math.round(npv),
     energyOffsetPercentage: Math.round(energyOffsetPercentage * 10) / 10,
     selfConsumptionAmount: Math.round(selfConsumptionAmount),
@@ -232,30 +171,17 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     lifetimeCO2Offset: Math.round(lifetimeCO2Offset * 10) / 10,
     avgMonthlyBillBefore: Math.round(avgMonthlyBillBefore),
     avgMonthlyBillAfter: Math.round(avgMonthlyBillAfter),
-    avgMonthlySavings: Math.round(avgMonthlySavings),
-    avgMonthlyFeedInRevenue: Math.round(avgMonthlyFeedInRevenue),
-    monthlyLoanPayment: monthlyLoanPayment
-      ? Math.round(monthlyLoanPayment)
-      : undefined,
-    totalLoanCost: totalLoanCost ? Math.round(totalLoanCost) : undefined,
-    yearlyBreakdown,
+    avgMonthlySavings: Math.round(avgMonthlyBillBefore - avgMonthlyBillAfter),
+    avgMonthlyFeedInRevenue: Math.round(firstYearFeedInRevenue / 12),
   };
 }
 
 /**
  * Calculate Internal Rate of Return (IRR) using Newton-Raphson method
  * IRR is the discount rate that makes NPV = 0
+ * @param cashFlows - negative initial investment, then positive annual cash flows
  */
-function calculateIRR(
-  initialInvestment: number,
-  yearlyBreakdown: YearlyBreakdown[],
-): number {
-  // Build cash flow array: negative initial investment, then positive annual cash flows
-  const cashFlows = [
-    -initialInvestment,
-    ...yearlyBreakdown.map((year) => year.savings + year.feedInRevenue),
-  ];
-
+function calculateIRR(cashFlows: number[]): number {
   // Newton-Raphson method to find IRR
   let irr = 0.1; // Initial guess: 10%
   const maxIterations = 100;

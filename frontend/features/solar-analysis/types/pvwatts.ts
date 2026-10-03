@@ -12,14 +12,6 @@ export interface PVWattsRequest {
   azimuth?: number;
 }
 
-export interface PVWattsSystemRequest {
-  latitude: number;
-  longitude: number;
-  system_capacity: number;
-  tilt?: number;
-  azimuth?: number;
-}
-
 export interface WeatherStationInfo {
   city: string;
   state: string;
@@ -33,12 +25,6 @@ export interface PVWattsResponse {
   annual_solar_radiation: number;
   system_capacity_kw: number;
   station_info: WeatherStationInfo;
-}
-
-export interface MonthlyProductionData {
-  month: string;
-  production: number;
-  productionKwh: number;
 }
 
 export interface PVWattsCalculationParams {

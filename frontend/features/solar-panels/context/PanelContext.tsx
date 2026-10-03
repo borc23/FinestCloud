@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useCallback,
-  useRef,
-} from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
-interface PanelData {
+export interface PanelData {
   readonly id: string;
   readonly name: string;
   readonly manufacturer: string;
@@ -22,7 +15,6 @@ interface PanelData {
 interface PanelContextType {
   selectedPanel: PanelData | null;
   setSelectedPanel: (panel: PanelData | null) => void;
-  registerPanelChangeCallback: (callback: () => void) => () => void;
 }
 
 const PanelContext = createContext<PanelContextType | undefined>(undefined);
@@ -41,30 +33,9 @@ export function PanelProvider({ children }: { children: ReactNode }) {
   const [selectedPanel, setSelectedPanel] = useState<PanelData | null>(
     DEFAULT_PANEL,
   );
-  const callbacksRef = useRef<Set<() => void>>(new Set());
-
-  const registerPanelChangeCallback = useCallback((callback: () => void) => {
-    callbacksRef.current.add(callback);
-    return () => {
-      callbacksRef.current.delete(callback);
-    };
-  }, []);
-
-  const handleSetSelectedPanel = useCallback((panel: PanelData | null) => {
-    setSelectedPanel(panel);
-    if (panel) {
-      callbacksRef.current.forEach((cb) => cb());
-    }
-  }, []);
-
-  const contextValue = {
-    selectedPanel,
-    setSelectedPanel: handleSetSelectedPanel,
-    registerPanelChangeCallback,
-  };
 
   return (
-    <PanelContext.Provider value={contextValue}>
+    <PanelContext.Provider value={{ selectedPanel, setSelectedPanel }}>
       {children}
     </PanelContext.Provider>
   );

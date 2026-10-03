@@ -1,44 +1,16 @@
-"use client";
-
-import { ButtonHTMLAttributes, ReactNode } from "react";
-
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
-type ButtonSize = "sm" | "md" | "lg";
+import type { ButtonHTMLAttributes } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-  children: ReactNode;
-  className?: string;
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "success";
 }
 
+// Styled by the global .btn / .btn-<variant> classes
 export default function Button({
   variant = "primary",
-  size = "md",
-  loading = false,
-  children,
   className = "",
-  disabled,
   ...props
 }: ButtonProps) {
-  const variantClass = `btn-${variant}`;
-  const sizeClass = size !== "md" ? `btn-${size}` : "";
-  const loadingClass = loading ? "btn-loading" : "";
-
-  const classes = ["btn", variantClass, sizeClass, loadingClass, className]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <button
-      className={classes}
-      disabled={disabled || loading}
-      aria-busy={loading}
-      {...props}
-    >
-      {loading && <span className="spinner" aria-hidden="true" />}
-      {!loading && children}
-    </button>
+    <button className={`btn btn-${variant} ${className}`.trim()} {...props} />
   );
 }

@@ -10,6 +10,15 @@ import {
 import { Icon } from "@/shared/components/ui/Icon";
 import styles from "./page.module.css";
 
+const loadingCard = (
+  <div className={styles.container}>
+    <div className={styles.card}>
+      <div className={`spinner ${styles.spinner}`}></div>
+      <p>Loading invitation...</p>
+    </div>
+  </div>
+);
+
 function AcceptInvitation() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,44 +27,35 @@ function AcceptInvitation() {
 
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
-  const [invitation, setInvitation] = useState<any>(null);
+  const [invitation, setInvitation] =
+    useState<Awaited<ReturnType<typeof getInvitationByToken>>>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (token) {
-      loadInvitation();
-    } else {
+    if (!token) {
       setError("No invitation token provided");
       setLoading(false);
+      return;
     }
+
+    getInvitationByToken(token)
+      .then((data) => {
+        if (!data) {
+          setError("Invitation not found");
+        } else if (data.status === "accepted") {
+          setError("This invitation has already been accepted");
+        } else if (data.status === "cancelled") {
+          setError("This invitation has been cancelled");
+        } else if (new Date(data.expires_at) < new Date()) {
+          setError("This invitation has expired");
+        } else {
+          setInvitation(data);
+        }
+      })
+      .catch(() => setError("Failed to load invitation"))
+      .finally(() => setLoading(false));
   }, [token]);
-
-  const loadInvitation = async () => {
-    if (!token) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await getInvitationByToken(token);
-      if (!data) {
-        setError("Invitation not found");
-      } else if (data.status === "accepted") {
-        setError("This invitation has already been accepted");
-      } else if (data.status === "cancelled") {
-        setError("This invitation has been cancelled");
-      } else if (new Date(data.expires_at) < new Date()) {
-        setError("This invitation has expired");
-      } else {
-        setInvitation(data);
-      }
-    } catch (err: any) {
-      setError("Failed to load invitation");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAccept = async () => {
     if (!user || !token) {
@@ -79,16 +79,7 @@ function AcceptInvitation() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.card}>
-          <div className={styles.spinner}></div>
-          <p>Loading invitation...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return loadingCard;
 
   if (error) {
     return (
@@ -143,7 +134,7 @@ function AcceptInvitation() {
           <p>
             Expires:{" "}
             <strong>
-              {new Date(invitation?.expires_at).toLocaleDateString()}
+              {new Date(invitation?.expires_at ?? "").toLocaleDateString()}
             </strong>
           </p>
         </div>
@@ -191,16 +182,7 @@ function AcceptInvitation() {
 // useSearchParams() requires a Suspense boundary for the page to prerender
 export default function AcceptInvitationPage() {
   return (
-    <Suspense
-      fallback={
-        <div className={styles.container}>
-          <div className={styles.card}>
-            <div className={styles.spinner}></div>
-            <p>Loading invitation...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={loadingCard}>
       <AcceptInvitation />
     </Suspense>
   );

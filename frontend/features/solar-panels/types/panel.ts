@@ -8,10 +8,8 @@ export interface Coordinate {
   lng: number;
 }
 
-export interface PanelCoordinate extends Coordinate {}
-
 export interface Panel {
-  coords: PanelCoordinate[];
+  coords: Coordinate[];
   lat: number;
   lng: number;
   annualSunshineKwh?: number; // Annual sunshine flux in kWh/m²/year from GeoTIFF
@@ -60,7 +58,7 @@ export interface SolarDataSegment {
   center: Coordinate;
   solarData: {
     solarPotential?: SolarPotential;
-  };
+  } | null; // null when the Solar API has no coverage
 }
 
 export interface AngleConfirmData {

@@ -1,13 +1,8 @@
 import { useMemo } from "react";
-import type { PanelGenerationData } from "@/features/solar-analysis/types/result_dashboard";
-
-interface AggregatedPanelData {
-  totalPanels: number;
-  systemSize: number;
-  panelWattage: number;
-  avgPitch: number;
-  avgAzimuth: number;
-}
+import type {
+  PanelData,
+  PanelGenerationData,
+} from "@/features/solar-analysis/types/dashboard";
 
 const DEFAULT_PANEL_WATTAGE = 400;
 const DEFAULT_PITCH = 20;
@@ -34,16 +29,8 @@ function calculateCircularMean(angles: number[], weights: number[]): number {
   const tolerance = 1e-10 * totalWeight; // Adjust based on precision needs
 
   if (resultantLength < tolerance) {
-    // Vectors cancel - return a default or throw error
-    // Option 1: Return a safe default (e.g., 180° for solar panels)
+    // Vectors cancel out - fall back to due south
     return 180;
-
-    // Option 2: Return NaN to signal undefined result
-    // return NaN
-
-    // Option 3: Use first/largest roof's azimuth
-    // const maxIndex = weights.indexOf(Math.max(...weights))
-    // return angles[maxIndex]
   }
 
   const meanRad = Math.atan2(sumSin, sumCos);
@@ -62,7 +49,7 @@ function calculateCircularMean(angles: number[], weights: number[]): number {
  */
 export function usePanelData(
   panelGenerationData: PanelGenerationData | null,
-): AggregatedPanelData | null {
+): PanelData | null {
   return useMemo(() => {
     if (
       !panelGenerationData ||

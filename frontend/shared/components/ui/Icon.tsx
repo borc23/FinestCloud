@@ -30,6 +30,12 @@ import {
   faBuilding,
   faUserPlus,
   faEnvelope,
+  faSpinner,
+  faTrash,
+  faCalendarPlus,
+  faClock,
+  faHouse,
+  faCircleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -61,6 +67,12 @@ const iconMap: Record<string, IconDefinition> = {
   building: faBuilding,
   "user-plus": faUserPlus,
   envelope: faEnvelope,
+  spinner: faSpinner,
+  trash: faTrash,
+  "calendar-plus": faCalendarPlus,
+  clock: faClock,
+  home: faHouse,
+  "circle-exclamation": faCircleExclamation,
 };
 
 interface IconProps {

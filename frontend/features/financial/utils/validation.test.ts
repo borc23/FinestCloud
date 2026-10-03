@@ -7,7 +7,7 @@ import {
   validateFinancialInputs,
   sanitizeNumericInput,
   safeDivide,
-  clamp,
+  validateGermanProduction,
   VALIDATION_CONSTRAINTS,
 } from "./validation";
 
@@ -95,13 +95,19 @@ describe("validateFinancialInputs", () => {
     );
   });
 
-  it("should warn about unrealistic production rates", () => {
+  it("should not duplicate production warnings (handled by validateGermanProduction)", () => {
     const result = validateFinancialInputs({
       ...validInputs,
       annualProduction: 3000, // Very low for 10kW system
     });
-    expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toContain("lower than typical");
+    expect(result.warnings.some((w) => w.includes("kWh/kW"))).toBe(false);
+  });
+
+  it("should validate optional financing fields only when provided", () => {
+    expect(
+      validateFinancialInputs({ ...validInputs, loanTerm: 0 }).errors,
+    ).toEqual(["Loan term in years must be at least 1"]);
+    expect(validateFinancialInputs(validInputs).errors).toHaveLength(0);
   });
 
   it("should warn about high system costs", () => {
@@ -179,22 +185,23 @@ describe("safeDivide", () => {
   });
 });
 
-describe("clamp", () => {
-  it("should return value when within range", () => {
-    expect(clamp(5, 0, 10)).toBe(5);
+describe("validateGermanProduction", () => {
+  it("should accept production within 850-1,050 full load hours", () => {
+    const result = validateGermanProduction(10, 9500);
+    expect(result.isRealistic).toBe(true);
+    expect(result.expectedRange).toEqual({ min: 8500, max: 10500 });
   });
 
-  it("should return min when value is below range", () => {
-    expect(clamp(-5, 0, 10)).toBe(0);
+  it("should flag conservative production", () => {
+    const result = validateGermanProduction(10, 3000);
+    expect(result.isRealistic).toBe(false);
+    expect(result.message).toContain("conservative");
   });
 
-  it("should return max when value is above range", () => {
-    expect(clamp(15, 0, 10)).toBe(10);
-  });
-
-  it("should handle edge cases", () => {
-    expect(clamp(0, 0, 10)).toBe(0);
-    expect(clamp(10, 0, 10)).toBe(10);
+  it("should flag optimistic production", () => {
+    const result = validateGermanProduction(10, 12000);
+    expect(result.isRealistic).toBe(false);
+    expect(result.message).toContain("optimistic");
   });
 });
 

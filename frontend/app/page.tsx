@@ -110,9 +110,7 @@ export default function HomePage() {
         <SaveProjectModal
           isOpen={showSaveModal}
           onClose={() => setShowSaveModal(false)}
-          onSave={(projectId) => {
-            setShowSaveModal(false);
-          }}
+          onSave={() => setShowSaveModal(false)}
           projectData={getProjectDataRef.current()}
         />
       )}

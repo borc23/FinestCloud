@@ -1,8 +1,5 @@
 import { useCallback } from "react";
-import {
-  generateSolarReport,
-  downloadPDF,
-} from "@/features/reports/utils/pdfGenerator";
+import { generateSolarReport } from "@/features/reports/utils/pdfGenerator";
 import {
   calculateFinancials,
   estimateSystemCost,
@@ -13,25 +10,15 @@ import { calculateGermanFeedInTariff } from "@/features/financial/utils/germanFe
 import { useOrganization } from "@/features/organization/hooks/useOrganization";
 import type { ReportData } from "@/features/reports/types/report";
 import type { PVWattsResponse } from "@/features/solar-analysis/types/pvwatts";
-
-interface PanelData {
-  totalPanels: number;
-  systemSize: number;
-  panelWattage: number;
-  avgPitch: number;
-  avgAzimuth: number;
-}
-
-interface Location {
-  lat: number;
-  lng: number;
-}
+import type {
+  Location,
+  PanelData,
+} from "@/features/solar-analysis/types/dashboard";
 
 interface UseSolarReportGeneratorProps {
   panelData: PanelData;
   annualProduction?: number;
   location?: Location;
-  costEstimate?: number;
   pvwatts?: PVWattsResponse | null;
 }
 
@@ -42,7 +29,6 @@ export function useSolarReportGenerator({
   panelData,
   annualProduction,
   location,
-  costEstimate,
   pvwatts,
 }: UseSolarReportGeneratorProps) {
   const { organization } = useOrganization();
@@ -53,25 +39,15 @@ export function useSolarReportGenerator({
       return;
     }
 
-    const systemCost = costEstimate || estimateSystemCost(panelData.systemSize);
-    const feedInTariff = calculateGermanFeedInTariff(
-      panelData.systemSize,
-      true,
-      false,
-    );
-
     const financials = calculateFinancials({
       annualProduction,
       systemSize: panelData.systemSize,
       utilityRates: {
         costPerKwh: FINANCIAL_DEFAULTS.costPerKwh,
-        feedInTariff: feedInTariff,
+        feedInTariff: calculateGermanFeedInTariff(panelData.systemSize),
         escalationRate: FINANCIAL_DEFAULTS.escalationRate,
       },
-      systemCost: {
-        totalCost: systemCost,
-        pricePerWatt: systemCost / (panelData.systemSize * 1000),
-      },
+      systemCost: estimateSystemCost(panelData.systemSize),
       selfConsumptionRate: FINANCIAL_DEFAULTS.selfConsumptionRate,
     });
 
@@ -101,7 +77,6 @@ export function useSolarReportGenerator({
         degradationRate: 0.5,
       },
       financials: financials,
-      systemCost: systemCost,
       monitoring: {
         monitoringSystem: "Web Portal & Mobile App",
         appAccess: true,
@@ -134,15 +109,8 @@ export function useSolarReportGenerator({
     };
 
     const doc = generateSolarReport(reportData);
-    downloadPDF(doc, `solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`);
-  }, [
-    annualProduction,
-    panelData,
-    location,
-    costEstimate,
-    pvwatts,
-    organization,
-  ]);
+    doc.save(`solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`);
+  }, [annualProduction, panelData, location, pvwatts, organization]);
 
   return { handleGeneratePDF };
 }

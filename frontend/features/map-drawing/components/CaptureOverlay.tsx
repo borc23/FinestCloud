@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Button from "@/shared/components/ui/Button";
-import Spinner from "@/shared/components/ui/Spinner";
 import styles from "./CaptureOverlay.module.css";
 
 interface CaptureOverlayProps {
@@ -24,53 +23,36 @@ export default function CaptureOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const updatePosition = useCallback(() => {
-    if (!overlayRef.current || !map) return;
-
-    const mapContainer = map.getDiv();
-    const containerRect = mapContainer.getBoundingClientRect();
-
-    // Calculate capture size based on available space
-    // Reserve space for toolstrip at top (44px + padding) and buttons at bottom (120px)
-    const reservedTopSpace = 60; // Toolstrip height + some padding
-    const reservedBottomSpace = 120; // Space for Cancel/Capture buttons
-    const availableHeight =
-      containerRect.height - reservedTopSpace - reservedBottomSpace;
-    const availableWidth = containerRect.width;
-
-    // Use the smaller dimension to ensure it fits, with a max of 640px
-    const maxSize = Math.min(availableWidth, availableHeight, 640);
-
-    // Center the capture square horizontally
-    const left = (containerRect.width - maxSize) / 2;
-    // Position vertically between toolstrip and buttons
-    const top = reservedTopSpace + (availableHeight - maxSize) / 2;
-
-    overlayRef.current.style.left = `${left}px`;
-    overlayRef.current.style.top = `${top}px`;
-    overlayRef.current.style.width = `${maxSize}px`;
-    overlayRef.current.style.height = `${maxSize}px`;
-  }, [map]);
-
+  // Size and center the capture square; it depends only on the map's size
   useEffect(() => {
-    if (isVisible && map) {
-      updatePosition();
+    if (!isVisible || !map) return;
+    const mapContainer = map.getDiv();
 
-      // Update position when map changes
-      const listeners = [
-        google.maps.event.addListener(map, "zoom_changed", updatePosition),
-        google.maps.event.addListener(map, "center_changed", updatePosition),
-        google.maps.event.addListener(map, "idle", updatePosition),
-      ];
+    const updatePosition = () => {
+      if (!overlayRef.current) return;
+      const { width, height } = mapContainer.getBoundingClientRect();
 
-      return () => {
-        listeners.forEach((listener) =>
-          google.maps.event.removeListener(listener),
-        );
-        listeners.length = 0;
-      };
-    }
-  }, [isVisible, map, updatePosition]);
+      // Reserve space for toolstrip at top (44px + padding) and Cancel/Capture buttons at bottom
+      const reservedTopSpace = 60;
+      const reservedBottomSpace = 120;
+      const availableHeight = height - reservedTopSpace - reservedBottomSpace;
+
+      // Use the smaller dimension to ensure it fits, with a max of 640px
+      const size = Math.min(width, availableHeight, 640);
+
+      Object.assign(overlayRef.current.style, {
+        left: `${(width - size) / 2}px`,
+        top: `${reservedTopSpace + (availableHeight - size) / 2}px`,
+        width: `${size}px`,
+        height: `${size}px`,
+      });
+    };
+
+    updatePosition();
+    const observer = new ResizeObserver(updatePosition);
+    observer.observe(mapContainer);
+    return () => observer.disconnect();
+  }, [isVisible, map]);
 
   // Add ESC key handler
   useEffect(() => {
@@ -103,124 +85,45 @@ export default function CaptureOverlay({
     }
   }, [isVisible]);
 
-  const isCalculatingRef = useRef(false);
+  /** Map bounds covered by the capture square (null if they can't be computed) */
+  const getBounds = async (): Promise<google.maps.LatLngBounds | null> => {
+    if (!overlayRef.current || !map) return null;
 
-  const getBounds =
-    useCallback(async (): Promise<google.maps.LatLngBounds | null> => {
-      if (!overlayRef.current || !map) return null;
-      if (isCalculatingRef.current) return null;
+    const overlay = new google.maps.OverlayView();
+    overlay.draw = () => {};
+    overlay.setMap(map);
 
-      isCalculatingRef.current = true;
-
-      let overlay: google.maps.OverlayView | null = null;
-
-      try {
-        overlay = new google.maps.OverlayView();
-        overlay.draw = function () {};
-        overlay.setMap(map);
-
-        // Wait for overlay to be ready with timeout
-        return new Promise((resolve, reject) => {
-          let attempts = 0;
-          const maxAttempts = 10; // Reduced from 40 to 10 attempts
-          let animationFrameId: number | null = null;
-          let timeoutId: NodeJS.Timeout | null = null;
-          const startTime = Date.now();
-          const maxWaitTime = 500; // Reduced from 2000ms to 500ms
-
-          const cleanup = () => {
-            if (animationFrameId !== null) {
-              cancelAnimationFrame(animationFrameId);
-              animationFrameId = null;
-            }
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-              timeoutId = null;
-            }
-            if (overlay) {
-              try {
-                // Check if overlay has setMap method before calling
-                if (typeof overlay.setMap === "function") {
-                  overlay.setMap(null);
-                }
-              } catch (cleanupError) {
-                // Silently ignore cleanup errors as they don't affect functionality
-              }
-            }
-          };
-
-          const checkProjection = () => {
-            const projection = overlay!.getProjection();
-            if (projection) {
-              try {
-                const mapContainer = map.getDiv();
-                const containerRect = mapContainer.getBoundingClientRect();
-                const squareRect = overlayRef.current!.getBoundingClientRect();
-
-                const topLeft = new google.maps.Point(
-                  squareRect.left - containerRect.left,
-                  squareRect.top - containerRect.top,
-                );
-                const bottomRight = new google.maps.Point(
-                  squareRect.right - containerRect.left,
-                  squareRect.bottom - containerRect.top,
-                );
-
-                const topLeftLatLng =
-                  projection.fromContainerPixelToLatLng(topLeft);
-                const bottomRightLatLng =
-                  projection.fromContainerPixelToLatLng(bottomRight);
-
-                if (!topLeftLatLng || !bottomRightLatLng) {
-                  cleanup();
-                  reject(
-                    new Error("Failed to convert pixel coordinates to LatLng"),
-                  );
-                  return;
-                }
-
-                const bounds = new google.maps.LatLngBounds();
-                bounds.extend(topLeftLatLng);
-                bounds.extend(bottomRightLatLng);
-
-                cleanup();
-                resolve(bounds);
-              } catch (projectionError) {
-                cleanup();
-                reject(projectionError);
-              }
-            } else {
-              attempts++;
-              const elapsedTime = Date.now() - startTime;
-
-              if (attempts >= maxAttempts || elapsedTime >= maxWaitTime) {
-                cleanup();
-                reject(new Error("Timeout waiting for Google Maps projection"));
-              } else {
-                // Use requestAnimationFrame for more efficient polling
-                animationFrameId = requestAnimationFrame(checkProjection);
-              }
-            }
-          };
-          checkProjection();
-        });
-      } catch (error) {
-        if (overlay) {
-          try {
-            if (typeof overlay.setMap === "function") {
-              overlay.setMap(null);
-            }
-          } catch {
-            // Silently ignore cleanup errors
-          }
+    try {
+      // Wait (max 10 frames / 500ms) for the overlay's projection
+      const startTime = Date.now();
+      for (let attempt = 1; !overlay.getProjection(); attempt++) {
+        if (attempt > 10 || Date.now() - startTime >= 500) {
+          throw new Error("Timeout waiting for Google Maps projection");
         }
-
-        isCalculatingRef.current = false;
-        return null;
-      } finally {
-        isCalculatingRef.current = false;
+        await new Promise(requestAnimationFrame);
       }
-    }, [map]);
+
+      const projection = overlay.getProjection();
+      const container = map.getDiv().getBoundingClientRect();
+      const square = overlayRef.current.getBoundingClientRect();
+      const toLatLng = (x: number, y: number) =>
+        projection.fromContainerPixelToLatLng(
+          new google.maps.Point(x - container.left, y - container.top),
+        );
+      const topLeft = toLatLng(square.left, square.top);
+      const bottomRight = toLatLng(square.right, square.bottom);
+      if (!topLeft || !bottomRight) {
+        throw new Error("Failed to convert pixel coordinates to LatLng");
+      }
+
+      return new google.maps.LatLngBounds().extend(topLeft).extend(bottomRight);
+    } catch (error) {
+      console.error("Failed to compute capture bounds:", error);
+      return null;
+    } finally {
+      overlay.setMap(null);
+    }
+  };
 
   const handleDetect = async () => {
     if (isProcessing) return;
@@ -263,7 +166,7 @@ export default function CaptureOverlay({
 
         {isProcessing && (
           <div className={styles.processingOverlay}>
-            <Spinner size="md" variant="primary" />
+            <div className="spinner" role="status" aria-label="Loading" />
             <span>Processing</span>
           </div>
         )}

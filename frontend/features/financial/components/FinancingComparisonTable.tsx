@@ -3,9 +3,12 @@
  * Displays comparison of cash, KfW loan, and standard loan options
  */
 
-import React from "react";
 import styles from "./FinancialCalculator.module.css";
+import panel from "@/shared/styles/panel.module.css";
 import type { FinancialResults } from "@/features/financial/types/financial";
+
+const GREEN = "linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)";
+const RED = "linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%)";
 
 interface FinancingScenario {
   type: "cash" | "kfw" | "loan";
@@ -35,9 +38,27 @@ export default function FinancingComparisonTable({
   loanTerm,
   results,
 }: FinancingComparisonTableProps) {
+  const rows = [
+    {
+      scenario: financingScenarios.cash,
+      label: "Cash Purchase",
+      note: "Pay upfront",
+    },
+    {
+      scenario: financingScenarios.kfw,
+      label: "KfW 270 Loan",
+      note: `${kfwInterestRate}% interest, ${loanTerm} years`,
+    },
+    {
+      scenario: financingScenarios.standardLoan,
+      label: "Standard Loan",
+      note: `${customInterestRate}% interest, ${loanTerm} years`,
+    },
+  ];
+
   return (
-    <div className={styles.section}>
-      <h4 className={styles.sectionTitle}>💰 Financing Options Comparison</h4>
+    <div className={panel.section}>
+      <h4 className={panel.sectionTitle}>💰 Financing Options Comparison</h4>
       <div className={styles.financingComparison}>
         <table className={styles.comparisonTable}>
           <thead>
@@ -51,92 +72,35 @@ export default function FinancingComparisonTable({
             </tr>
           </thead>
           <tbody>
-            {/* Cash Purchase */}
-            <tr className={financingType === "cash" ? styles.selectedRow : ""}>
-              <td>
-                <strong>Cash Purchase</strong>
-                <br />
-                <small>Pay upfront</small>
-              </td>
-              <td>€0</td>
-              <td className={styles.positive}>+€{results.avgMonthlySavings}</td>
-              <td className={styles.positive}>
-                <strong>+€{results.avgMonthlySavings}</strong>
-              </td>
-              <td>€0</td>
-              <td>€{financingScenarios.cash.totalCost.toLocaleString()}</td>
-            </tr>
-
-            {/* KfW Loan */}
-            <tr className={financingType === "kfw" ? styles.selectedRow : ""}>
-              <td>
-                <strong>KfW 270 Loan</strong>
-                <br />
-                <small>
-                  {kfwInterestRate}% interest, {loanTerm} years
-                </small>
-              </td>
-              <td>€{financingScenarios.kfw.monthlyPayment}</td>
-              <td className={styles.positive}>+€{results.avgMonthlySavings}</td>
-              <td
-                className={
-                  results.avgMonthlySavings >
-                  financingScenarios.kfw.monthlyPayment
-                    ? styles.positive
-                    : styles.negative
-                }
-              >
-                <strong>
-                  {results.avgMonthlySavings >
-                  financingScenarios.kfw.monthlyPayment
-                    ? "+"
-                    : ""}
-                  €
-                  {results.avgMonthlySavings -
-                    financingScenarios.kfw.monthlyPayment}
-                </strong>
-              </td>
-              <td>€{financingScenarios.kfw.totalInterest.toLocaleString()}</td>
-              <td>€{financingScenarios.kfw.totalCost.toLocaleString()}</td>
-            </tr>
-
-            {/* Standard Loan */}
-            <tr className={financingType === "loan" ? styles.selectedRow : ""}>
-              <td>
-                <strong>Standard Loan</strong>
-                <br />
-                <small>
-                  {customInterestRate}% interest, {loanTerm} years
-                </small>
-              </td>
-              <td>€{financingScenarios.standardLoan.monthlyPayment}</td>
-              <td className={styles.positive}>+€{results.avgMonthlySavings}</td>
-              <td
-                className={
-                  results.avgMonthlySavings >
-                  financingScenarios.standardLoan.monthlyPayment
-                    ? styles.positive
-                    : styles.negative
-                }
-              >
-                <strong>
-                  {results.avgMonthlySavings >
-                  financingScenarios.standardLoan.monthlyPayment
-                    ? "+"
-                    : ""}
-                  €
-                  {results.avgMonthlySavings -
-                    financingScenarios.standardLoan.monthlyPayment}
-                </strong>
-              </td>
-              <td>
-                €
-                {financingScenarios.standardLoan.totalInterest.toLocaleString()}
-              </td>
-              <td>
-                €{financingScenarios.standardLoan.totalCost.toLocaleString()}
-              </td>
-            </tr>
+            {rows.map(({ scenario, label, note }) => {
+              const net = results.avgMonthlySavings - scenario.monthlyPayment;
+              const gain = net > 0 || scenario.type === "cash";
+              return (
+                <tr
+                  key={scenario.type}
+                  className={
+                    financingType === scenario.type ? styles.selectedRow : ""
+                  }
+                >
+                  <td>
+                    <strong>{label}</strong>
+                    <br />
+                    <small>{note}</small>
+                  </td>
+                  <td>€{scenario.monthlyPayment}</td>
+                  <td className={styles.positive}>
+                    +€{results.avgMonthlySavings}
+                  </td>
+                  <td className={gain ? styles.positive : styles.negative}>
+                    <strong>
+                      {gain ? "+" : ""}€{net}
+                    </strong>
+                  </td>
+                  <td>€{scenario.totalInterest.toLocaleString()}</td>
+                  <td>€{scenario.totalCost.toLocaleString()}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -177,95 +141,59 @@ export default function FinancingComparisonTable({
                 ? financingScenarios.kfw.monthlyPayment
                 : financingScenarios.standardLoan.monthlyPayment;
             const netImpact = results.avgMonthlySavings - monthlyPayment;
-
-            // Calculate max value for scaling (use the maximum of payment and savings)
-            const maxValue = Math.max(
-              monthlyPayment,
-              results.avgMonthlySavings,
-              Math.abs(netImpact),
-            );
-
-            // Calculate widths as percentages of max value (with minimum 15% for visibility)
-            const paymentWidth = Math.max(
-              (monthlyPayment / maxValue) * 100,
-              15,
-            );
-            const savingsWidth = Math.max(
-              (results.avgMonthlySavings / maxValue) * 100,
-              15,
-            );
-            const netWidth = Math.max(
-              (Math.abs(netImpact) / maxValue) * 100,
-              15,
-            );
+            const bars = [
+              {
+                label: "Loan Payment",
+                amount: monthlyPayment,
+                background: RED,
+                text: `€${monthlyPayment}`,
+              },
+              {
+                label: "Solar Savings",
+                amount: results.avgMonthlySavings,
+                background: GREEN,
+                text: `+€${results.avgMonthlySavings}`,
+              },
+              {
+                label: "Net Monthly Impact",
+                amount: Math.abs(netImpact),
+                background: netImpact >= 0 ? GREEN : RED,
+                text: `${netImpact >= 0 ? "+" : ""}€${Math.abs(
+                  netImpact,
+                ).toFixed(0)}`,
+                color: netImpact >= 0 ? "#4caf50" : "#ff6b6b",
+              },
+            ];
+            // Scale to the largest value (with minimum 15% width for visibility)
+            const maxValue = Math.max(...bars.map((bar) => bar.amount));
 
             return (
               <div className={styles.monthlyCashFlow}>
                 <h5>Monthly Cash Flow Impact</h5>
                 <div className={styles.cashFlowBars}>
-                  {/* Loan Payment */}
-                  <div className={styles.cashFlowItem}>
-                    <div className={styles.cashFlowLabel}>Loan Payment</div>
-                    <div className={styles.cashFlowBarContainer}>
-                      <div
-                        className={styles.cashFlowBar}
-                        style={{
-                          width: `${paymentWidth}%`,
-                          background:
-                            "linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%)",
-                        }}
-                      />
-                      <span className={styles.cashFlowValue}>
-                        €{monthlyPayment}
-                      </span>
+                  {bars.map((bar) => (
+                    <div key={bar.label} className={styles.cashFlowItem}>
+                      <div className={styles.cashFlowLabel}>{bar.label}</div>
+                      <div className={styles.cashFlowBarContainer}>
+                        <div
+                          className={styles.cashFlowBar}
+                          style={{
+                            width: `${Math.max(
+                              (bar.amount / maxValue) * 100,
+                              15,
+                            )}%`,
+                            background: bar.background,
+                          }}
+                        />
+                        <span
+                          className={styles.cashFlowValue}
+                          style={{ color: bar.color }}
+                        >
+                          {bar.text}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Solar Savings */}
-                  <div className={styles.cashFlowItem}>
-                    <div className={styles.cashFlowLabel}>Solar Savings</div>
-                    <div className={styles.cashFlowBarContainer}>
-                      <div
-                        className={styles.cashFlowBar}
-                        style={{
-                          width: `${savingsWidth}%`,
-                          background:
-                            "linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)",
-                        }}
-                      />
-                      <span className={styles.cashFlowValue}>
-                        +€{results.avgMonthlySavings}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Net Monthly Impact */}
-                  <div className={styles.cashFlowItem}>
-                    <div className={styles.cashFlowLabel}>
-                      Net Monthly Impact
-                    </div>
-                    <div className={styles.cashFlowBarContainer}>
-                      <div
-                        className={styles.cashFlowBar}
-                        style={{
-                          width: `${netWidth}%`,
-                          background:
-                            netImpact >= 0
-                              ? "linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)"
-                              : "linear-gradient(90deg, #ff6b6b 0%, #ff5252 100%)",
-                        }}
-                      />
-                      <span
-                        className={styles.cashFlowValue}
-                        style={{
-                          color: netImpact >= 0 ? "#4caf50" : "#ff6b6b",
-                        }}
-                      >
-                        {netImpact >= 0 ? "+" : ""}€
-                        {Math.abs(netImpact).toFixed(0)}
-                      </span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             );

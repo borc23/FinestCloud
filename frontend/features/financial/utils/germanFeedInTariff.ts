@@ -5,153 +5,46 @@
  */
 
 /**
- * German Feed-In Tariff Tiers for Partial Feed-In (Überschusseinspeisung)
- * Updated for November 2025 with compensation bonus for negative price hours
+ * German Feed-In Tariff Tiers for Partial Feed-In (Überschusseinspeisung), ct/kWh.
+ * Updated for November 2025. Each rate applies to the capacity share within its tier.
+ * The top tier's rate applies to all capacity above 40 kWp, so systems >100 kWp are
+ * credited in full (the >100 kWp direct-marketing obligation is not modelled).
  */
-const GERMAN_FEED_IN_TIERS_2025 = {
-  // Base rates (ct/kWh)
-  tier1_0_10kW: 7.94, // First 10 kWp
-  tier2_10_40kW: 6.88, // 10-40 kWp portion
-  tier3_40_100kW: 5.62, // 40-100 kWp portion
+const TIERS = [
+  { tier: "0-10 kWp", fromKw: 0, toKw: 10, rateCt: 7.94 },
+  { tier: "10-40 kWp", fromKw: 10, toKw: 40, rateCt: 6.88 },
+  { tier: "40+ kWp", fromKw: 40, toKw: Infinity, rateCt: 5.62 },
+];
 
-  // 2025 compensation bonus for negative price hours (optional)
-  compensationBonus: 0.6, // +0.6 ct/kWh to compensate for negative-price exclusions
-
-  // Full feed-in rates (Volleinspeisung) - if user exports ALL energy
-  fullFeedIn_0_10kW: 12.47,
-  fullFeedIn_10_40kW: 10.4,
-  fullFeedIn_40_100kW: 8.2,
-} as const;
-
-/**
- * Calculate weighted average feed-in tariff for a given system size
- * Uses tiered pricing based on EEG 2025 regulations
- *
- * @param systemSizeKw - System size in kW
- * @param includeCompensationBonus - Add 0.6 ct/kWh bonus for 2025 negative-price compensation
- * @param isFullFeedIn - Use full feed-in rates (Volleinspeisung) instead of partial
- * @returns Weighted average feed-in tariff in €/kWh
- */
-export function calculateGermanFeedInTariff(
-  systemSizeKw: number,
-  includeCompensationBonus: boolean = true,
-  isFullFeedIn: boolean = false,
-): number {
-  const rates = GERMAN_FEED_IN_TIERS_2025;
-  const bonus = includeCompensationBonus ? rates.compensationBonus : 0;
-
-  let totalRevenue = 0;
-
-  if (isFullFeedIn) {
-    // Full feed-in (Volleinspeisung) - export all energy
-    if (systemSizeKw <= 10) {
-      totalRevenue = systemSizeKw * (rates.fullFeedIn_0_10kW + bonus);
-    } else if (systemSizeKw <= 40) {
-      totalRevenue =
-        10 * (rates.fullFeedIn_0_10kW + bonus) +
-        (systemSizeKw - 10) * (rates.fullFeedIn_10_40kW + bonus);
-    } else if (systemSizeKw <= 100) {
-      totalRevenue =
-        10 * (rates.fullFeedIn_0_10kW + bonus) +
-        30 * (rates.fullFeedIn_10_40kW + bonus) +
-        (systemSizeKw - 40) * (rates.fullFeedIn_40_100kW + bonus);
-    } else {
-      // Systems > 100 kWp typically require auction participation
-      totalRevenue =
-        10 * (rates.fullFeedIn_0_10kW + bonus) +
-        30 * (rates.fullFeedIn_10_40kW + bonus) +
-        60 * (rates.fullFeedIn_40_100kW + bonus);
-    }
-  } else {
-    // Partial feed-in (Überschusseinspeisung) - self-consume + export excess
-    if (systemSizeKw <= 10) {
-      totalRevenue = systemSizeKw * (rates.tier1_0_10kW + bonus);
-    } else if (systemSizeKw <= 40) {
-      totalRevenue =
-        10 * (rates.tier1_0_10kW + bonus) +
-        (systemSizeKw - 10) * (rates.tier2_10_40kW + bonus);
-    } else if (systemSizeKw <= 100) {
-      totalRevenue =
-        10 * (rates.tier1_0_10kW + bonus) +
-        30 * (rates.tier2_10_40kW + bonus) +
-        (systemSizeKw - 40) * (rates.tier3_40_100kW + bonus);
-    } else {
-      totalRevenue =
-        10 * (rates.tier1_0_10kW + bonus) +
-        30 * (rates.tier2_10_40kW + bonus) +
-        60 * (rates.tier3_40_100kW + bonus);
-    }
-  }
-
-  // Convert ct/kWh to €/kWh and return weighted average
-  return totalRevenue / systemSizeKw / 100;
-}
+// 2025 compensation bonus for negative price hours: +0.6 ct/kWh
+const COMPENSATION_BONUS_CT = 0.6;
 
 /**
  * Get detailed breakdown of feed-in tariff tiers for a system
  * Useful for displaying to users
  */
-export function getFeedInTariffBreakdown(
-  systemSizeKw: number,
-  includeCompensationBonus: boolean = true,
-  isFullFeedIn: boolean = false,
-): {
-  tier: string;
-  capacityKw: number;
-  rateCtPerKwh: number;
-  rateEuroPerKwh: number;
-}[] {
-  const rates = GERMAN_FEED_IN_TIERS_2025;
-  const bonus = includeCompensationBonus ? rates.compensationBonus : 0;
-  const breakdown: {
-    tier: string;
-    capacityKw: number;
-    rateCtPerKwh: number;
-    rateEuroPerKwh: number;
-  }[] = [];
+export function getFeedInTariffBreakdown(systemSizeKw: number) {
+  return TIERS.filter(({ fromKw }) => systemSizeKw > fromKw).map(
+    ({ tier, fromKw, toKw, rateCt }) => ({
+      tier,
+      capacityKw: Math.min(systemSizeKw, toKw) - fromKw,
+      rateCtPerKwh: rateCt + COMPENSATION_BONUS_CT,
+      rateEuroPerKwh: (rateCt + COMPENSATION_BONUS_CT) / 100,
+    }),
+  );
+}
 
-  const tier1Rate = isFullFeedIn ? rates.fullFeedIn_0_10kW : rates.tier1_0_10kW;
-  const tier2Rate = isFullFeedIn
-    ? rates.fullFeedIn_10_40kW
-    : rates.tier2_10_40kW;
-  const tier3Rate = isFullFeedIn
-    ? rates.fullFeedIn_40_100kW
-    : rates.tier3_40_100kW;
-
-  // Tier 1: 0-10 kWp
-  if (systemSizeKw > 0) {
-    const tier1Capacity = Math.min(systemSizeKw, 10);
-    breakdown.push({
-      tier: "0-10 kWp",
-      capacityKw: tier1Capacity,
-      rateCtPerKwh: tier1Rate + bonus,
-      rateEuroPerKwh: (tier1Rate + bonus) / 100,
-    });
-  }
-
-  // Tier 2: 10-40 kWp
-  if (systemSizeKw > 10) {
-    const tier2Capacity = Math.min(systemSizeKw - 10, 30);
-    breakdown.push({
-      tier: "10-40 kWp",
-      capacityKw: tier2Capacity,
-      rateCtPerKwh: tier2Rate + bonus,
-      rateEuroPerKwh: (tier2Rate + bonus) / 100,
-    });
-  }
-
-  // Tier 3: 40-100 kWp
-  if (systemSizeKw > 40) {
-    const tier3Capacity = Math.min(systemSizeKw - 40, 60);
-    breakdown.push({
-      tier: "40-100 kWp",
-      capacityKw: tier3Capacity,
-      rateCtPerKwh: tier3Rate + bonus,
-      rateEuroPerKwh: (tier3Rate + bonus) / 100,
-    });
-  }
-
-  return breakdown;
+/**
+ * Calculate weighted average feed-in tariff (incl. compensation bonus) for a system size
+ * @returns Weighted average feed-in tariff in €/kWh
+ */
+export function calculateGermanFeedInTariff(systemSizeKw: number): number {
+  const totalRevenue = getFeedInTariffBreakdown(systemSizeKw).reduce(
+    (sum, { capacityKw, rateCtPerKwh }) => sum + capacityKw * rateCtPerKwh,
+    0,
+  );
+  // Convert ct/kWh to €/kWh
+  return totalRevenue / systemSizeKw / 100;
 }
 
 /**

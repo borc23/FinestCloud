@@ -3,89 +3,152 @@
  * Collapsible form for adjusting financial assumptions
  */
 
-import React from "react";
+import { useState } from "react";
 import styles from "./FinancialCalculator.module.css";
+import panel from "@/shared/styles/panel.module.css";
 import { sanitizeNumericInput } from "@/features/financial/utils/validation";
-import { estimateSystemCost } from "@/features/financial/utils/financialCalculations";
+import {
+  estimateSystemCost,
+  FINANCIAL_DEFAULTS,
+} from "@/features/financial/utils/financialCalculations";
+import { calculateGermanFeedInTariff } from "@/features/financial/utils/germanFeedInTariff";
 
-interface FinancialInputFormProps {
-  // State values
-  financingType: "cash" | "kfw" | "loan";
-  downPayment: number;
-  loanTerm: number;
-  kfwInterestRate: number;
-  customInterestRate: number;
+type FinancingType = "cash" | "kfw" | "loan";
+
+interface CalculatorInputs {
+  financingType: FinancingType;
   costPerKwh: number;
   avgMonthlyBill: number;
   escalationRate: number;
-  systemCostInput: number;
+  systemCost: number;
   feedInTariff: number;
   selfConsumptionRate: number;
   stateGrant: number;
   municipalGrant: number;
   discountRate: number;
-  netSystemCost: number;
-  systemSize: number;
-  showAdvanced: boolean;
-
-  // Setters
-  setFinancingType: (value: "cash" | "kfw" | "loan") => void;
-  setDownPayment: (value: number) => void;
-  setLoanTerm: (value: number) => void;
-  setKfwInterestRate: (value: number) => void;
-  setCustomInterestRate: (value: number) => void;
-  setCostPerKwh: (value: number) => void;
-  setAvgMonthlyBill: (value: number) => void;
-  setEscalationRate: (value: number) => void;
-  setSystemCostInput: (value: number) => void;
-  setFeedInTariff: (value: number) => void;
-  setSelfConsumptionRate: (value: number) => void;
-  setStateGrant: (value: number) => void;
-  setMunicipalGrant: (value: number) => void;
-  setDiscountRate: (value: number) => void;
-  setShowAdvanced: (value: boolean) => void;
+  downPayment: number;
+  loanTerm: number;
+  kfwInterestRate: number;
+  customInterestRate: number;
 }
 
-export default function FinancialInputForm(props: FinancialInputFormProps) {
-  const {
-    financingType,
-    downPayment,
-    loanTerm,
-    kfwInterestRate,
-    customInterestRate,
-    costPerKwh,
-    avgMonthlyBill,
-    escalationRate,
-    systemCostInput,
-    feedInTariff,
-    selfConsumptionRate,
-    stateGrant,
-    municipalGrant,
-    discountRate,
-    netSystemCost,
-    systemSize,
-    showAdvanced,
-    setFinancingType,
-    setDownPayment,
-    setLoanTerm,
-    setKfwInterestRate,
-    setCustomInterestRate,
-    setCostPerKwh,
-    setAvgMonthlyBill,
-    setEscalationRate,
-    setSystemCostInput,
-    setFeedInTariff,
-    setSelfConsumptionRate,
-    setStateGrant,
-    setMunicipalGrant,
-    setDiscountRate,
-    setShowAdvanced,
-  } = props;
+/** Initial values; also the fallback when a field is cleared or invalid */
+export const defaultInputs = (systemSize: number): CalculatorInputs => ({
+  financingType: "cash",
+  ...FINANCIAL_DEFAULTS,
+  avgMonthlyBill: 130,
+  systemCost: estimateSystemCost(systemSize),
+  feedInTariff: calculateGermanFeedInTariff(systemSize),
+  stateGrant: 0,
+  municipalGrant: 0,
+  discountRate: 4,
+  downPayment: 0,
+  loanTerm: 15,
+  kfwInterestRate: 2.5,
+  customInterestRate: 4.5,
+});
+
+const LOANS: FinancingType[] = ["kfw", "loan"];
+
+/** Numeric inputs in display order; `financing` limits a field to those financing types */
+const FIELDS: {
+  key: Exclude<keyof CalculatorInputs, "financingType">;
+  label: string;
+  step: number;
+  min: number;
+  max?: number;
+  hint?: string;
+  integer?: boolean;
+  financing?: FinancingType[];
+}[] = [
+  {
+    key: "downPayment",
+    label: "Down Payment (€)",
+    step: 1000,
+    min: 0,
+    financing: LOANS,
+  },
+  {
+    key: "loanTerm",
+    label: "Loan Term (years)",
+    step: 1,
+    min: 5,
+    max: 25,
+    integer: true,
+    financing: LOANS,
+  },
+  {
+    key: "kfwInterestRate",
+    label: "KfW Interest Rate (%)",
+    step: 0.1,
+    min: 2,
+    max: 3.5,
+    hint: "Typical KfW 270 range: 2.0-3.5% (varies by credit rating)",
+    financing: ["kfw"],
+  },
+  {
+    key: "customInterestRate",
+    label: "Interest Rate (%)",
+    step: 0.1,
+    min: 0,
+    max: 15,
+    hint: "Typical German range: 3.5-6.5% (secured loans: 2-4%)",
+    financing: ["loan"],
+  },
+  { key: "costPerKwh", label: "Electricity Rate (€/kWh)", step: 0.01, min: 0 },
+  {
+    key: "avgMonthlyBill",
+    label: "Current Monthly Bill (€)",
+    step: 10,
+    min: 0,
+  },
+  {
+    key: "escalationRate",
+    label: "Rate Escalation (%/year)",
+    step: 0.5,
+    min: 0,
+    max: 10,
+  },
+  { key: "systemCost", label: "System Cost (€)", step: 100, min: 0 },
+  { key: "feedInTariff", label: "Feed-in Tariff (€/kWh)", step: 0.001, min: 0 },
+  {
+    key: "selfConsumptionRate",
+    label: "Self-Consumption Rate (%)",
+    step: 5,
+    min: 0,
+    max: 100,
+  },
+  { key: "stateGrant", label: "State Grant (€)", step: 100, min: 0 },
+  { key: "municipalGrant", label: "Municipal Grant (€)", step: 100, min: 0 },
+  {
+    key: "discountRate",
+    label: "Discount Rate (% for NPV)",
+    step: 0.5,
+    min: 0,
+    max: 15,
+    hint: "Typical: 3-6% (conservative to aggressive)",
+  },
+];
+
+interface FinancialInputFormProps {
+  inputs: CalculatorInputs;
+  defaults: CalculatorInputs;
+  netSystemCost: number;
+  onChange: (patch: Partial<CalculatorInputs>) => void;
+}
+
+export default function FinancialInputForm({
+  inputs,
+  defaults,
+  netSystemCost,
+  onChange,
+}: FinancialInputFormProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
-    <div className={styles.controls}>
+    <div className={panel.controls}>
       <button
-        className={styles.toggleButton}
+        className={panel.toggleButton}
         onClick={() => setShowAdvanced(!showAdvanced)}
       >
         {showAdvanced ? "▼" : "▶"} Adjust Assumptions
@@ -94,14 +157,14 @@ export default function FinancialInputForm(props: FinancialInputFormProps) {
       {showAdvanced && (
         <div className={styles.inputs}>
           {/* Financing Options */}
-          <div className={styles.inputGroup}>
+          <div className={panel.inputGroup}>
             <label className={styles.inputLabel}>
               Financing Method
               <select
                 className={styles.input}
-                value={financingType}
+                value={inputs.financingType}
                 onChange={(e) =>
-                  setFinancingType(e.target.value as "cash" | "kfw" | "loan")
+                  onChange({ financingType: e.target.value as FinancingType })
                 }
               >
                 <option value="cash">Cash Purchase</option>
@@ -111,7 +174,7 @@ export default function FinancialInputForm(props: FinancialInputFormProps) {
                 <option value="loan">Standard Bank Loan</option>
               </select>
             </label>
-            {financingType === "kfw" && (
+            {inputs.financingType === "kfw" && (
               <small className={styles.inputHint}>
                 ℹ️ KfW 270 "Renewable Energy - Standard" offers low-interest
                 government-backed loans for solar installations
@@ -119,253 +182,43 @@ export default function FinancialInputForm(props: FinancialInputFormProps) {
             )}
           </div>
 
-          {financingType !== "cash" && (
-            <>
-              <div className={styles.inputGroup}>
+          {FIELDS.filter(
+            ({ financing }) =>
+              !financing || financing.includes(inputs.financingType),
+          ).map(({ key, label, step, min, max, hint, integer }) => {
+            const isDownPayment = key === "downPayment";
+            return (
+              <div key={key} className={panel.inputGroup}>
                 <label className={styles.inputLabel}>
-                  Down Payment (€)
+                  {label}
                   <input
                     type="number"
                     className={styles.input}
-                    value={downPayment}
-                    onChange={(e) =>
-                      setDownPayment(sanitizeNumericInput(e.target.value, 0))
-                    }
-                    step="1000"
-                    min="0"
-                    max={netSystemCost}
+                    value={inputs[key]}
+                    onChange={(e) => {
+                      const value = sanitizeNumericInput(
+                        e.target.value,
+                        defaults[key],
+                      );
+                      onChange({ [key]: integer ? Math.round(value) : value });
+                    }}
+                    step={step}
+                    min={min}
+                    max={isDownPayment ? netSystemCost : max}
                   />
                 </label>
-                <small className={styles.inputHint}>
-                  Loan amount: €{(netSystemCost - downPayment).toLocaleString()}
-                </small>
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>
-                  Loan Term (years)
-                  <input
-                    type="number"
-                    className={styles.input}
-                    value={loanTerm}
-                    onChange={(e) =>
-                      setLoanTerm(
-                        Math.round(sanitizeNumericInput(e.target.value, 15)),
-                      )
-                    }
-                    step="1"
-                    min="5"
-                    max="25"
-                  />
-                </label>
-              </div>
-
-              {financingType === "kfw" ? (
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>
-                    KfW Interest Rate (%)
-                    <input
-                      type="number"
-                      className={styles.input}
-                      value={kfwInterestRate}
-                      onChange={(e) =>
-                        setKfwInterestRate(
-                          sanitizeNumericInput(e.target.value, 2.5),
-                        )
-                      }
-                      step="0.1"
-                      min="2.0"
-                      max="3.5"
-                    />
-                  </label>
+                {(hint || isDownPayment) && (
                   <small className={styles.inputHint}>
-                    Typical KfW 270 range: 2.0-3.5% (varies by credit rating)
+                    {isDownPayment
+                      ? `Loan amount: €${(
+                          netSystemCost - inputs.downPayment
+                        ).toLocaleString()}`
+                      : hint}
                   </small>
-                </div>
-              ) : (
-                financingType === "loan" && (
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>
-                      Interest Rate (%)
-                      <input
-                        type="number"
-                        className={styles.input}
-                        value={customInterestRate}
-                        onChange={(e) =>
-                          setCustomInterestRate(
-                            sanitizeNumericInput(e.target.value, 4.5),
-                          )
-                        }
-                        step="0.1"
-                        min="0"
-                        max="15"
-                      />
-                    </label>
-                    <small className={styles.inputHint}>
-                      Typical German range: 3.5-6.5% (secured loans: 2-4%)
-                    </small>
-                  </div>
-                )
-              )}
-            </>
-          )}
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Electricity Rate (€/kWh)
-              <input
-                type="number"
-                className={styles.input}
-                value={costPerKwh}
-                onChange={(e) =>
-                  setCostPerKwh(sanitizeNumericInput(e.target.value, 0.37))
-                }
-                step="0.01"
-                min="0"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Current Monthly Bill (€)
-              <input
-                type="number"
-                className={styles.input}
-                value={avgMonthlyBill}
-                onChange={(e) =>
-                  setAvgMonthlyBill(sanitizeNumericInput(e.target.value, 130))
-                }
-                step="10"
-                min="0"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Rate Escalation (%/year)
-              <input
-                type="number"
-                className={styles.input}
-                value={escalationRate}
-                onChange={(e) =>
-                  setEscalationRate(sanitizeNumericInput(e.target.value, 4))
-                }
-                step="0.5"
-                min="0"
-                max="10"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              System Cost (€)
-              <input
-                type="number"
-                className={styles.input}
-                value={systemCostInput}
-                onChange={(e) =>
-                  setSystemCostInput(
-                    sanitizeNumericInput(
-                      e.target.value,
-                      estimateSystemCost(systemSize),
-                    ),
-                  )
-                }
-                step="100"
-                min="0"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Feed-in Tariff (€/kWh)
-              <input
-                type="number"
-                className={styles.input}
-                value={feedInTariff}
-                onChange={(e) =>
-                  setFeedInTariff(sanitizeNumericInput(e.target.value, 0.1623))
-                }
-                step="0.001"
-                min="0"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Self-Consumption Rate (%)
-              <input
-                type="number"
-                className={styles.input}
-                value={selfConsumptionRate}
-                onChange={(e) =>
-                  setSelfConsumptionRate(
-                    sanitizeNumericInput(e.target.value, 30),
-                  )
-                }
-                step="5"
-                min="0"
-                max="100"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              State Grant (€)
-              <input
-                type="number"
-                className={styles.input}
-                value={stateGrant}
-                onChange={(e) =>
-                  setStateGrant(sanitizeNumericInput(e.target.value, 0))
-                }
-                step="100"
-                min="0"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Municipal Grant (€)
-              <input
-                type="number"
-                className={styles.input}
-                value={municipalGrant}
-                onChange={(e) =>
-                  setMunicipalGrant(sanitizeNumericInput(e.target.value, 0))
-                }
-                step="100"
-                min="0"
-              />
-            </label>
-          </div>
-
-          <div className={styles.inputGroup}>
-            <label className={styles.inputLabel}>
-              Discount Rate (% for NPV)
-              <input
-                type="number"
-                className={styles.input}
-                value={discountRate}
-                onChange={(e) =>
-                  setDiscountRate(sanitizeNumericInput(e.target.value, 4))
-                }
-                step="0.5"
-                min="0"
-                max="15"
-              />
-            </label>
-            <small className={styles.inputHint}>
-              Typical: 3-6% (conservative to aggressive)
-            </small>
-          </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

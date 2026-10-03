@@ -1,51 +1,37 @@
 import { createClient } from "@/shared/lib/supabase/client";
 
+const BUCKET = "organization-logos";
+
 /**
- * Upload organization logo to Supabase Storage
- * @param file - Image file to upload
- * @param organizationId - Organization ID for namespacing
- * @returns Public URL of uploaded logo
+ * Upload (or replace) the organization logo in Supabase Storage
+ * @returns Public URL of the logo, versioned to bust caches
  */
 export async function uploadOrganizationLogo(
   file: File,
   organizationId: string,
 ): Promise<string> {
-  const supabase = createClient();
-
-  // Validate file
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  if (file.size > maxSize) {
+  if (file.size > 5 * 1024 * 1024) {
     throw new Error("Logo file size must be less than 5MB");
   }
-
-  const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
-  if (!allowedTypes.includes(file.type)) {
+  // Raster only: SVG in a public bucket would allow stored XSS
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
     throw new Error("Logo must be PNG, JPEG, or WebP format");
   }
 
-  // Generate unique filename with timestamp to prevent caching issues
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${organizationId}/logo-${Date.now()}.${fileExt}`;
-
-  // Upload to Supabase Storage
-  const { data, error } = await supabase.storage
-    .from("organization-logos")
-    .upload(fileName, file, {
-      cacheControl: "3600",
-      upsert: true,
-    });
+  const storage = createClient().storage.from(BUCKET);
+  // Fixed path per org, so a new upload replaces the old logo
+  const { data, error } = await storage.upload(`${organizationId}/logo`, file, {
+    cacheControl: "3600",
+    contentType: file.type,
+    upsert: true,
+  });
 
   if (error) {
     console.error("Logo upload error:", error);
     throw new Error(`Failed to upload logo: ${error.message}`);
   }
 
-  // Get public URL
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("organization-logos").getPublicUrl(data.path);
-
-  return publicUrl;
+  return `${storage.getPublicUrl(data.path).data.publicUrl}?v=${Date.now()}`;
 }
 
 /**
@@ -57,24 +43,15 @@ export async function deleteOrganizationLogo(
   logoUrl: string,
   organizationId: string,
 ): Promise<void> {
-  const supabase = createClient();
-
-  // Extract file path from URL
-  const urlParts = logoUrl.split("/organization-logos/");
-  if (urlParts.length !== 2) {
-    throw new Error("Invalid logo URL format");
-  }
-
-  const filePath = urlParts[1];
+  const filePath = new URL(logoUrl).pathname.split(`/${BUCKET}/`)[1];
 
   // Verify the file belongs to this organization
-  if (!filePath.startsWith(`${organizationId}/`)) {
+  if (!filePath?.startsWith(`${organizationId}/`)) {
     throw new Error("Unauthorized: Logo does not belong to this organization");
   }
 
-  // Delete from storage
-  const { error } = await supabase.storage
-    .from("organization-logos")
+  const { error } = await createClient()
+    .storage.from(BUCKET)
     .remove([filePath]);
 
   if (error) {

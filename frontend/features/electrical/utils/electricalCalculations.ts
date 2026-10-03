@@ -7,6 +7,7 @@ import type {
   PanelSpecs,
   StringConfiguration,
   InverterType,
+  InverterKind,
   WireSizing,
   BreakerSizing,
   ElectricalDesign,
@@ -49,15 +50,15 @@ export const STANDARD_PANEL_SPECS: Record<number, PanelSpecs> = {
 function calculateStringConfiguration(
   panelSpecs: PanelSpecs,
   totalPanels: number,
-  inverterType: "string" | "microinverter" | "optimizer",
+  inverterType: InverterKind,
   roofTemp: number = 60,
 ): StringConfiguration {
   // Temperature correction for voltage
   const tempDiff = roofTemp - 25; // Standard test condition is 25°C
   const voltageCorrection = 1 + (panelSpecs.tempCoeff * tempDiff) / 100;
 
-  if (inverterType === "microinverter") {
-    // Microinverters: 1 panel per inverter
+  if (inverterType !== "string") {
+    // Microinverters / power optimizers: 1 panel each
     return {
       panelsPerString: 1,
       numberOfStrings: totalPanels,
@@ -65,25 +66,7 @@ function calculateStringConfiguration(
       stringVoltageVoc: panelSpecs.voc * voltageCorrection,
       stringVoltageVmp: panelSpecs.vmp * voltageCorrection,
       stringCurrent: panelSpecs.imp,
-      totalSystemVoltage: panelSpecs.vmp * voltageCorrection,
       totalSystemCurrent: panelSpecs.imp * totalPanels,
-    };
-  }
-
-  if (inverterType === "optimizer") {
-    // Power optimizers: typically 1-2 panels per optimizer
-    const panelsPerOptimizer = 1;
-    return {
-      panelsPerString: panelsPerOptimizer,
-      numberOfStrings: Math.ceil(totalPanels / panelsPerOptimizer),
-      totalPanels,
-      stringVoltageVoc: panelSpecs.voc * voltageCorrection * panelsPerOptimizer,
-      stringVoltageVmp: panelSpecs.vmp * voltageCorrection * panelsPerOptimizer,
-      stringCurrent: panelSpecs.imp,
-      totalSystemVoltage:
-        panelSpecs.vmp * voltageCorrection * panelsPerOptimizer,
-      totalSystemCurrent:
-        panelSpecs.imp * Math.ceil(totalPanels / panelsPerOptimizer),
     };
   }
 
@@ -121,7 +104,6 @@ function calculateStringConfiguration(
     stringVoltageVoc: panelSpecs.voc * voltageCorrection * panelsPerString,
     stringVoltageVmp: panelSpecs.vmp * voltageCorrection * panelsPerString,
     stringCurrent: panelSpecs.imp,
-    totalSystemVoltage: panelSpecs.vmp * voltageCorrection * panelsPerString,
     totalSystemCurrent: panelSpecs.imp * numberOfStrings,
   };
 }
@@ -132,7 +114,7 @@ function calculateStringConfiguration(
 function selectInverter(
   systemSizeKw: number,
   stringConfig: StringConfiguration,
-  inverterType: "string" | "microinverter" | "optimizer",
+  inverterType: InverterKind,
 ): InverterType {
   if (inverterType === "microinverter") {
     return {
@@ -176,86 +158,70 @@ function selectInverter(
   };
 }
 
+// Wire sizing chart: mm² cross-section, max current (A), resistance (Ω/km at 20°C)
+const WIRES = [
+  { size: 4, maxCurrent: 32, resistance: 4.61 },
+  { size: 6, maxCurrent: 41, resistance: 3.08 },
+  { size: 10, maxCurrent: 57, resistance: 1.83 },
+  { size: 16, maxCurrent: 76, resistance: 1.15 },
+  { size: 25, maxCurrent: 101, resistance: 0.727 },
+];
+
+/** Smallest wire rated for the current, else the fallback size */
+const selectWire = (current: number, fallbackSize: number) =>
+  WIRES.find((wire) => wire.maxCurrent >= current) ??
+  WIRES.find((wire) => wire.size === fallbackSize)!;
+
+/** Voltage drop in % (round trip = 2x length) */
+const voltageDrop = (
+  lengthM: number,
+  current: number,
+  resistance: number,
+  voltage: number,
+) => {
+  const percent = ((2 * lengthM * current * resistance) / 1000 / voltage) * 100;
+  return Math.round(percent * 100) / 100;
+};
+
 /**
- * Calculate wire sizing based on current and distance
+ * Calculate wire sizing based on design currents (incl. safety factor) and distance
  */
 function calculateWireSizing(
   stringConfig: StringConfiguration,
-  inverterType: InverterType,
-  dcCableLength: number = 15,
-  acCableLength: number = 10,
+  dcCurrent: number,
+  acCurrent: number,
+  dcCableLength: number,
+  acCableLength: number,
 ): WireSizing {
-  // DC cable sizing (from array to inverter)
-  const dcCurrent = stringConfig.stringCurrent * 1.25; // 25% safety factor per NEC/IEC
-  const dcVoltage = stringConfig.stringVoltageVmp;
-
-  // Wire sizing chart (mm² for different current ratings)
-  const wireChart: Record<
-    number,
-    { size: number; maxCurrent: number; resistance: number }
-  > = {
-    4: { size: 4, maxCurrent: 32, resistance: 4.61 }, // Ω/km at 20°C
-    6: { size: 6, maxCurrent: 41, resistance: 3.08 },
-    10: { size: 10, maxCurrent: 57, resistance: 1.83 },
-    16: { size: 16, maxCurrent: 76, resistance: 1.15 },
-    25: { size: 25, maxCurrent: 101, resistance: 0.727 },
-  };
-
-  // Select DC cable size
-  let dcCableSize = 6; // Default minimum for solar
-  for (const [, wire] of Object.entries(wireChart)) {
-    if (wire.maxCurrent >= dcCurrent) {
-      dcCableSize = wire.size;
-      break;
-    }
-  }
-
-  // Calculate voltage drop (round trip = 2x length)
-  const dcResistance = wireChart[dcCableSize].resistance;
-  const dcVoltageDrop =
-    ((2 * dcCableLength * dcCurrent * dcResistance) / 1000 / dcVoltage) * 100;
-
-  // AC cable sizing (from inverter to grid)
-  const systemSizeKw = (stringConfig.totalPanels * 400) / 1000; // Approximate
-  const acCurrent = ((systemSizeKw * 1000) / 230) * 1.25; // 230V single phase, 25% safety
-
-  let acCableSize = 4; // Default minimum
-  for (const [, wire] of Object.entries(wireChart)) {
-    if (wire.maxCurrent >= acCurrent) {
-      acCableSize = wire.size;
-      break;
-    }
-  }
-
-  const acResistance = wireChart[acCableSize].resistance;
-  const acVoltageDrop =
-    ((2 * acCableLength * acCurrent * acResistance) / 1000 / 230) * 100;
+  // DC cable (array to inverter): 6mm² minimum for solar; AC cable (inverter to grid, 230V)
+  const dc = selectWire(dcCurrent, 6);
+  const ac = selectWire(acCurrent, 4);
 
   return {
     dcCableLengthOneWay: dcCableLength,
     acCableLengthOneWay: acCableLength,
-    dcCableSize,
-    acCableSize,
-    dcVoltageDrop: Math.round(dcVoltageDrop * 100) / 100,
-    acVoltageDrop: Math.round(acVoltageDrop * 100) / 100,
-    dcCableType: `${dcCableSize}mm² PV cable (UV resistant, rated for outdoor use)`,
-    acCableType: `${acCableSize}mm² NYM-J cable (indoor installation)`,
+    dcCableSize: dc.size,
+    acCableSize: ac.size,
+    dcVoltageDrop: voltageDrop(
+      dcCableLength,
+      dcCurrent,
+      dc.resistance,
+      stringConfig.stringVoltageVmp,
+    ),
+    acVoltageDrop: voltageDrop(acCableLength, acCurrent, ac.resistance, 230),
+    dcCableType: `${dc.size}mm² PV cable (UV resistant, rated for outdoor use)`,
+    acCableType: `${ac.size}mm² NYM-J cable (indoor installation)`,
   };
 }
 
 /**
- * Calculate breaker/fuse sizing
+ * Calculate breaker/fuse sizing, rounded up to the nearest 5A
  */
 function calculateBreakerSizing(
-  stringConfig: StringConfiguration,
-  systemSizeKw: number,
+  dcCurrent: number,
+  acCurrent: number,
 ): BreakerSizing {
-  // DC breaker: 1.25x string current per NEC/IEC standards
-  const dcCurrent = stringConfig.stringCurrent * 1.25;
-  const dcBreakerRating = Math.ceil(dcCurrent / 5) * 5; // Round up to nearest 5A
-
-  // AC breaker: based on inverter output
-  const acCurrent = ((systemSizeKw * 1000) / 230) * 1.25;
+  const dcBreakerRating = Math.ceil(dcCurrent / 5) * 5;
   const acBreakerRating = Math.ceil(acCurrent / 5) * 5;
 
   return {
@@ -328,10 +294,15 @@ export function calculateElectricalDesign(
     }
   }
 
+  // Design currents with 25% safety factor per NEC/IEC: DC per string, AC at 230V single phase
+  const dcCurrent = stringConfig.stringCurrent * 1.25;
+  const acCurrent = ((systemSizeKw * 1000) / 230) * 1.25;
+
   // Calculate wiring
   const wiring = calculateWireSizing(
     stringConfig,
-    inverter,
+    dcCurrent,
+    acCurrent,
     dcCableLength,
     acCableLength,
   );
@@ -353,7 +324,7 @@ export function calculateElectricalDesign(
   }
 
   // Calculate breakers
-  const breakers = calculateBreakerSizing(stringConfig, systemSizeKw);
+  const breakers = calculateBreakerSizing(dcCurrent, acCurrent);
 
   return {
     stringConfig,
@@ -365,88 +336,69 @@ export function calculateElectricalDesign(
 }
 
 /**
- * Compare inverter types for a given system
+ * Inverter types with rough cost estimates (German market) and trade-offs
  */
-export function compareInverterTypes(
-  panelSpecs: PanelSpecs,
-  totalPanels: number,
-  systemSizeKw: number,
-): Record<
-  "string" | "microinverter" | "optimizer",
-  { design: ElectricalDesign; cost: number; pros: string[]; cons: string[] }
-> {
-  const types: ("string" | "microinverter" | "optimizer")[] = [
-    "string",
-    "microinverter",
-    "optimizer",
-  ];
-
-  const comparison: any = {};
-
-  types.forEach((type) => {
-    const design = calculateElectricalDesign({
-      panelSpecs,
-      totalPanels,
-      systemSizeKw,
-      inverterType: type,
-    });
-
-    // Rough cost estimates (German market)
-    let cost = 0;
-    let pros: string[] = [];
-    let cons: string[] = [];
-
-    switch (type) {
-      case "string":
-        cost = systemSizeKw * 200; // ~200€/kW for string inverter
-        pros = [
-          "Lowest upfront cost",
-          "High efficiency (97-98%)",
-          "Proven technology",
-          "Easy monitoring of whole system",
-        ];
-        cons = [
-          "Single point of failure",
-          "Shading affects entire string",
-          "No panel-level monitoring",
-          "Requires proper string design",
-        ];
-        break;
-      case "microinverter":
-        cost = totalPanels * 120; // ~120€/panel for microinverters
-        pros = [
-          "Panel-level MPPT",
-          "No single point of failure",
-          "Easy system expansion",
-          "Excellent for shading/complex roofs",
-          "Panel-level monitoring",
-        ];
-        cons = [
-          "Higher upfront cost",
-          "More points of failure",
-          "Slightly lower efficiency (96-97%)",
-          "Harder to service (roof access)",
-        ];
-        break;
-      case "optimizer":
-        cost = systemSizeKw * 200 + totalPanels * 80; // Inverter + optimizers
-        pros = [
-          "Panel-level MPPT",
-          "Panel-level monitoring",
-          "Good for shading",
-          "Central inverter for easy service",
-          "High efficiency (99%)",
-        ];
-        cons = [
-          "Highest upfront cost",
-          "Two systems to maintain",
-          "More complex installation",
-        ];
-        break;
-    }
-
-    comparison[type] = { design, cost: Math.round(cost), pros, cons };
-  });
-
-  return comparison;
-}
+export const INVERTER_OPTIONS: {
+  type: InverterKind;
+  icon: string;
+  name: string;
+  estimateCost: (systemSizeKw: number, totalPanels: number) => number;
+  pros: string[];
+  cons: string[];
+}[] = [
+  {
+    type: "string",
+    icon: "🔌",
+    name: "String Inverter",
+    estimateCost: (kw) => kw * 200, // ~200€/kW for string inverter
+    pros: [
+      "Lowest upfront cost",
+      "High efficiency (97-98%)",
+      "Proven technology",
+      "Easy monitoring of whole system",
+    ],
+    cons: [
+      "Single point of failure",
+      "Shading affects entire string",
+      "No panel-level monitoring",
+      "Requires proper string design",
+    ],
+  },
+  {
+    type: "microinverter",
+    icon: "🔋",
+    name: "Microinverters",
+    estimateCost: (_kw, panels) => panels * 120, // ~120€/panel for microinverters
+    pros: [
+      "Panel-level MPPT",
+      "No single point of failure",
+      "Easy system expansion",
+      "Excellent for shading/complex roofs",
+      "Panel-level monitoring",
+    ],
+    cons: [
+      "Higher upfront cost",
+      "More points of failure",
+      "Slightly lower efficiency (96-97%)",
+      "Harder to service (roof access)",
+    ],
+  },
+  {
+    type: "optimizer",
+    icon: "⚙️",
+    name: "Power Optimizers",
+    estimateCost: (kw, panels) => kw * 200 + panels * 80, // Inverter + optimizers
+    pros: [
+      "Panel-level MPPT",
+      "Panel-level monitoring",
+      "Good for shading",
+      "Central inverter for easy service",
+      "High efficiency (99%)",
+    ],
+    cons: [
+      "Highest upfront cost",
+      "Two systems to maintain",
+      "More complex installation",
+    ],
+  },
+];

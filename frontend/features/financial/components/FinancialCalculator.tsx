@@ -1,23 +1,22 @@
 /**
- * Financial Calculator Component (Refactored)
+ * Financial Calculator Component
  * Main component that orchestrates financial analysis display
- * Now broken down into smaller, reusable sub-components
  */
 
 "use client";
 
 import { useState, useMemo } from "react";
 import styles from "./FinancialCalculator.module.css";
-import type { FinancialInputs } from "@/features/financial/types/financial";
+import panel from "@/shared/styles/panel.module.css";
 import {
   calculateFinancials,
-  estimateSystemCost,
-  FINANCIAL_DEFAULTS,
+  calculateVatSavings,
 } from "@/features/financial/utils/financialCalculations";
-import { validateGermanProduction } from "@/features/solar-analysis/utils/germanSolarCalculations";
-import { validateFinancialInputs } from "@/features/financial/utils/validation";
 import {
-  calculateGermanFeedInTariff,
+  validateFinancialInputs,
+  validateGermanProduction,
+} from "@/features/financial/utils/validation";
+import {
   getFeedInTariffBreakdown,
   formatFeedInTariff,
 } from "@/features/financial/utils/germanFeedInTariff";
@@ -26,239 +25,155 @@ import {
 import KeyMetrics from "./KeyMetrics";
 import EnergyOffsetDisplay from "./EnergyOffsetDisplay";
 import FinancingComparisonTable from "./FinancingComparisonTable";
-import FinancialInputForm from "./FinancialInputForm";
+import FinancialInputForm, { defaultInputs } from "./FinancialInputForm";
 import ValidationDisplay from "./ValidationDisplay";
 
 interface FinancialCalculatorProps {
   annualProduction: number; // kWh/year
   systemSize: number; // kW
-  panelCount?: number;
-  panelWattage?: number;
   onClose?: () => void;
+}
+
+/** Monthly payment and totals for an annuity loan */
+function calculateLoan(
+  type: "kfw" | "loan",
+  netSystemCost: number,
+  downPayment: number,
+  interestRate: number,
+  loanTerm: number,
+) {
+  const loanAmount = netSystemCost - downPayment;
+  const monthlyRate = interestRate / 100 / 12;
+  const numPayments = loanTerm * 12;
+  const monthlyPayment =
+    monthlyRate > 0
+      ? (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
+        (Math.pow(1 + monthlyRate, numPayments) - 1)
+      : loanAmount / numPayments;
+  const totalInterest =
+    monthlyRate > 0 ? monthlyPayment * numPayments - loanAmount : 0;
+
+  return {
+    type,
+    monthlyPayment: Math.round(monthlyPayment),
+    totalInterest: Math.round(totalInterest),
+    totalCost: Math.round(loanAmount + totalInterest + downPayment),
+  };
 }
 
 export default function FinancialCalculator({
   annualProduction,
   systemSize,
-  panelCount,
-  panelWattage = 400,
   onClose,
 }: FinancialCalculatorProps) {
-  // Calculate accurate German feed-in tariff based on system size (EEG 2025)
-  const calculatedFeedInTariff = useMemo(
-    () => calculateGermanFeedInTariff(systemSize, true, false),
-    [systemSize],
-  );
-
-  // User inputs with German market defaults
-  const [costPerKwh, setCostPerKwh] = useState(FINANCIAL_DEFAULTS.costPerKwh);
-  const [avgMonthlyBill, setAvgMonthlyBill] = useState(130);
-  const [escalationRate, setEscalationRate] = useState(
-    FINANCIAL_DEFAULTS.escalationRate,
-  );
-  const [systemCostInput, setSystemCostInput] = useState(
-    estimateSystemCost(systemSize),
-  );
-  const [feedInTariff, setFeedInTariff] = useState(calculatedFeedInTariff);
-  const [selfConsumptionRate, setSelfConsumptionRate] = useState(
-    FINANCIAL_DEFAULTS.selfConsumptionRate,
-  );
-  const [stateGrant, setStateGrant] = useState(0);
-  const [municipalGrant, setMunicipalGrant] = useState(0);
-  const [discountRate, setDiscountRate] = useState(4);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  // Validation state
-  const [validationResult, setValidationResult] = useState<any | null>(null);
-
-  // Financing options
-  const [financingType, setFinancingType] = useState<"cash" | "kfw" | "loan">(
-    "cash",
-  );
-  const [downPayment, setDownPayment] = useState(0);
-  const [loanTerm, setLoanTerm] = useState(15);
-  const [kfwInterestRate, setKfwInterestRate] = useState(2.5);
-  const [customInterestRate, setCustomInterestRate] = useState(4.5);
-
-  // Calculate net system cost after incentives
-  const vatSavingsAmount = systemSize <= 30 ? systemCostInput * 0.19 : 0;
-  const netSystemCost =
-    systemCostInput - vatSavingsAmount - stateGrant - municipalGrant;
-
-  // Validate all inputs
-  const validation = useMemo(() => {
-    const result = validateFinancialInputs({
-      systemSize,
-      annualProduction,
-      costPerKwh,
-      avgMonthlyBill,
-      escalationRate,
-      systemCost: systemCostInput,
-      feedInTariff,
-      selfConsumptionRate,
-      stateGrant,
-      municipalGrant,
-      discountRate,
-      downPayment: financingType !== "cash" ? downPayment : undefined,
-      loanTerm: financingType !== "cash" ? loanTerm : undefined,
-      interestRate:
-        financingType !== "cash"
-          ? financingType === "kfw"
-            ? kfwInterestRate
-            : customInterestRate
-          : undefined,
-      netSystemCost,
-    });
-    setValidationResult(result);
-    return result;
-  }, [
-    systemSize,
-    annualProduction,
+  // User inputs with German market defaults (EEG 2025 feed-in tariff for this system size)
+  const defaults = useMemo(() => defaultInputs(systemSize), [systemSize]);
+  const [inputs, setInputs] = useState(defaults);
+  const {
+    financingType,
     costPerKwh,
     avgMonthlyBill,
-    escalationRate,
-    systemCostInput,
+    systemCost,
     feedInTariff,
     selfConsumptionRate,
     stateGrant,
     municipalGrant,
     discountRate,
-    financingType,
     downPayment,
     loanTerm,
     kfwInterestRate,
     customInterestRate,
-    netSystemCost,
-  ]);
+  } = inputs;
+  const financed = financingType !== "cash";
 
-  // Calculate financials
-  const financialInputs: FinancialInputs = useMemo(
-    () => ({
-      annualProduction,
-      systemSize,
-      utilityRates: {
-        costPerKwh,
-        avgMonthlyBill,
-        escalationRate,
-        feedInTariff,
-      },
-      systemCost: {
-        totalCost: systemCostInput,
-        pricePerWatt: systemCostInput / (systemSize * 1000),
-      },
-      incentives: {
-        vatReduction: systemSize <= 30 ? 19 : 0,
-        stateGrant,
-        municipalGrant,
-      },
-      financing:
-        financingType !== "cash"
-          ? {
-              type: financingType,
-              downPayment,
-              loanAmount: netSystemCost - downPayment,
-              interestRate:
-                financingType === "kfw" ? kfwInterestRate : customInterestRate,
-              loanTerm,
-            }
-          : undefined,
-      selfConsumptionRate,
-      discountRate,
-    }),
-    [
-      annualProduction,
-      systemSize,
-      costPerKwh,
-      avgMonthlyBill,
-      escalationRate,
-      systemCostInput,
-      feedInTariff,
-      selfConsumptionRate,
-      stateGrant,
-      municipalGrant,
-      discountRate,
-      financingType,
-      downPayment,
-      loanTerm,
-      kfwInterestRate,
-      customInterestRate,
-      netSystemCost,
-    ],
+  // Net system cost after incentives
+  const netSystemCost =
+    systemCost -
+    calculateVatSavings(systemSize, systemCost) -
+    stateGrant -
+    municipalGrant;
+
+  // Validate all inputs
+  const validation = useMemo(
+    () =>
+      validateFinancialInputs({
+        ...inputs,
+        systemSize,
+        annualProduction,
+        downPayment: financed ? downPayment : undefined,
+        loanTerm: financed ? loanTerm : undefined,
+        interestRate: !financed
+          ? undefined
+          : financingType === "kfw"
+            ? kfwInterestRate
+            : customInterestRate,
+        netSystemCost,
+      }),
+    [inputs, systemSize, annualProduction, netSystemCost],
   );
 
-  const results = useMemo(() => {
-    if (!validation.isValid) {
-      return null;
-    }
-    try {
-      return calculateFinancials(financialInputs);
-    } catch (error) {
-      console.error("Financial calculation error:", error);
-      return null;
-    }
-  }, [financialInputs, validation.isValid]);
+  // Calculate financials (only for valid inputs)
+  const results = useMemo(
+    () =>
+      validation.isValid
+        ? calculateFinancials({
+            annualProduction,
+            systemSize,
+            utilityRates: {
+              costPerKwh,
+              avgMonthlyBill,
+              escalationRate: inputs.escalationRate,
+              feedInTariff,
+            },
+            systemCost,
+            stateGrant,
+            municipalGrant,
+            selfConsumptionRate,
+            discountRate,
+          })
+        : null,
+    [inputs, systemSize, annualProduction, validation.isValid],
+  );
 
   // Calculate financing comparison scenarios
-  const financingScenarios = useMemo(() => {
-    const calculateLoan = (type: "kfw" | "loan", interestRate: number) => {
-      const loanAmount = netSystemCost - downPayment;
-      const monthlyRate = interestRate / 100 / 12;
-      const numPayments = loanTerm * 12;
-
-      let monthlyPayment = 0;
-      let totalInterest = 0;
-
-      if (monthlyRate > 0) {
-        monthlyPayment =
-          (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
-          (Math.pow(1 + monthlyRate, numPayments) - 1);
-        totalInterest = monthlyPayment * numPayments - loanAmount;
-      } else {
-        monthlyPayment = loanAmount / numPayments;
-        totalInterest = 0;
-      }
-
-      return {
-        type,
-        monthlyPayment: Math.round(monthlyPayment),
-        totalInterest: Math.round(totalInterest),
-        totalCost: Math.round(loanAmount + totalInterest + downPayment),
-      };
-    };
-
-    return {
+  const financingScenarios = useMemo(
+    () => ({
       cash: {
         type: "cash" as const,
         monthlyPayment: 0,
         totalInterest: 0,
         totalCost: Math.round(netSystemCost),
       },
-      kfw: calculateLoan("kfw", kfwInterestRate),
-      standardLoan: calculateLoan("loan", customInterestRate),
-    };
-  }, [
-    netSystemCost,
-    downPayment,
-    loanTerm,
-    kfwInterestRate,
-    customInterestRate,
-  ]);
-
-  // VAT savings for display
-  const vatSavings = systemSize <= 30 ? systemCostInput * 0.19 : 0;
+      kfw: calculateLoan(
+        "kfw",
+        netSystemCost,
+        downPayment,
+        kfwInterestRate,
+        loanTerm,
+      ),
+      standardLoan: calculateLoan(
+        "loan",
+        netSystemCost,
+        downPayment,
+        customInterestRate,
+        loanTerm,
+      ),
+    }),
+    [netSystemCost, downPayment, loanTerm, kfwInterestRate, customInterestRate],
+  );
 
   // Validate production for German conditions
-  const productionValidation = useMemo(
-    () => validateGermanProduction(systemSize, annualProduction),
-    [systemSize, annualProduction],
+  const productionValidation = validateGermanProduction(
+    systemSize,
+    annualProduction,
   );
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>Financial Analysis</h3>
+      <div className={panel.header}>
+        <h3 className={panel.title}>Financial Analysis</h3>
         <button
-          className={styles.closeButton}
+          className={panel.closeButton}
           onClick={onClose}
           aria-label="Close"
         >
@@ -266,7 +181,7 @@ export default function FinancialCalculator({
         </button>
       </div>
 
-      <div className={styles.scrollableContent}>
+      <div className={panel.scrollableContent}>
         {/* Validation Messages */}
         <ValidationDisplay validation={validation} />
 
@@ -286,8 +201,8 @@ export default function FinancialCalculator({
             />
 
             {/* Monthly Comparison */}
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Monthly Bill Comparison</h4>
+            <div className={panel.section}>
+              <h4 className={panel.sectionTitle}>Monthly Bill Comparison</h4>
               <div className={styles.billComparison}>
                 <div className={styles.billItem}>
                   <span className={styles.billLabel}>Before Solar</span>
@@ -314,8 +229,8 @@ export default function FinancialCalculator({
             </div>
 
             {/* System Costs */}
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>System Costs</h4>
+            <div className={panel.section}>
+              <h4 className={panel.sectionTitle}>System Costs</h4>
               <div className={styles.costBreakdown}>
                 <div className={styles.costItem}>
                   <span className={styles.costLabel}>Gross System Cost</span>
@@ -323,29 +238,24 @@ export default function FinancialCalculator({
                     €{results.grossSystemCost.toLocaleString()}
                   </span>
                 </div>
-                {vatSavings > 0 && (
-                  <div className={styles.costItem}>
-                    <span className={styles.costLabel}>VAT Savings (19%)</span>
-                    <span className={`${styles.costValue} ${styles.incentive}`}>
-                      -€{vatSavings.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {stateGrant > 0 && (
-                  <div className={styles.costItem}>
-                    <span className={styles.costLabel}>State Grant</span>
-                    <span className={`${styles.costValue} ${styles.incentive}`}>
-                      -€{stateGrant.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {municipalGrant > 0 && (
-                  <div className={styles.costItem}>
-                    <span className={styles.costLabel}>Municipal Grant</span>
-                    <span className={`${styles.costValue} ${styles.incentive}`}>
-                      -€{municipalGrant.toLocaleString()}
-                    </span>
-                  </div>
+                {(
+                  [
+                    ["VAT Savings (19%)", results.vatSavings],
+                    ["State Grant", stateGrant],
+                    ["Municipal Grant", municipalGrant],
+                  ] as const
+                ).map(
+                  ([label, amount]) =>
+                    amount > 0 && (
+                      <div key={label} className={styles.costItem}>
+                        <span className={styles.costLabel}>{label}</span>
+                        <span
+                          className={`${styles.costValue} ${styles.incentive}`}
+                        >
+                          -€{amount.toLocaleString()}
+                        </span>
+                      </div>
+                    ),
                 )}
                 <div className={`${styles.costItem} ${styles.netCost}`}>
                   <span className={styles.costLabel}>Net System Cost</span>
@@ -371,85 +281,70 @@ export default function FinancialCalculator({
             />
 
             {/* Energy & Environmental */}
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>
+            <div className={panel.section}>
+              <h4 className={panel.sectionTitle}>
                 Energy & Environmental Impact
               </h4>
               <div className={styles.impactGrid}>
-                <div className={styles.impactItem}>
-                  <div className={styles.impactValue}>
-                    {results.energyOffsetPercentage}%
+                {[
+                  [`${results.energyOffsetPercentage}%`, "Self-Consumption"],
+                  [results.lifetimeCO2Offset, "Tons CO₂ Offset"],
+                  [
+                    results.selfConsumptionAmount.toLocaleString(),
+                    "kWh Self-Used",
+                  ],
+                ].map(([value, label]) => (
+                  <div key={label} className={styles.impactItem}>
+                    <div className={styles.impactValue}>{value}</div>
+                    <div className={styles.impactLabel}>{label}</div>
                   </div>
-                  <div className={styles.impactLabel}>Self-Consumption</div>
-                </div>
-                <div className={styles.impactItem}>
-                  <div className={styles.impactValue}>
-                    {results.lifetimeCO2Offset}
-                  </div>
-                  <div className={styles.impactLabel}>Tons CO₂ Offset</div>
-                </div>
-                <div className={styles.impactItem}>
-                  <div className={styles.impactValue}>
-                    {results.selfConsumptionAmount.toLocaleString()}
-                  </div>
-                  <div className={styles.impactLabel}>kWh Self-Used</div>
-                </div>
+                ))}
               </div>
             </div>
 
             {/* Feed-in Revenue */}
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Feed-in Tariff Revenue</h4>
+            <div className={panel.section}>
+              <h4 className={panel.sectionTitle}>Feed-in Tariff Revenue</h4>
               <div className={styles.feedInInfo}>
                 <div className={styles.feedInRow}>
                   <span className={styles.feedInLabel}>
                     EEG 2025 Tiered Rates for {systemSize.toFixed(1)} kW
                   </span>
                   <span className={styles.feedInValue}>
-                    {getFeedInTariffBreakdown(systemSize, true, false).map(
-                      (tier, idx) => (
-                        <div key={idx}>
-                          {tier.tier}: {tier.capacityKw.toFixed(2)} kW @{" "}
-                          {formatFeedInTariff(tier.rateEuroPerKwh)}
-                        </div>
-                      ),
-                    )}
+                    {getFeedInTariffBreakdown(systemSize).map((tier, idx) => (
+                      <div key={idx}>
+                        {tier.tier}: {tier.capacityKw.toFixed(2)} kW @{" "}
+                        {formatFeedInTariff(tier.rateEuroPerKwh)}
+                      </div>
+                    ))}
                   </span>
                 </div>
-                <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>
-                    Weighted Average Rate
-                  </span>
-                  <span className={styles.feedInValue}>
-                    {formatFeedInTariff(feedInTariff)} (fixed for 20 years)
-                  </span>
-                </div>
-                <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>
-                    Grid Feed-in per Year (Year 1)
-                  </span>
-                  <span className={styles.feedInValue}>
-                    {results.gridFeedInAmount.toLocaleString()} kWh
-                  </span>
-                </div>
-                <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>
-                    Annual Feed-in Revenue (Year 1)
-                  </span>
-                  <span className={styles.feedInValue}>
-                    €{results.firstYearFeedInRevenue}
-                  </span>
-                </div>
-                <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>
-                    25-Year Feed-in Revenue (with degradation)
-                  </span>
-                  <span
-                    className={`${styles.feedInValue} ${styles.feedInHighlight}`}
-                  >
-                    €{results.twentyFiveYearFeedInRevenue.toLocaleString()}
-                  </span>
-                </div>
+                {[
+                  [
+                    "Weighted Average Rate",
+                    `${formatFeedInTariff(feedInTariff)} (fixed for 20 years)`,
+                  ],
+                  [
+                    "Grid Feed-in per Year (Year 1)",
+                    `${results.gridFeedInAmount.toLocaleString()} kWh`,
+                  ],
+                  [
+                    "Annual Feed-in Revenue (Year 1)",
+                    `€${results.firstYearFeedInRevenue}`,
+                  ],
+                  [
+                    "25-Year Feed-in Revenue (with degradation)",
+                    `€${results.twentyFiveYearFeedInRevenue.toLocaleString()}`,
+                    styles.feedInHighlight,
+                  ],
+                ].map(([label, value, highlight = ""]) => (
+                  <div key={label} className={styles.feedInRow}>
+                    <span className={styles.feedInLabel}>{label}</span>
+                    <span className={`${styles.feedInValue} ${highlight}`}>
+                      {value}
+                    </span>
+                  </div>
+                ))}
               </div>
               <div className={styles.feedInNote}>
                 Note: Includes 0.6 ct/kWh bonus to compensate for exclusion
@@ -461,46 +356,18 @@ export default function FinancialCalculator({
 
         {/* Input Controls */}
         <FinancialInputForm
-          financingType={financingType}
-          downPayment={downPayment}
-          loanTerm={loanTerm}
-          kfwInterestRate={kfwInterestRate}
-          customInterestRate={customInterestRate}
-          costPerKwh={costPerKwh}
-          avgMonthlyBill={avgMonthlyBill}
-          escalationRate={escalationRate}
-          systemCostInput={systemCostInput}
-          feedInTariff={feedInTariff}
-          selfConsumptionRate={selfConsumptionRate}
-          stateGrant={stateGrant}
-          municipalGrant={municipalGrant}
-          discountRate={discountRate}
+          inputs={inputs}
+          defaults={defaults}
           netSystemCost={netSystemCost}
-          systemSize={systemSize}
-          showAdvanced={showAdvanced}
-          setFinancingType={setFinancingType}
-          setDownPayment={setDownPayment}
-          setLoanTerm={setLoanTerm}
-          setKfwInterestRate={setKfwInterestRate}
-          setCustomInterestRate={setCustomInterestRate}
-          setCostPerKwh={setCostPerKwh}
-          setAvgMonthlyBill={setAvgMonthlyBill}
-          setEscalationRate={setEscalationRate}
-          setSystemCostInput={setSystemCostInput}
-          setFeedInTariff={setFeedInTariff}
-          setSelfConsumptionRate={setSelfConsumptionRate}
-          setStateGrant={setStateGrant}
-          setMunicipalGrant={setMunicipalGrant}
-          setDiscountRate={setDiscountRate}
-          setShowAdvanced={setShowAdvanced}
+          onChange={(patch) => setInputs((prev) => ({ ...prev, ...patch }))}
         />
 
         {/* Production Validation Warning */}
         {!productionValidation.isRealistic && (
-          <div className={styles.warningBox}>
-            <div className={styles.warningIcon}>⚠️</div>
-            <div className={styles.warningContent}>
-              <div className={styles.warningTitle}>
+          <div className={panel.warningBox}>
+            <div className={panel.warningIcon}>⚠️</div>
+            <div className={panel.warningContent}>
+              <div className={panel.warningTitle}>
                 Production Estimate Notice
               </div>
               <p className={styles.warningText}>
@@ -523,7 +390,7 @@ export default function FinancialCalculator({
         )}
 
         {/* Disclaimer */}
-        <div className={styles.disclaimer}>
+        <div className={panel.disclaimer}>
           <p>
             * Estimates based on {systemSize.toFixed(1)}kW system producing{" "}
             {annualProduction.toLocaleString()} kWh/year. Actual savings may

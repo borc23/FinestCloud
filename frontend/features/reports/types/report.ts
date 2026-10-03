@@ -49,7 +49,6 @@ export interface ReportData {
   systemSpecs: SystemSpecifications;
   energyProduction?: EnergyProduction;
   financials: FinancialResults;
-  systemCost: number; // €
   monitoring?: MonitoringMaintenance;
 
   // Branding & metadata

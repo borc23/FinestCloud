@@ -7,63 +7,32 @@ export interface UtilityRates {
   costPerKwh: number; // €/kWh
   avgMonthlyBill?: number; // € (optional, for validation)
   escalationRate: number; // % annual increase (default 4%)
-  feedInTariff?: number; // €/kWh Einspeisevergütung for excess energy
-}
-
-export interface SystemCost {
-  totalCost: number; // € total system cost
-  pricePerWatt?: number; // €/W (auto-calculated if not provided)
-}
-
-export interface Incentives {
-  vatReduction: number; // % (default 0% - Nullsteuersatz since Jan 2023)
-  kfwLoan?: number; // € KfW loan amount (e.g., KfW 270)
-  kfwInterestRate?: number; // % reduced interest rate
-  stateGrant?: number; // € Bundesland-specific grants
-  municipalGrant?: number; // € Stadt/Gemeinde grants
-}
-
-export interface FinancingOption {
-  type: "cash" | "loan" | "kfw";
-  downPayment?: number; // € (for loan)
-  loanAmount?: number; // € (for loan)
-  interestRate?: number; // % (for loan)
-  loanTerm?: number; // years (for loan)
-  monthlyPayment?: number; // € (calculated)
+  feedInTariff: number; // €/kWh Einspeisevergütung for excess energy
 }
 
 export interface FinancialInputs {
   annualProduction: number; // kWh/year
   systemSize: number; // kW
   utilityRates: UtilityRates;
-  systemCost: SystemCost;
-  incentives?: Incentives;
-  financing?: FinancingOption;
+  systemCost: number; // € total system cost
+  stateGrant?: number; // € Bundesland-specific grants
+  municipalGrant?: number; // € Stadt/Gemeinde grants
   systemDegradation?: number; // % per year (default 0.5%)
   analysisYears?: number; // years (default 25)
   selfConsumptionRate?: number; // % of energy consumed directly (default 30%)
   discountRate?: number; // % for NPV calculation (default 4%)
 }
 
-export interface YearlyBreakdown {
-  year: number;
-  production: number; // kWh (with degradation)
-  savings: number; // €
-  feedInRevenue: number; // € from Einspeisevergütung
-  cumulativeSavings: number; // €
-  netCost: number; // € (cost - cumulative savings)
-}
-
 export interface FinancialResults {
   // Immediate costs
   grossSystemCost: number; // € before incentives
+  vatSavings: number; // € saved by 0% VAT (systems ≤30kWp)
   netSystemCost: number; // € after incentives
   effectiveCostPerWatt: number; // €/W after incentives
 
   // Annual metrics
   firstYearSavings: number; // €
   firstYearFeedInRevenue: number; // € from Einspeisevergütung
-  annualSavings: number; // € average over analysis period
 
   // ROI metrics
   paybackPeriod: number; // years
@@ -84,11 +53,4 @@ export interface FinancialResults {
   avgMonthlyBillAfter: number; // € (with solar)
   avgMonthlySavings: number; // €
   avgMonthlyFeedInRevenue: number; // €
-
-  // Loan specific (if applicable)
-  monthlyLoanPayment?: number; // €
-  totalLoanCost?: number; // € over loan term
-
-  // Breakdown
-  yearlyBreakdown?: YearlyBreakdown[];
 }

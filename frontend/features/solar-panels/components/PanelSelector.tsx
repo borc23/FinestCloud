@@ -3,18 +3,22 @@
 import { useState, useMemo } from "react";
 import styles from "./PanelSelector.module.css";
 import panelsConfig from "@/features/solar-panels/config/panels.json";
-import { usePanelContext } from "@/features/solar-panels/context/PanelContext";
+import {
+  usePanelContext,
+  type PanelData,
+} from "@/features/solar-panels/context/PanelContext";
 import { Icon } from "@/shared/components/ui/Icon";
 
-interface Panel {
-  id: string;
-  name: string;
-  manufacturer: string;
-  width: number;
-  height: number;
-  power: number;
-  efficiency: number;
-}
+const EMPTY_FILTERS = {
+  minPower: "",
+  maxPower: "",
+  minEfficiency: "",
+  maxEfficiency: "",
+  minWidth: "",
+  maxWidth: "",
+  minHeight: "",
+  maxHeight: "",
+};
 
 interface PanelSelectorProps {
   isOpen: boolean;
@@ -27,16 +31,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    minPower: "",
-    maxPower: "",
-    minEfficiency: "",
-    maxEfficiency: "",
-    minWidth: "",
-    maxWidth: "",
-    minHeight: "",
-    maxHeight: "",
-  });
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [customPanel, setCustomPanel] = useState({
     name: "",
     manufacturer: "",
@@ -47,7 +42,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
   });
 
   const filteredPanels = useMemo(() => {
-    return panelsConfig.panels.filter((panel: Panel) => {
+    return panelsConfig.panels.filter((panel: PanelData) => {
       // Search filter
       const matchesSearch =
         searchQuery === "" ||
@@ -102,18 +97,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleClearFilters = () => {
-    setFilters({
-      minPower: "",
-      maxPower: "",
-      minEfficiency: "",
-      maxEfficiency: "",
-      minWidth: "",
-      maxWidth: "",
-      minHeight: "",
-      maxHeight: "",
-    });
-  };
+  const handleClearFilters = () => setFilters(EMPTY_FILTERS);
 
   const handleApply = () => {
     if (selectedPanel) {
@@ -294,7 +278,7 @@ export default function PanelSelector({ isOpen, onClose }: PanelSelectorProps) {
           {/* Predefined Panels */}
           <div className={styles.panelList}>
             {filteredPanels.length > 0 ? (
-              filteredPanels.map((panel: Panel) => (
+              filteredPanels.map((panel) => (
                 <div
                   key={panel.id}
                   className={`${styles.panelCard} ${

@@ -1,11 +1,7 @@
 "use client";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import {
-  getProfile,
-  setDefaultLocation,
-  updateProfile,
-} from "@/features/auth/lib/profilesApi";
+import { getProfile, updateProfile } from "@/features/auth/lib/profilesApi";
 import type { Project } from "@/features/auth/types/database";
 import ProjectCard from "@/features/projects/components/ProjectCard";
 import {
@@ -20,12 +16,6 @@ import OrganizationSettings from "@/features/organization/components/Organizatio
 import TeamManagement from "@/features/organization/components/TeamManagement";
 import type { UserRole } from "@/features/organization/types/organization";
 import styles from "./ProfilePanel.module.css";
-
-declare global {
-  interface Window {
-    google: typeof google;
-  }
-}
 
 interface ProfilePanelProps {
   isOpen: boolean;
@@ -85,40 +75,28 @@ export default function ProfilePanel({
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Profile (and its paid reverse geocode) loads once per open/user
   useEffect(() => {
-    if (isOpen && user) {
-      loadProfile();
-      if (activeTab === "projects") {
-        loadProjects();
-      }
-    }
-  }, [isOpen, user, activeTab]);
+    if (isOpen && user) loadProfile(user.id);
+  }, [isOpen, user?.id]);
 
-  const loadProfile = async () => {
-    if (!user) return;
+  useEffect(() => {
+    if (isOpen && user && activeTab === "projects") loadProjects(user.id);
+  }, [isOpen, user?.id, activeTab]);
 
+  const loadProfile = async (userId: string) => {
     setProfileLoading(true);
     setError(null);
 
     try {
-      const profile = await getProfile(user.id);
+      const profile = await getProfile(userId);
       if (profile) {
         setDisplayName(profile.display_name || "");
         const lat = profile.default_latitude;
         const lng = profile.default_longitude;
         setDefaultLat(lat?.toString() || "");
         setDefaultLng(lng?.toString() || "");
-
-        // Get user role from profile
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        if (data?.role) {
-          setUserRole(data.role as UserRole);
-        }
+        setUserRole(profile.role);
 
         // If we have coordinates, reverse geocode to get location name
         if (lat && lng && window.google?.maps) {
@@ -153,28 +131,11 @@ export default function ProfilePanel({
     }
   };
 
-  const loadProjects = async () => {
-    if (!user) return;
-
+  const loadProjects = async (userId: string) => {
     setProjectsLoading(true);
 
     try {
-      const data = await getProjects(user.id);
-      setProjects(
-        data.map((p) => ({
-          id: p.id,
-          userId: p.user_id,
-          projectName: p.project_name,
-          status: p.status,
-          mapCenterLat: p.map_center_lat,
-          mapCenterLng: p.map_center_lng,
-          mapZoom: p.map_zoom,
-          annualFluxUrl: p.annual_flux_url,
-          organizationId: p.organization_id,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at,
-        })),
-      );
+      setProjects(await getProjects(userId));
     } catch (err: any) {
       console.error("Error loading projects:", err);
     } finally {
@@ -254,9 +215,9 @@ export default function ProfilePanel({
     setSuccess(false);
 
     try {
-      await updateProfile(user.id, {
+      const updates: Parameters<typeof updateProfile>[1] = {
         display_name: displayName.trim() || null,
-      });
+      };
 
       if (defaultLat && defaultLng) {
         const lat = parseFloat(defaultLat);
@@ -270,8 +231,11 @@ export default function ProfilePanel({
           throw new Error("Coordinates out of range");
         }
 
-        await setDefaultLocation(user.id, lat, lng);
+        updates.default_latitude = lat;
+        updates.default_longitude = lng;
       }
+
+      await updateProfile(user.id, updates);
 
       setSuccess(true);
       setTimeout(() => {
@@ -647,7 +611,7 @@ export default function ProfilePanel({
         {activeTab === "profile" &&
           (profileLoading ? (
             <div className={styles.loading}>
-              <div className={styles.spinner}></div>
+              <div className={`spinner ${styles.spinner}`}></div>
               <p>Loading profile...</p>
             </div>
           ) : (
@@ -770,7 +734,7 @@ export default function ProfilePanel({
           <div className={styles.projectsTab}>
             {projectsLoading ? (
               <div className={styles.loading}>
-                <div className={styles.spinner}></div>
+                <div className={`spinner ${styles.spinner}`}></div>
                 <p>Loading projects...</p>
               </div>
             ) : projects.length === 0 ? (

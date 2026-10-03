@@ -58,7 +58,15 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       projects: {
         Row: {
@@ -142,7 +150,15 @@ export interface Database {
           shade_stats?: Json | null;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "roof_analysis_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       object_polygons: {
         Row: {
@@ -163,7 +179,15 @@ export interface Database {
           polygon_coords?: Json;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "object_polygons_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       panel_configurations: {
         Row: {
@@ -190,7 +214,15 @@ export interface Database {
           module_specs?: Json;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "panel_configurations_roof_analysis_id_fkey";
+            columns: ["roof_analysis_id"];
+            isOneToOne: false;
+            referencedRelation: "roof_analysis";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       organizations: {
         Row: OrganizationRow;

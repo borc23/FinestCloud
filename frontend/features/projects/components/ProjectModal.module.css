@@ -107,7 +107,7 @@
   color: var(--text-dark);
 }
 
-.summaryItem i {
+.summaryItem svg {
   color: var(--accent-primary);
 }
 

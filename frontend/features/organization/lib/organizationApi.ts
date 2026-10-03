@@ -10,27 +10,37 @@ import type {
   UserRole,
 } from "../types/organization";
 
-// Get user's organization
-export async function getUserOrganization(
+// One shared fetch per user; membership changes reload the page, which resets it
+let orgCache: {
+  userId: string;
+  promise: Promise<OrganizationRow | null>;
+} | null = null;
+
+async function fetchUserOrganization(
   userId: string,
 ): Promise<OrganizationRow | null> {
-  const supabase = createClient();
-
-  const { data: profile } = await supabase
+  const { data, error } = await createClient()
     .from("profiles")
-    .select("organization_id")
+    .select("organizations(*)")
     .eq("id", userId)
     .single();
 
-  if (!profile?.organization_id) return null;
+  if (error) throw error;
+  return data.organizations;
+}
 
-  const { data } = await supabase
-    .from("organizations")
-    .select("*")
-    .eq("id", profile.organization_id)
-    .single();
-
-  return data;
+// Get user's organization
+export function getUserOrganization(
+  userId: string,
+): Promise<OrganizationRow | null> {
+  if (orgCache?.userId !== userId) {
+    const entry = { userId, promise: fetchUserOrganization(userId) };
+    entry.promise.catch(() => {
+      if (orgCache === entry) orgCache = null;
+    });
+    orgCache = entry;
+  }
+  return orgCache.promise;
 }
 
 // Create organization (caller becomes owner, enforced server-side)
@@ -55,7 +65,10 @@ export async function createOrganization(name: string) {
 }
 
 // Update organization
-export async function updateOrganization(orgId: string, updates: any) {
+export async function updateOrganization(
+  orgId: string,
+  updates: Partial<OrganizationRow>,
+) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("organizations")
@@ -65,6 +78,7 @@ export async function updateOrganization(orgId: string, updates: any) {
     .single();
 
   if (error) throw error;
+  orgCache = null;
   return data;
 }
 
@@ -122,62 +136,35 @@ export async function getInvitations(orgId: string): Promise<InvitationRow[]> {
   return data || [];
 }
 
-// Get invitations for current user (received invitations)
-export async function getMyInvitations(): Promise<InvitationRow[]> {
+// Get pending invitations addressed to the current user's email
+export async function getMyInvitations(email: string) {
   const supabase = createClient();
+  const { data, error } = await supabase
+    .from("invitations")
+    .select("*, organizations(name)")
+    .eq("email", email)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
 
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.id) return [];
-
-    // Get user's email from profiles table instead of auth.users
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.email) return [];
-
-    const { data, error } = await supabase
-      .from("invitations")
-      .select("*, organizations(name)")
-      .eq("email", profile.email)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching my invitations:", error);
-      return []; // Return empty array instead of throwing
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error("Error in getMyInvitations:", err);
-    return []; // Return empty array on any error
+  if (error) {
+    console.error("Error fetching my invitations:", error);
+    return []; // Incoming invitations are optional; don't block the team view
   }
+
+  return data;
 }
 
-// Create invitation
+// Create invitation (invitedBy must be the current user, enforced by RLS)
 export async function createInvitation(
   orgId: string,
   email: string,
   role: UserRole,
+  invitedBy: string,
 ) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const token = crypto.randomUUID();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
-
-  console.log("Creating invitation:", { orgId, email, role, userId: user.id });
 
   const { data, error } = await supabase
     .from("invitations")
@@ -185,8 +172,8 @@ export async function createInvitation(
       organization_id: orgId,
       email,
       role,
-      invited_by: user.id,
-      token,
+      invited_by: invitedBy,
+      token: crypto.randomUUID(),
       expires_at: expiresAt.toISOString(),
     })
     .select()
