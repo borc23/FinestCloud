@@ -9,35 +9,27 @@ class PanelService:
     def __init__(
         self,
         bounds: dict[str, float],
-        edge_padding_cm: int = 20,
+        panel_specs: dict,
+        edge_padding_cm: float = 20,
         spacing_cm: float = 0.5,
         panel_orientation: str = "best",
-        panel_specs: dict | None = None,
     ):
-        if not panel_specs:
-            raise ValueError("panel_specs are required. No default panels in backend.")
-
-        self.bounds = bounds
         self.edge_padding_cm = edge_padding_cm
         self.spacing_cm = spacing_cm
         self.panel_orientation = panel_orientation
-
-        # Always use panel_specs from frontend
+        # Panel dimensions arrive in meters from the frontend
         self.module_dict = {
-            "id": panel_specs.get("id", "custom"),
-            "name": panel_specs.get("name", "Custom Panel"),
-            "width_cm": panel_specs.get("width", 1.046) * 100,  # Convert meters to cm
-            "height_cm": panel_specs.get("height", 1.690) * 100,  # Convert meters to cm
-            "power_w": panel_specs.get("power", 400),
-            "efficiency": panel_specs.get("efficiency", 22.6),
-            "color": "#7f8c8d",
-            "path": "https://res.cloudinary.com/dajy5yo5a/image/upload/v1746527441/solar-panel_acv6hz.png",
-            "description": panel_specs.get("name", "Custom panel from frontend"),
+            "id": "custom",
+            "name": "Custom Panel",
+            "width_cm": panel_specs["width"] * 100,
+            "height_cm": panel_specs["height"] * 100,
+            "power_w": panel_specs["power"],
+            "efficiency": panel_specs["efficiency"],
         }
-
-        center_lat = (bounds["north"] + bounds["south"]) / 2
-        center_lng = (bounds["east"] + bounds["west"]) / 2
-        self.gps_system = GPSCoordinateSystem(center_lat, center_lng)
+        self.gps_system = GPSCoordinateSystem(
+            (bounds["north"] + bounds["south"]) / 2,
+            (bounds["east"] + bounds["west"]) / 2,
+        )
 
     def generate_panels(self, roofs: list[dict], objects: list[dict]) -> dict:
         """Generate all possible panels for all roofs."""

@@ -16,7 +16,7 @@ def generate_panels(request: GeneratePanelsRequest) -> PanelGenerationResponse:
         edge_padding_cm=request.padding,
         spacing_cm=request.spacing,
         panel_orientation=request.panelOrientation,
-        panel_specs=request.panel_specs.model_dump() if request.panel_specs else None,
+        panel_specs=request.panel_specs.model_dump(),
     )
     results = generator.generate_panels(
         roofs=[roof.model_dump() for roof in request.roofs],

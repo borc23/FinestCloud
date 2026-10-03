@@ -1,14 +1,14 @@
 import cv2
+import httpx
 import numpy as np
-import requests
 
 
 def load_image_from_url(image_url: str) -> np.ndarray:
     """Download an image as a 3-channel BGR array, the format YOLO expects."""
     try:
-        response = requests.get(image_url, timeout=30)
+        response = httpx.get(image_url, timeout=30, follow_redirects=True)
         response.raise_for_status()
-    except requests.RequestException as e:
+    except httpx.HTTPError as e:
         # Exception type only: the URL carries the Maps API key
         raise ValueError(f"Failed to download image ({type(e).__name__})") from None
 

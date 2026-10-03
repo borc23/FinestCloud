@@ -1,31 +1,35 @@
 """Pydantic models for request/response validation."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 
-# Base models
 class BaseResponse(BaseModel):
-    """Base response model."""
-
-    success: bool = Field(default=True)
+    success: bool = True
 
 
-# Detection models
 class BoundsModel(BaseModel):
-    """Geographic bounds model."""
-
     north: float = Field(..., description="Northern latitude boundary")
     south: float = Field(..., description="Southern latitude boundary")
     east: float = Field(..., description="Eastern longitude boundary")
     west: float = Field(..., description="Western longitude boundary")
 
 
-class DetectRequest(BaseModel):
-    """Request model for roof detection."""
+class CoordinateModel(BaseModel):
+    lat: float
+    lng: float
 
-    image: str = Field(..., description="Image URL or base64 encoded image data")
+
+class RoofModel(BaseModel):
+    coords: list[CoordinateModel]
+    pitch: float | None = None
+    azimuth: float | None = None
+
+
+# Detection
+class DetectRequest(BaseModel):
+    image: str = Field(..., description="URL of the image to detect roofs in")
     bounds: BoundsModel = Field(..., description="Geographic bounds of the image")
     conf: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence threshold")
     epsilon: float = Field(
@@ -33,70 +37,38 @@ class DetectRequest(BaseModel):
     )
 
 
-class CoordinateModel(BaseModel):
-    """Coordinate model."""
-
-    lat: float | None = None
-    lng: float | None = None
-
-
-class RoofModel(BaseModel):
-    """Roof polygon model."""
-
-    coords: list[CoordinateModel]
-    pitch: float | None = None
-    azimuth: float | None = None
-
-
 class DetectionResponse(BaseResponse):
-    """Detection response model."""
-
     roofs: list[RoofModel]
     objects: list[RoofModel] = Field(default_factory=list)
 
 
-# Panel generation models
+# Panel generation
 class PanelSpecsModel(BaseModel):
-    """Panel specifications model."""
-
-    width: float = Field(..., description="Panel width in meters")
-    height: float = Field(..., description="Panel height in meters")
-    power: float = Field(..., description="Panel power in watts")
+    width: float = Field(..., gt=0, description="Panel width in meters")
+    height: float = Field(..., gt=0, description="Panel height in meters")
+    power: float = Field(..., gt=0, description="Panel power in watts")
     efficiency: float = Field(..., description="Panel efficiency in percentage")
 
 
 class GeneratePanelsRequest(BaseModel):
-    """Request model for panel generation."""
-
     roofs: list[RoofModel] = Field(..., description="Roof polygons")
     objects: list[RoofModel] = Field(
         default_factory=list, description="Obstacle polygons"
     )
     mapBounds: BoundsModel = Field(..., description="Map bounds")
-    module: str | None = Field(None, description="Panel module type")
     spacing: float = Field(default=0.5, ge=0.0, description="Panel spacing in cm")
-    max_panels: int | None = Field(None, ge=0, description="Maximum panels per roof")
-    padding: float | None = Field(default=20, ge=0.0, description="Edge padding in cm")
-    panelOrientation: str | None = Field(
-        default="best",
-        description="Panel orientation: 'vertical', 'horizontal', or 'best'",
-    )
-    panel_specs: PanelSpecsModel | None = Field(
-        None, description="Custom panel specifications"
-    )
+    padding: float = Field(default=20, ge=0.0, description="Edge padding in cm")
+    panelOrientation: Literal["best", "vertical", "horizontal"] = "best"
+    panel_specs: PanelSpecsModel
 
 
 class PanelModel(BaseModel):
-    """Solar panel model."""
-
     coords: list[CoordinateModel]
-    roof_id: int | None = None
-    panel_id: int | None = None
+    roof_id: int
+    panel_id: int
 
 
 class RoofPanelsModel(BaseModel):
-    """Model for panels on a single roof."""
-
     roof_id: int
     panels: list[PanelModel]
     panel_count: int
@@ -108,11 +80,27 @@ class RoofPanelsModel(BaseModel):
 
 
 class PanelGenerationResponse(BaseResponse):
-    """Panel generation response model."""
-
     roofs: list[RoofPanelsModel]
     max_panels: int
     module: str
 
 
-# Session models
+# PVWatts
+class PVWattsRequest(BaseModel):
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+    panel_count: int = Field(..., gt=0)
+    panel_wattage: float = Field(..., gt=0, description="Panel wattage in watts")
+    tilt: float = Field(default=20, ge=0, le=90, description="Array tilt in degrees")
+    azimuth: float = Field(
+        default=180, ge=0, le=360, description="Array azimuth in degrees (180=south)"
+    )
+
+
+class PVWattsResponse(BaseModel):
+    monthly_production: list[float] = Field(..., description="Monthly AC energy (kWh)")
+    annual_production: float = Field(..., description="Annual AC energy (kWh)")
+    capacity_factor: float
+    annual_solar_radiation: float = Field(..., description="kWh/m2/day")
+    system_capacity_kw: float
+    station_info: dict
