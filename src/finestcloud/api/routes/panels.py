@@ -21,6 +21,5 @@ def generate_panels(request: GeneratePanelsRequest) -> PanelGenerationResponse:
     results = generator.generate_panels(
         roofs=[roof.model_dump() for roof in request.roofs],
         objects=[obj.model_dump() for obj in request.objects],
-        tune_params=True,
     )
     return PanelGenerationResponse(**results)
