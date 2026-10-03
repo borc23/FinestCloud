@@ -12,14 +12,6 @@ class BaseResponse(BaseModel):
     success: bool = Field(default=True)
 
 
-class ErrorResponse(BaseResponse):
-    """Error response model."""
-
-    success: bool = Field(default=False)
-    error: str
-    details: str | None = None
-
-
 # Detection models
 class BoundsModel(BaseModel):
     """Geographic bounds model."""
@@ -68,13 +60,6 @@ class DetectionResponse(BaseResponse):
 
 
 # Panel generation models
-class MapDimensionsModel(BaseModel):
-    """Map dimensions model."""
-
-    width: int = Field(..., gt=0, description="Map width in pixels")
-    height: int = Field(..., gt=0, description="Map height in pixels")
-
-
 class PanelSpecsModel(BaseModel):
     """Panel specifications model."""
 
@@ -132,7 +117,6 @@ class PanelGenerationResponse(BaseResponse):
     roofs: list[RoofPanelsModel]
     max_panels: int
     module: str
-    electrical_system: dict[str, Any] | None = None
 
 
 # Panel count update models
@@ -155,67 +139,8 @@ class MaxPanelCountResponse(BaseResponse):
     max_panels: int
 
 
-# Module models
-class ModuleSpecsModel(BaseModel):
-    """Custom module specifications."""
-
-    name: str = Field(..., description="Module name")
-    width: float = Field(..., gt=0, description="Module width in meters")
-    height: float = Field(..., gt=0, description="Module height in meters")
-    power: float = Field(..., gt=0, description="Module power in watts")
-    efficiency: float | None = Field(None, ge=0, le=1, description="Module efficiency")
-
-
-class CustomModuleRequest(BaseModel):
-    """Request model for custom module creation."""
-
-    specs: ModuleSpecsModel = Field(..., description="Module specifications")
-
-
-class ModuleModel(BaseModel):
-    """Panel module model."""
-
-    name: str
-    value: dict[str, Any]
-
-
-class ModulesResponse(BaseResponse):
-    """Modules response model."""
-
-    modules: dict[str, dict[str, Any]]
-
-
-class CustomModuleResponse(BaseResponse):
-    """Custom module response model."""
-
-    module: dict[str, Any]
-
-
-# Solar API models
-class SolarApiRequest(BaseModel):
-    """Request model for Solar API proxy."""
-
-    latitude: float = Field(..., ge=-90, le=90, description="Latitude")
-    longitude: float = Field(..., ge=-180, le=180, description="Longitude")
-
-
 # Session models
 class ResetResponse(BaseResponse):
     """Session reset response model."""
 
     message: str = Field(default="Session reset successfully.")
-
-
-# Error handling models
-class ValidationErrorModel(BaseModel):
-    """Validation error model."""
-
-    field: str
-    message: str
-    value: Any
-
-
-class ValidationErrorResponse(ErrorResponse):
-    """Validation error response model."""
-
-    validation_errors: list[ValidationErrorModel]

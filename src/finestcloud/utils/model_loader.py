@@ -3,7 +3,9 @@ import os
 import shutil
 
 import torch
-from huggingface_hub import hf_hub_download, login
+from huggingface_hub import hf_hub_download
+
+from finestcloud.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ def _determine_model_path_logic():
         logger.info(f"Using bundled model from: {LOCAL_MODEL_PATH}")
         return LOCAL_MODEL_PATH
 
-    models_dir = os.getenv("MODELS_DIR", "/tmp/models")
+    models_dir = get_settings().models_dir
     os.makedirs(models_dir, exist_ok=True)
     models_dir_path = os.path.join(models_dir, MODEL_FILENAME)
 
@@ -71,15 +73,17 @@ def _determine_model_path_logic():
 
 def download_model_if_needed():
     """Downloads model from HuggingFace Hub if needed"""
-    models_dir = os.getenv("MODELS_DIR", "/tmp/models")
-    os.makedirs(models_dir, exist_ok=True)
-    destination_path = os.path.join(models_dir, MODEL_FILENAME)
+    settings = get_settings()
+    os.makedirs(settings.models_dir, exist_ok=True)
+    destination_path = os.path.join(settings.models_dir, MODEL_FILENAME)
+    token = (
+        settings.hugging_face_token.get_secret_value()
+        if settings.hugging_face_token
+        else None
+    )
 
     try:
-        if "HUGGING_FACE_TOKEN" in os.environ:
-            login(token=os.environ["HUGGING_FACE_TOKEN"])
-            logger.info("Authenticated with Hugging Face Hub")
-        else:
+        if not token:
             logger.warning(
                 "No HUGGING_FACE_TOKEN found - model download may fail if repo is private"
             )
@@ -94,10 +98,7 @@ def download_model_if_needed():
         cache_path = os.path.join(
             custom_cache_dir, f"models--{repo_id.replace('/', '--')}"
         )
-        if (
-            os.path.exists(cache_path)
-            and os.environ.get("FORCE_MODEL_DOWNLOAD", "false").lower() == "true"
-        ):
+        if os.path.exists(cache_path) and settings.force_model_download:
             logger.info(
                 f"Forcing model re-download, removing existing cache: {cache_path}"
             )
@@ -107,9 +108,8 @@ def download_model_if_needed():
             repo_id=repo_id,
             filename=MODEL_FILENAME,
             cache_dir=custom_cache_dir,
-            token=os.environ.get("HUGGING_FACE_TOKEN"),
-            force_download=os.environ.get("FORCE_MODEL_DOWNLOAD", "false").lower()
-            == "true",
+            token=token,
+            force_download=settings.force_model_download,
         )
 
         logger.info(f"Model downloaded via HuggingFace to: {downloaded_hf_path}")

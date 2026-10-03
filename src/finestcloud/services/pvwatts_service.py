@@ -194,20 +194,3 @@ class PVWattsService:
             tilt=tilt,
             azimuth=azimuth,
         )
-
-    def get_month_names(self) -> list[str]:
-        """Get list of month names for labeling."""
-        return [
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December",
-        ]

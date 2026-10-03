@@ -1,6 +1,6 @@
 """GPS coordinate system utilities with cm precision."""
 
-from math import atan2, cos, radians, sin, sqrt
+from math import cos, radians
 
 import numpy as np
 
@@ -91,29 +91,3 @@ class GPSCoordinateSystem:
             lat, lng = self.cm_to_gps(x, y)
             result.append({"lat": lat, "lng": lng})
         return result
-
-    @staticmethod
-    def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-        """
-        Calculate accurate distance between two GPS points in cm.
-
-        Args:
-            lat1: First latitude in degrees
-            lng1: First longitude in degrees
-            lat2: Second latitude in degrees
-            lng2: Second longitude in degrees
-
-        Returns:
-            Distance in cm
-        """
-        R = 6371000  # Earth radius in meters
-
-        phi1 = radians(lat1)
-        phi2 = radians(lat2)
-        delta_phi = radians(lat2 - lat1)
-        delta_lambda = radians(lng2 - lng1)
-
-        a = sin(delta_phi / 2) ** 2 + cos(phi1) * cos(phi2) * sin(delta_lambda / 2) ** 2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        return R * c * 100  # Convert to cm
