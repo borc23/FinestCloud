@@ -16,7 +16,6 @@ from fastapi.responses import JSONResponse
 from finestcloud.api.routes import detection, panels, pvwatts, utilities
 from finestcloud.core.config import get_settings
 from finestcloud.services.detection_service import get_detection_service
-from finestcloud.utils.exceptions import SessionDataError
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -75,10 +74,6 @@ def create_app() -> FastAPI:
     app.include_router(panels.router, prefix="/api", tags=["panels"])
     app.include_router(pvwatts.router, prefix="/api/pvwatts", tags=["pvwatts"])
     app.include_router(utilities.router, prefix="/api", tags=["utilities"])
-
-    @app.exception_handler(SessionDataError)
-    async def session_data_error(_: Request, exc: SessionDataError):
-        return JSONResponse(status_code=400, content={"detail": str(exc)})
 
     # Starlette re-raises after this, so uvicorn still logs the traceback;
     # the client only gets a generic message, never internals

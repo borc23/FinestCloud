@@ -5,11 +5,7 @@ import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
-from finestcloud.api.dependencies import get_cache_manager, get_session_service
-from finestcloud.api.models import ResetResponse
 from finestcloud.core.config import get_settings
-from finestcloud.services.cache_service import CacheManager
-from finestcloud.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -49,19 +45,3 @@ async def solar_api_proxy(
             status_code=e.response.status_code,
             detail=f"Solar API error: {e.response.text}",
         )
-
-
-@router.post("/reset_session", response_model=ResetResponse)
-def reset_session(
-    cache_manager: CacheManager = Depends(get_cache_manager),
-    session_service: SessionService = Depends(get_session_service),
-) -> ResetResponse:
-    """
-    Reset the current session.
-
-    Clears all session data and cache entries.
-    """
-    cache_manager.clear_all()
-    session_service.reset()
-    logger.info("Session reset successfully")
-    return ResetResponse()

@@ -37,8 +37,6 @@ class PanelService:
             "description": panel_specs.get("name", "Custom panel from frontend"),
         }
 
-        self.all_panels = []
-        self.max_panels = 0
         self.genetic_optimizer = PanelGeneticOptimizer()
 
         center_lat = (bounds["north"] + bounds["south"]) / 2
@@ -58,7 +56,6 @@ class PanelService:
         ]
         total_max_panels = sum(roof["panel_count"] for roof in all_roof_panels)
 
-        self.all_panels, self.max_panels = all_roof_panels, total_max_panels
         return {
             "roofs": all_roof_panels,
             "max_panels": total_max_panels,
@@ -95,42 +92,6 @@ class PanelService:
             "coords": roof["coords"],
             "pitch": pitch,
             "azimuth": azimuth,
-        }
-
-    def get_visible_panels(self, panel_count: int) -> dict:
-        """Return subset of panels based on requested count."""
-        if not isinstance(panel_count, int) or not (
-            0 <= panel_count <= self.max_panels
-        ):
-            raise ValueError(
-                f"Panel count must be an integer between 0 and {self.max_panels}"
-            )
-
-        visible_roofs = []
-        remaining_count = panel_count
-        module_power = self.module_dict["power_w"]
-
-        for roof in self.all_panels:
-            if remaining_count <= 0:
-                break
-            panels_to_show = min(remaining_count, len(roof["panels"]))
-            if panels_to_show <= 0:
-                continue
-
-            visible_roofs.append(
-                {
-                    **roof,
-                    "panels": roof["panels"][:panels_to_show],
-                    "panel_count": panels_to_show,
-                    "total_power_w": panels_to_show * module_power,
-                }
-            )
-            remaining_count -= panels_to_show
-
-        return {
-            "roofs": visible_roofs,
-            "total_panels": panel_count,
-            "total_power_w": panel_count * module_power,
         }
 
     def _generate_panels_on_roof(

@@ -18,11 +18,6 @@ class Settings(BaseSettings):
     allowed_hosts: list[str] = Field(default=["*"])
     cors_origins: list[str] = Field(default=["*"])
 
-    # Cache Configuration
-    cache_type: str = Field(default="memory")
-    cache_timeout: int = Field(default=3600)
-    cache_size: int = Field(default=100)
-
     # File Upload Configuration
     upload_folder: str = Field(default="/tmp/uploads")
     models_dir: str = Field(default="/tmp/models")
@@ -40,9 +35,6 @@ class Settings(BaseSettings):
     hugging_face_token: SecretStr | None = Field(
         default=None, description="Token for the private model repo on HF Hub"
     )
-
-    # Session Configuration
-    session_timeout: int = Field(default=3600, description="Session timeout in seconds")
 
     class Config:
         env_file = ".env"

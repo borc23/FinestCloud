@@ -39,16 +39,6 @@ class PVWattsResponse(BaseModel):
     station_info: dict = Field(..., description="Weather station information")
 
 
-class SystemCapacityRequest(BaseModel):
-    """Request model for system capacity calculations."""
-
-    latitude: float = Field(..., description="Site latitude")
-    longitude: float = Field(..., description="Site longitude")
-    system_capacity: float = Field(..., gt=0, description="System capacity in kW")
-    tilt: float = Field(default=20, ge=0, le=90, description="Array tilt")
-    azimuth: float = Field(default=180, ge=0, le=360, description="Array azimuth")
-
-
 def get_pvwatts_service() -> PVWattsService:
     """Dependency to get PVWatts service instance."""
     settings = get_settings()
@@ -99,39 +89,5 @@ def calculate_solar_production(
         capacity_factor=result["capacity_factor"],
         annual_solar_radiation=result["annual_solar_radiation"],
         system_capacity_kw=system_capacity_kw,
-        station_info=result["station_info"],
-    )
-
-
-@router.post("/calculate_system", response_model=PVWattsResponse)
-def calculate_by_system_capacity(
-    request: SystemCapacityRequest,
-    pvwatts_service: PVWattsService = Depends(get_pvwatts_service),
-) -> PVWattsResponse:
-    """
-    Calculate solar production by system capacity in kW.
-
-    Useful when you know the total system size but not the panel count.
-    """
-    result = pvwatts_service.get_monthly_production(
-        latitude=request.latitude,
-        longitude=request.longitude,
-        system_capacity=request.system_capacity,
-        tilt=request.tilt,
-        azimuth=request.azimuth,
-    )
-
-    if not result:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to calculate solar production. Please check your inputs.",
-        )
-
-    return PVWattsResponse(
-        monthly_production=result["monthly_production"],
-        annual_production=result["annual_production"],
-        capacity_factor=result["capacity_factor"],
-        annual_solar_radiation=result["annual_solar_radiation"],
-        system_capacity_kw=request.system_capacity,
         station_info=result["station_info"],
     )

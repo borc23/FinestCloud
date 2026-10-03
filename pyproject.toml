@@ -13,8 +13,6 @@ dependencies = [
     # HTTP clients
     "httpx==0.25.2",
     "requests==2.32.3",
-    # Caching
-    "cachelib==0.13.0",
     # Machine learning & computer vision
     "torch==2.8.0",
     "torchvision==0.23.0",

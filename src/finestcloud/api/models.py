@@ -33,10 +33,6 @@ class DetectRequest(BaseModel):
     )
 
 
-class DetectImageRequest(DetectRequest):
-    """Request model for image-based detection."""
-
-
 class CoordinateModel(BaseModel):
     """Coordinate model."""
 
@@ -119,28 +115,4 @@ class PanelGenerationResponse(BaseResponse):
     module: str
 
 
-# Panel count update models
-class UpdatePanelCountRequest(BaseModel):
-    """Request model for updating panel count."""
-
-    panel_count: int = Field(..., ge=0, description="Target panel count")
-    mapBounds: BoundsModel = Field(..., description="Map bounds")
-
-
-class UpdateMaxPanelCountRequest(BaseModel):
-    """Request model for updating max panel count."""
-
-    max_panel_count: int = Field(..., ge=0, description="Maximum panel count")
-
-
-class MaxPanelCountResponse(BaseResponse):
-    """Max panel count response model."""
-
-    max_panels: int
-
-
 # Session models
-class ResetResponse(BaseResponse):
-    """Session reset response model."""
-
-    message: str = Field(default="Session reset successfully.")
