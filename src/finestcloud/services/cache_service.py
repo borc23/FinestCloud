@@ -12,7 +12,6 @@ from typing import Any
 class CacheKeys(Enum):
     """Enumeration of all cache key types used in the application."""
 
-    IMAGE_SHAPE = "image_shape"
     CUSTOM_MODULE = "custom_module"
     ALL_PANELS = "all_panels"
     MAX_PANELS = "max_panels"

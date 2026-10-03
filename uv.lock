@@ -659,13 +659,11 @@ dependencies = [
     { name = "numpy" },
     { name = "opencv-python" },
     { name = "pandas" },
-    { name = "pillow" },
     { name = "psutil" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "rdp" },
     { name = "requests" },
     { name = "rtree" },
     { name = "scipy" },
@@ -700,13 +698,11 @@ requires-dist = [
     { name = "numpy", specifier = "<2.0" },
     { name = "opencv-python", specifier = "==4.11.0.86" },
     { name = "pandas", specifier = "==2.2.3" },
-    { name = "pillow", specifier = "==11.0.0" },
     { name = "psutil", specifier = "==7.0.0" },
     { name = "pydantic", specifier = "==2.5.0" },
     { name = "pydantic-settings", specifier = "==2.1.0" },
     { name = "python-dotenv", specifier = "==1.1.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
-    { name = "rdp", specifier = "==0.8" },
     { name = "requests", specifier = "==2.32.3" },
     { name = "rtree", specifier = "==1.4.1" },
     { name = "scipy", specifier = "==1.15.2" },
@@ -2281,15 +2277,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/28/5b1042899caed18278c56d54a502f5254d463afe8aea1acbecc98e053391/pyzmq-27.2.0-pp311-pypy311_pp73-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f5c6d8744d10b5e1eadd90a7c58f8546acf6bf680ee463f7e6ada09ad6c9f802", size = 780574, upload-time = "2026-08-20T19:08:07.987Z" },
     { url = "https://files.pythonhosted.org/packages/77/a3/f134603a671c114c6b56eb912bba890f09e2d43b8a28d243be5a5507cf2f/pyzmq-27.2.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:3ee8dd7031d5e23f632e0e7eee67183ca7d2536e0de35dc1e5d69f3471a791e8", size = 553961, upload-time = "2026-08-20T19:08:09.651Z" },
 ]
-
-[[package]]
-name = "rdp"
-version = "0.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/67/42/80a54cc4387256335c32b48bd42db80967ab5f40d6ffcd8167b3dd988c11/rdp-0.8.tar.gz", hash = "sha256:19ec92f0803587891a00b439441e5e23fc9410500983f02941e4cf9ac3113e4b", size = 4382, upload-time = "2016-12-19T01:34:07.454Z" }
 
 [[package]]
 name = "referencing"

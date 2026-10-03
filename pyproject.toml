@@ -21,8 +21,6 @@ dependencies = [
     "ultralytics==8.3.208",
     "numpy<2.0",
     "opencv-python==4.11.0.86",
-    "pillow==11.0.0",
-    "rdp==0.8",
     "huggingface-hub",
     # Data processing
     "pandas==2.2.3",

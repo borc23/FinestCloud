@@ -26,7 +26,7 @@ class DetectRequest(BaseModel):
     """Request model for roof detection."""
 
     image: str = Field(..., description="Image URL or base64 encoded image data")
-    bounds: BoundsModel | None = Field(None, description="Geographic bounds")
+    bounds: BoundsModel = Field(..., description="Geographic bounds of the image")
     conf: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence threshold")
     epsilon: float = Field(
         default=0.0075, ge=0.0, description="Polygon simplification epsilon"

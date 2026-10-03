@@ -40,13 +40,6 @@ class Settings(BaseSettings):
     hugging_face_token: SecretStr | None = Field(
         default=None, description="Token for the private model repo on HF Hub"
     )
-    force_model_download: bool = Field(default=False)
-
-    # ML Model Configuration
-    enable_gpu: bool = Field(default=True, description="Enable GPU acceleration")
-    detection_cache_size: int = Field(
-        default=100, description="Detection model cache size"
-    )
 
     # Session Configuration
     session_timeout: int = Field(default=3600, description="Session timeout in seconds")
