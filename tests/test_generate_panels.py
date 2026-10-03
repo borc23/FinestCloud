@@ -29,7 +29,7 @@ def test_generate_panels_roof_defaults(roof_extra, expected_pitch, expected_azim
         "/api/generate_panels",
         json={
             "roofs": [{"coords": COORDS, **roof_extra}],
-            "mapBounds": BOUNDS,
+            "map_bounds": BOUNDS,
             "panel_specs": SPECS,
         },
     )

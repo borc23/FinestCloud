@@ -24,17 +24,17 @@ export interface DetectionResponse {
   error?: string;
 }
 
-export interface StaticMapParams {
-  center: string;
+/** Captured map view; the backend fetches its satellite image itself */
+export interface MapView {
+  lat: number;
+  lng: number;
   zoom: number;
-  size: string;
-  maptype: string;
-  format: string;
-  style: string;
+  width: number;
+  height: number;
 }
 
 export interface DetectionRequest {
-  image: StaticMapParams;
+  view: MapView;
   bounds: DetectionBounds;
   conf?: number;
   epsilon?: number;

@@ -1,4 +1,4 @@
-"""GPS coordinate system utilities with cm precision."""
+"""Local metric coordinates (cm) around a reference point, for roof-scale geometry."""
 
 from math import cos, radians
 
@@ -6,88 +6,22 @@ import numpy as np
 
 
 class GPSCoordinateSystem:
-    """Handle GPS coordinate transformations using proper spherical geometry."""
+    """Flat projection around a reference point; accurate to mm over a few hundred m."""
 
     def __init__(self, reference_lat: float, reference_lng: float):
-        """
-        Initialize with a reference point (typically center of map).
-        All coordinates will be converted relative to this point.
-
-        Args:
-            reference_lat: Reference latitude (degrees)
-            reference_lng: Reference longitude (degrees)
-        """
-        self.ref_lat = reference_lat
-        self.ref_lng = reference_lng
-        self.ref_lat_rad = radians(reference_lat)
-
-        # Meters per degree at reference latitude
-        self.meters_per_deg_lat = 111132.92
-        self.meters_per_deg_lng = 111132.92 * cos(self.ref_lat_rad)
-
-        # Convert to cm per degree for better precision
-        self.cm_per_deg_lat = self.meters_per_deg_lat * 100
-        self.cm_per_deg_lng = self.meters_per_deg_lng * 100
-
-    def gps_to_cm(self, lat: float, lng: float) -> tuple[float, float]:
-        """
-        Convert GPS coordinates to local metric coordinates (cm).
-        Returns (x_cm, y_cm) relative to reference point.
-
-        Args:
-            lat: Latitude in degrees
-            lng: Longitude in degrees
-
-        Returns:
-            Tuple of (x_cm, y_cm)
-        """
-        x = (lng - self.ref_lng) * self.cm_per_deg_lng
-        y = (lat - self.ref_lat) * self.cm_per_deg_lat
-        return x, y
-
-    def cm_to_gps(self, x_cm: float, y_cm: float) -> tuple[float, float]:
-        """
-        Convert local metric coordinates back to GPS.
-        Returns (lat, lng).
-
-        Args:
-            x_cm: X coordinate in cm
-            y_cm: Y coordinate in cm
-
-        Returns:
-            Tuple of (lat, lng)
-        """
-        lng = self.ref_lng + (x_cm / self.cm_per_deg_lng)
-        lat = self.ref_lat + (y_cm / self.cm_per_deg_lat)
-        return lat, lng
+        phi = radians(reference_lat)
+        # WGS84 meters per degree at this latitude
+        m_per_deg_lat = 111132.92 - 559.82 * cos(2 * phi) + 1.175 * cos(4 * phi)
+        m_per_deg_lng = 111412.84 * cos(phi) - 93.5 * cos(3 * phi)
+        self.origin = np.array([reference_lng, reference_lat])
+        self.cm_per_deg = np.array([m_per_deg_lng, m_per_deg_lat]) * 100
 
     def gps_array_to_cm(self, coords: list[dict]) -> np.ndarray:
-        """
-        Convert array of GPS coordinates to cm.
-
-        Args:
-            coords: List of dicts with 'lat' and 'lng' keys
-
-        Returns:
-            NumPy array of shape (N, 2) with [x_cm, y_cm]
-        """
-        result = np.zeros((len(coords), 2))
-        for i, coord in enumerate(coords):
-            result[i] = self.gps_to_cm(coord["lat"], coord["lng"])
-        return result
+        """[{"lat", "lng"}, ...] -> (N, 2) array of [x_cm, y_cm]."""
+        lng_lat = np.array([(c["lng"], c["lat"]) for c in coords], dtype=float)
+        return (lng_lat.reshape(-1, 2) - self.origin) * self.cm_per_deg
 
     def cm_array_to_gps(self, coords: np.ndarray) -> list[dict]:
-        """
-        Convert array of cm coordinates to GPS.
-
-        Args:
-            coords: NumPy array of shape (N, 2) with [x_cm, y_cm]
-
-        Returns:
-            List of dicts with 'lat' and 'lng' keys
-        """
-        result = []
-        for x, y in coords:
-            lat, lng = self.cm_to_gps(x, y)
-            result.append({"lat": lat, "lng": lng})
-        return result
+        """(N, 2) array of [x_cm, y_cm] -> [{"lat", "lng"}, ...]."""
+        lng, lat = (np.asarray(coords) / self.cm_per_deg + self.origin).T
+        return [{"lat": float(a), "lng": float(o)} for a, o in zip(lat, lng)]

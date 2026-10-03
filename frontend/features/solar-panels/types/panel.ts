@@ -82,9 +82,7 @@ export interface PanelGenerationRequest {
     };
   }>;
   mapBounds?: unknown;
-  module?: string;
   spacing?: number;
-  max_panels?: number | null;
   edgePadding?: number;
   panelOrientation?: string;
 }
