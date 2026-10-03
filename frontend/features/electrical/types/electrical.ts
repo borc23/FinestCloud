@@ -19,12 +19,13 @@ export interface StringConfiguration {
   stringVoltageVoc: number; // V at open circuit
   stringVoltageVmp: number; // V at max power
   stringCurrent: number; // A
-  totalSystemVoltage: number; // V
   totalSystemCurrent: number; // A
 }
 
+export type InverterKind = "string" | "microinverter" | "optimizer";
+
 export interface InverterType {
-  type: "string" | "microinverter" | "optimizer";
+  type: InverterKind;
   model?: string;
   efficiency: number; // % (typically 96-99%)
   maxInputVoltage: number; // V
@@ -65,9 +66,8 @@ export interface ElectricalInputs {
   panelSpecs: PanelSpecs;
   totalPanels: number;
   systemSizeKw: number;
-  inverterType: "string" | "microinverter" | "optimizer";
+  inverterType: InverterKind;
   dcCableLength?: number; // meters, default 15m
   acCableLength?: number; // meters, default 10m
-  ambientTemp?: number; // °C, default 25°C
   roofTemp?: number; // °C, default 60°C (important for voltage calculations)
 }

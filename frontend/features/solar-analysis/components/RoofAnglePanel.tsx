@@ -6,7 +6,6 @@ import Button from "@/shared/components/ui/Button";
 import styles from "./RoofAnglePanel.module.css";
 import { extractPolygonCoordinates } from "@/features/map-drawing/utils/polygonUtils";
 import type { AngleConfirmData } from "@/features/solar-panels/types/panel";
-import { useTutorial } from "@/contexts/TutorialContext";
 
 interface RoofSegment {
   polygonIndex: number;
@@ -14,6 +13,46 @@ interface RoofSegment {
   center: { lat: number; lng: number };
   solarData: any;
 }
+
+/** Roof segment stats from the Solar API for a polygon, if any */
+const segmentStats = (solarData: RoofSegment[] | null, index: number) =>
+  solarData?.find((s) => s.polygonIndex === index)?.solarData?.solarPotential
+    ?.roofSegmentStats?.[0];
+
+/** API pitch as an input value; only valid non-zero values are used */
+const apiAngle = (solarData: RoofSegment[] | null, index: number) => {
+  const pitch = segmentStats(solarData, index)?.pitchDegrees;
+  return pitch && pitch > 0 ? pitch.toFixed(1) : "";
+};
+
+const ORIENTATIONS = [
+  {
+    value: "vertical",
+    label: "Vertical",
+    icon: <rect x="9" y="4" width="6" height="16" rx="1" />,
+  },
+  {
+    value: "horizontal",
+    label: "Horizontal",
+    icon: <rect x="4" y="9" width="16" height="6" rx="1" />,
+  },
+  {
+    value: "best",
+    label: "Best",
+    icon: (
+      <>
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </>
+    ),
+  },
+];
+
+const isValidAngle = (angle: string) => {
+  const value = parseFloat(angle);
+  return value >= 0 && value <= 90;
+};
 
 interface RoofAnglePanelProps {
   roofPolygons: google.maps.Polygon[];
@@ -33,50 +72,36 @@ export default function RoofAnglePanel({
   const [angles, setAngles] = useState<string[]>([]);
   const [edgePadding, setEdgePadding] = useState("20");
   const [panelOrientation, setPanelOrientation] = useState("best");
-  const labelsRef = useRef<google.maps.Marker[]>([]);
-  const { showTooltip, markStepComplete } = useTutorial();
+  const seededPolygonsRef = useRef<google.maps.Polygon[] | null>(null);
 
-  // Check if all angles are populated
+  const padding = parseFloat(edgePadding);
   const isGenerateEnabled =
-    angles.length > 0 &&
-    angles.every((angle) => angle !== "" && !isNaN(parseFloat(angle)));
+    angles.length > 0 && angles.every(isValidAngle) && padding >= 0;
 
+  // Seed angles from solar data once per polygon set; when solar data arrives
+  // later, only fill in angles the user hasn't entered
   useEffect(() => {
-    labelsRef.current.forEach((label) => label.setMap(null));
-    labelsRef.current = [];
+    const isNewPolygonSet = seededPolygonsRef.current !== roofPolygons;
+    seededPolygonsRef.current = roofPolygons;
+    setAngles((prev) =>
+      roofPolygons.map(
+        (_, index) =>
+          (!isNewPolygonSet && prev[index]) || apiAngle(solarData, index),
+      ),
+    );
+  }, [roofPolygons, solarData]);
 
-    // Initialize angles from solar data
-    const initialAngles = roofPolygons.map((_, index) => {
-      const segment = solarData?.find((s) => s.polygonIndex === index);
-      const pitchDegrees =
-        segment?.solarData?.solarPotential?.roofSegmentStats?.[0]?.pitchDegrees;
-      // Only use API data if it's a valid non-zero value
-      return pitchDegrees && pitchDegrees > 0 ? pitchDegrees.toFixed(1) : "";
-    });
-    setAngles(initialAngles);
-
-    // Show tutorial tooltip when panel opens
-    setTimeout(() => {
-      showTooltip({
-        id: "roof_angle_panel",
-        targetElement: '[data-tutorial="generate-button"]',
-        content:
-          "We've auto-filled roof angles from Google Solar API. Adjust if needed, then click Generate Panels.",
-        position: "top",
-        showNext: false,
-        showSkip: true,
-      });
-    }, 500);
-
-    roofPolygons.forEach((polygon, index) => {
-      const path = polygon.getPath().getArray();
-      const coordinates = path.map(
-        (point) => [point.lng(), point.lat()] as [number, number],
-      );
+  // Numbered labels at each roof's pole of inaccessibility
+  useEffect(() => {
+    const labels = roofPolygons.map((polygon, index) => {
+      const coordinates = polygon
+        .getPath()
+        .getArray()
+        .map((point) => [point.lng(), point.lat()] as [number, number]);
       coordinates.push(coordinates[0]);
       const [lng, lat] = polylabel([coordinates], 0.000001);
 
-      const label = new google.maps.Marker({
+      return new google.maps.Marker({
         position: { lat, lng },
         map: polygon.getMap(),
         label: {
@@ -94,38 +119,16 @@ export default function RoofAnglePanel({
           scale: 12,
         },
       });
-      labelsRef.current.push(label);
     });
 
-    return () => {
-      labelsRef.current.forEach((label) => label.setMap(null));
-      labelsRef.current = [];
-    };
-  }, [roofPolygons, solarData, showTooltip]);
+    return () => labels.forEach((label) => label.setMap(null));
+  }, [roofPolygons]);
 
   const handleConfirm = () => {
-    const parsedAngles = angles.map((a, i) => {
-      const val = parseFloat(a);
-      if (isNaN(val) || val < 0 || val > 90) {
-        throw new Error(`Invalid angle for roof ${i + 1}`);
-      }
-      return val;
-    });
-
-    const padding = parseFloat(edgePadding);
-    if (isNaN(padding) || padding < 0) {
-      throw new Error("Invalid edge padding");
-    }
+    const parsedAngles = angles.map(parseFloat);
 
     // Get map bounds and resolution
-    const map = roofPolygons[0]?.getMap();
-    if (!map) {
-      console.error("Map not available");
-      onConfirm({ angles: parsedAngles, edgePadding: padding });
-      return;
-    }
-
-    const bounds = map.getBounds();
+    const bounds = roofPolygons[0]?.getMap()?.getBounds();
     if (!bounds) {
       console.error("Map bounds not available");
       onConfirm({ angles: parsedAngles, edgePadding: padding });
@@ -155,9 +158,6 @@ export default function RoofAnglePanel({
       spacing: 0.5,
     };
 
-    // Mark generate step as complete
-    markStepComplete("generate");
-
     // Close popup immediately, then make API call in background
     onConfirm({
       angles: parsedAngles,
@@ -174,16 +174,11 @@ export default function RoofAnglePanel({
 
       <div className={styles.content}>
         {roofPolygons.map((_, index) => {
-          const segment = solarData?.find((s) => s.polygonIndex === index);
-          const apiAngle =
-            segment?.solarData?.solarPotential?.roofSegmentStats?.[0]
-              ?.pitchDegrees;
-          const azimuth =
-            segment?.solarData?.solarPotential?.roofSegmentStats?.[0]
-              ?.azimuthDegrees;
+          const stats = segmentStats(solarData, index);
+          const pitch = stats?.pitchDegrees;
           const isLoading = solarData === null;
           // Show "Enter manually" only when API data is unavailable or returns 0/null
-          const hasValidApiData = apiAngle && apiAngle > 0;
+          const hasValidApiData = pitch && pitch > 0;
           const noDataAvailable = solarData !== null && !hasValidApiData;
 
           return (
@@ -195,8 +190,8 @@ export default function RoofAnglePanel({
                   <small className={styles.hint}>Loading...</small>
                 ) : hasValidApiData ? (
                   <small className={styles.hint}>
-                    Pitch: {apiAngle.toFixed(1)}°, Azimuth:{" "}
-                    {azimuth?.toFixed(0)}°
+                    Pitch: {pitch.toFixed(1)}°, Azimuth:{" "}
+                    {stats.azimuthDegrees?.toFixed(0)}°
                   </small>
                 ) : noDataAvailable ? (
                   <small className={styles.hint}>Enter manually</small>
@@ -209,11 +204,11 @@ export default function RoofAnglePanel({
                   max="90"
                   step="0.1"
                   value={angles[index] || ""}
-                  onChange={(e) => {
-                    const newAngles = [...angles];
-                    newAngles[index] = e.target.value;
-                    setAngles(newAngles);
-                  }}
+                  onChange={(e) =>
+                    setAngles((prev) =>
+                      Object.assign([...prev], { [index]: e.target.value }),
+                    )
+                  }
                   placeholder="0-90"
                 />
                 <span className={styles.unit}>°</span>
@@ -250,76 +245,36 @@ export default function RoofAnglePanel({
               <div
                 className={styles.orientationSlider}
                 style={{
-                  transform:
-                    panelOrientation === "vertical"
-                      ? "translateX(0%)"
-                      : panelOrientation === "horizontal"
-                        ? "translateX(100%)"
-                        : "translateX(200%)",
+                  transform: `translateX(${
+                    ORIENTATIONS.findIndex(
+                      (o) => o.value === panelOrientation,
+                    ) * 100
+                  }%)`,
                 }}
               />
-              <button
-                type="button"
-                className={`${styles.orientationOption} ${
-                  panelOrientation === "vertical" ? styles.active : ""
-                }`}
-                onClick={() => setPanelOrientation("vertical")}
-                role="radio"
-                aria-checked={panelOrientation === "vertical"}
-              >
-                <svg
-                  className={styles.orientationIcon}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
+              {ORIENTATIONS.map(({ value, label, icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`${styles.orientationOption} ${
+                    panelOrientation === value ? styles.active : ""
+                  }`}
+                  onClick={() => setPanelOrientation(value)}
+                  role="radio"
+                  aria-checked={panelOrientation === value}
                 >
-                  <rect x="9" y="4" width="6" height="16" rx="1" />
-                </svg>
-                <span className={styles.orientationLabel}>Vertical</span>
-              </button>
-              <button
-                type="button"
-                className={`${styles.orientationOption} ${
-                  panelOrientation === "horizontal" ? styles.active : ""
-                }`}
-                onClick={() => setPanelOrientation("horizontal")}
-                role="radio"
-                aria-checked={panelOrientation === "horizontal"}
-              >
-                <svg
-                  className={styles.orientationIcon}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <rect x="4" y="9" width="16" height="6" rx="1" />
-                </svg>
-                <span className={styles.orientationLabel}>Horizontal</span>
-              </button>
-              <button
-                type="button"
-                className={`${styles.orientationOption} ${
-                  panelOrientation === "best" ? styles.active : ""
-                }`}
-                onClick={() => setPanelOrientation("best")}
-                role="radio"
-                aria-checked={panelOrientation === "best"}
-              >
-                <svg
-                  className={styles.orientationIcon}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-                <span className={styles.orientationLabel}>Best</span>
-              </button>
+                  <svg
+                    className={styles.orientationIcon}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    {icon}
+                  </svg>
+                  <span className={styles.orientationLabel}>{label}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -332,7 +287,6 @@ export default function RoofAnglePanel({
             variant="primary"
             onClick={handleConfirm}
             disabled={!isGenerateEnabled}
-            data-tutorial="generate-button"
           >
             Generate
           </Button>

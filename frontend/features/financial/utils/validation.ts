@@ -7,24 +7,6 @@ export interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
-  criticalWarnings?: string[];
-}
-
-export interface FinancialInputValidation {
-  systemSize?: string;
-  annualProduction?: string;
-  costPerKwh?: string;
-  avgMonthlyBill?: string;
-  escalationRate?: string;
-  systemCost?: string;
-  feedInTariff?: string;
-  selfConsumptionRate?: string;
-  stateGrant?: string;
-  municipalGrant?: string;
-  discountRate?: string;
-  downPayment?: string;
-  loanTerm?: string;
-  interestRate?: string;
 }
 
 /**
@@ -103,52 +85,29 @@ export const VALIDATION_CONSTRAINTS = {
   },
 } as const;
 
+type FieldName = keyof typeof VALIDATION_CONSTRAINTS;
+
 /**
  * Validate a single numeric input
  */
 export function validateNumericInput(
   value: number,
-  fieldName: keyof typeof VALIDATION_CONSTRAINTS,
-): { isValid: boolean; error?: string; warning?: string } {
-  const constraints = VALIDATION_CONSTRAINTS[fieldName];
-
-  // Check if value is a valid number
-  if (!Number.isFinite(value)) {
-    return {
-      isValid: false,
-      error: `${constraints.description} must be a valid number`,
-    };
-  }
-
-  // Check if value is NaN
-  if (Number.isNaN(value)) {
-    return {
-      isValid: false,
-      error: `${constraints.description} must be a valid number`,
-    };
-  }
-
-  // Check minimum constraint
-  if (value < constraints.min) {
-    return {
-      isValid: false,
-      error: `${constraints.description} must be at least ${constraints.min}`,
-    };
-  }
-
-  // Check maximum constraint
-  if (value > constraints.max) {
-    return {
-      isValid: false,
-      error: `${constraints.description} must be at most ${constraints.max}`,
-    };
-  }
-
-  return { isValid: true };
+  fieldName: FieldName,
+): { isValid: boolean; error?: string } {
+  const { min, max, description } = VALIDATION_CONSTRAINTS[fieldName];
+  const error = !Number.isFinite(value)
+    ? `${description} must be a valid number`
+    : value < min
+      ? `${description} must be at least ${min}`
+      : value > max
+        ? `${description} must be at most ${max}`
+        : undefined;
+  return { isValid: !error, error };
 }
 
 /**
- * Validate all financial calculator inputs
+ * Validate all financial calculator inputs.
+ * Optional financing fields are only validated when provided.
  */
 export function validateFinancialInputs(inputs: {
   systemSize: number;
@@ -169,53 +128,12 @@ export function validateFinancialInputs(inputs: {
 }): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const criticalWarnings: string[] = [];
 
-  // Validate basic inputs
-  const fields = [
-    "systemSize",
-    "annualProduction",
-    "costPerKwh",
-    "avgMonthlyBill",
-    "escalationRate",
-    "systemCost",
-    "feedInTariff",
-    "selfConsumptionRate",
-    "stateGrant",
-    "municipalGrant",
-    "discountRate",
-  ] as const;
-
-  for (const field of fields) {
-    const result = validateNumericInput(inputs[field], field);
-    if (!result.isValid && result.error) {
-      errors.push(result.error);
-    }
-    if (result.warning) {
-      warnings.push(result.warning);
-    }
-  }
-
-  // Validate optional financing fields
-  if (inputs.downPayment !== undefined) {
-    const result = validateNumericInput(inputs.downPayment, "downPayment");
-    if (!result.isValid && result.error) {
-      errors.push(result.error);
-    }
-  }
-
-  if (inputs.loanTerm !== undefined) {
-    const result = validateNumericInput(inputs.loanTerm, "loanTerm");
-    if (!result.isValid && result.error) {
-      errors.push(result.error);
-    }
-  }
-
-  if (inputs.interestRate !== undefined) {
-    const result = validateNumericInput(inputs.interestRate, "interestRate");
-    if (!result.isValid && result.error) {
-      errors.push(result.error);
-    }
+  for (const field of Object.keys(VALIDATION_CONSTRAINTS) as FieldName[]) {
+    const value = inputs[field];
+    const error =
+      value !== undefined && validateNumericInput(value, field).error;
+    if (error) errors.push(error);
   }
 
   // Cross-field validations
@@ -223,11 +141,10 @@ export function validateFinancialInputs(inputs: {
     // Check if down payment exceeds net system cost
     if (
       inputs.downPayment !== undefined &&
-      inputs.netSystemCost !== undefined
+      inputs.netSystemCost !== undefined &&
+      inputs.downPayment > inputs.netSystemCost
     ) {
-      if (inputs.downPayment > inputs.netSystemCost) {
-        errors.push("Down payment cannot exceed net system cost");
-      }
+      errors.push("Down payment cannot exceed net system cost");
     }
 
     // Check if grants exceed system cost
@@ -236,22 +153,7 @@ export function validateFinancialInputs(inputs: {
       warnings.push("Total grants exceed system cost - this seems unusual");
     }
 
-    // Check if annual production is realistic for system size
-    const productionPerKw = inputs.annualProduction / inputs.systemSize;
-    if (productionPerKw < 500) {
-      warnings.push(
-        `Annual production (${Math.round(
-          productionPerKw,
-        )} kWh/kW) is lower than typical German systems (850-1,050 kWh/kW). Verify your production estimate.`,
-      );
-    }
-    if (productionPerKw > 1500) {
-      warnings.push(
-        `Annual production (${Math.round(
-          productionPerKw,
-        )} kWh/kW) is higher than typical German systems (850-1,050 kWh/kW). This is optimistic.`,
-      );
-    }
+    // Production realism is checked separately by validateGermanProduction
 
     // Check if system cost is reasonable
     const costPerWatt = inputs.systemCost / (inputs.systemSize * 1000);
@@ -319,7 +221,6 @@ export function validateFinancialInputs(inputs: {
     isValid: errors.length === 0,
     errors,
     warnings,
-    criticalWarnings,
   };
 }
 
@@ -330,14 +231,8 @@ export function sanitizeNumericInput(
   value: string | number,
   defaultValue: number,
 ): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : defaultValue;
-  }
-
-  const parsed = parseFloat(value);
-  return Number.isFinite(parsed) && !Number.isNaN(parsed)
-    ? parsed
-    : defaultValue;
+  const parsed = typeof value === "number" ? value : parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : defaultValue;
 }
 
 /**
@@ -359,8 +254,26 @@ export function safeDivide(
 }
 
 /**
- * Clamp a value between min and max
+ * Validate if production estimate is realistic for Germany
+ * Based on Fraunhofer ISE 2025: 850 (conservative) to 1,050 (optimistic) full load hours, ±10% tolerance
  */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
+export function validateGermanProduction(
+  systemSizeKw: number,
+  reportedProduction: number,
+) {
+  const tooHigh = reportedProduction > systemSizeKw * 1050 * 1.1;
+  const tooLow = reportedProduction < systemSizeKw * 850 * 0.9;
+  return {
+    isRealistic: !tooHigh && !tooLow,
+    expectedRange: {
+      min: Math.round(systemSizeKw * 850),
+      max: Math.round(systemSizeKw * 1050),
+    },
+    message: tooHigh
+      ? "Production estimate appears optimistic for typical German conditions. " +
+        "This would require exceptional south-facing orientation and southern German location."
+      : tooLow
+        ? "Production estimate appears conservative. Check for shading or non-optimal orientation."
+        : "Production estimate is within typical German ranges.",
+  };
 }

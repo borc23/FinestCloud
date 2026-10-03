@@ -17,12 +17,23 @@ interface OrganizationSettingsProps {
   userId: string;
 }
 
+const EMPTY_FORM = {
+  name: "",
+  company_email: "",
+  company_phone: "",
+  company_website: "",
+  company_address: "",
+  primary_color: "#3B82F6",
+  secondary_color: "#1E40AF",
+};
+
 export default function OrganizationSettings({
   userId,
 }: OrganizationSettingsProps) {
   const [organization, setOrganization] = useState<OrganizationRow | null>(
     null,
   );
+  const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,42 +41,48 @@ export default function OrganizationSettings({
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form fields
-  const [name, setName] = useState("");
-  const [companyEmail, setCompanyEmail] = useState("");
-  const [companyPhone, setCompanyPhone] = useState("");
-  const [companyWebsite, setCompanyWebsite] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#3B82F6");
-  const [secondaryColor, setSecondaryColor] = useState("#1E40AF");
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const applyOrganization = (org: OrganizationRow) => {
+    setOrganization(org);
+    setForm({
+      name: org.name,
+      company_email: org.company_email || "",
+      company_phone: org.company_phone || "",
+      company_website: org.company_website || "",
+      company_address: org.company_address || "",
+      primary_color: org.primary_color,
+      secondary_color: org.secondary_color,
+    });
+  };
+
+  // Props for a text input bound to a form field
+  const field = (key: keyof typeof EMPTY_FORM) => ({
+    value: form[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, [key]: e.target.value })),
+    disabled: saving,
+  });
+
+  const flashSuccess = () => {
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
 
   useEffect(() => {
-    loadOrganization();
-  }, [userId]);
-
-  const loadOrganization = async () => {
     setLoading(true);
     setError(null);
+    getUserOrganization(userId)
+      .then((org) => org && applyOrganization(org))
+      .catch(() => setError("Failed to load organization"))
+      .finally(() => setLoading(false));
+  }, [userId]);
 
-    try {
-      const org = await getUserOrganization(userId);
-      if (org) {
-        setOrganization(org);
-        setName(org.name);
-        setCompanyEmail(org.company_email || "");
-        setCompanyPhone(org.company_phone || "");
-        setCompanyWebsite(org.company_website || "");
-        setCompanyAddress(org.company_address || "");
-        setPrimaryColor(org.primary_color);
-        setSecondaryColor(org.secondary_color);
-        setLogoUrl(org.logo_url || null);
-      }
-    } catch (err: any) {
-      setError("Failed to load organization");
-    } finally {
-      setLoading(false);
-    }
+  // Persist a new logo URL (or null) to the organization
+  const saveLogo = async (logoUrl: string | null) => {
+    if (!organization) return;
+    setOrganization(
+      await updateOrganization(organization.id, { logo_url: logoUrl }),
+    );
+    flashSuccess();
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,27 +93,8 @@ export default function OrganizationSettings({
     setError(null);
 
     try {
-      // Delete old logo if exists
-      if (logoUrl) {
-        try {
-          await deleteOrganizationLogo(logoUrl, organization.id);
-        } catch (err) {
-          console.error("Failed to delete old logo:", err);
-          // Continue with upload even if deletion fails
-        }
-      }
-
-      // Upload new logo
-      const newLogoUrl = await uploadOrganizationLogo(file, organization.id);
-      setLogoUrl(newLogoUrl);
-
-      // Save logo URL to database
-      await updateOrganization(organization.id, {
-        logo_url: newLogoUrl,
-      });
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      // Uploads replace the previous logo in place
+      await saveLogo(await uploadOrganizationLogo(file, organization.id));
     } catch (err: any) {
       setError(err.message || "Failed to upload logo");
     } finally {
@@ -109,20 +107,14 @@ export default function OrganizationSettings({
   };
 
   const handleRemoveLogo = async () => {
-    if (!organization || !logoUrl) return;
+    if (!organization?.logo_url) return;
 
     setUploadingLogo(true);
     setError(null);
 
     try {
-      await deleteOrganizationLogo(logoUrl, organization.id);
-      await updateOrganization(organization.id, {
-        logo_url: null,
-      });
-
-      setLogoUrl(null);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      await deleteOrganizationLogo(organization.logo_url, organization.id);
+      await saveLogo(null);
     } catch (err: any) {
       setError(err.message || "Failed to remove logo");
     } finally {
@@ -139,20 +131,19 @@ export default function OrganizationSettings({
     setSuccess(false);
 
     try {
-      await updateOrganization(organization.id, {
-        name: name.trim(),
-        company_email: companyEmail.trim() || null,
-        company_phone: companyPhone.trim() || null,
-        company_website: companyWebsite.trim() || null,
-        company_address: companyAddress.trim() || null,
-        primary_color: primaryColor,
-        secondary_color: secondaryColor,
-      });
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      await loadOrganization();
-    } catch (err: any) {
+      applyOrganization(
+        await updateOrganization(organization.id, {
+          name: form.name.trim(),
+          company_email: form.company_email.trim() || null,
+          company_phone: form.company_phone.trim() || null,
+          company_website: form.company_website.trim() || null,
+          company_address: form.company_address.trim() || null,
+          primary_color: form.primary_color,
+          secondary_color: form.secondary_color,
+        }),
+      );
+      flashSuccess();
+    } catch {
       setError("Failed to save organization settings");
     } finally {
       setSaving(false);
@@ -162,7 +153,7 @@ export default function OrganizationSettings({
   if (loading) {
     return (
       <div className={styles.loading}>
-        <div className={styles.spinner}></div>
+        <div className="spinner"></div>
         <p>Loading organization...</p>
       </div>
     );
@@ -199,14 +190,7 @@ export default function OrganizationSettings({
 
         <div className={styles.field}>
           <label htmlFor="orgName">Organization Name *</label>
-          <input
-            id="orgName"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            disabled={saving}
-          />
+          <input id="orgName" type="text" {...field("name")} required />
         </div>
 
         <div className={styles.field}>
@@ -239,24 +223,12 @@ export default function OrganizationSettings({
 
         <div className={styles.field}>
           <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={companyEmail}
-            onChange={(e) => setCompanyEmail(e.target.value)}
-            disabled={saving}
-          />
+          <input id="email" type="email" {...field("company_email")} />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="phone">Phone</label>
-          <input
-            id="phone"
-            type="tel"
-            value={companyPhone}
-            onChange={(e) => setCompanyPhone(e.target.value)}
-            disabled={saving}
-          />
+          <input id="phone" type="tel" {...field("company_phone")} />
         </div>
 
         <div className={styles.field}>
@@ -264,22 +236,14 @@ export default function OrganizationSettings({
           <input
             id="website"
             type="url"
-            value={companyWebsite}
-            onChange={(e) => setCompanyWebsite(e.target.value)}
+            {...field("company_website")}
             placeholder="https://example.com"
-            disabled={saving}
           />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="address">Address</label>
-          <input
-            id="address"
-            type="text"
-            value={companyAddress}
-            onChange={(e) => setCompanyAddress(e.target.value)}
-            disabled={saving}
-          />
+          <input id="address" type="text" {...field("company_address")} />
         </div>
       </div>
 
@@ -288,9 +252,9 @@ export default function OrganizationSettings({
 
         <div className={styles.field}>
           <label>Company Logo</label>
-          {logoUrl && (
+          {organization.logo_url && (
             <div className={styles.logoPreview}>
-              <img src={logoUrl} alt="Company logo" />
+              <img src={organization.logo_url} alt="Company logo" />
               <button
                 type="button"
                 onClick={handleRemoveLogo}
@@ -305,7 +269,7 @@ export default function OrganizationSettings({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+            accept="image/png,image/jpeg,image/webp"
             onChange={handleLogoUpload}
             disabled={uploadingLogo}
             style={{ display: "none" }}
@@ -316,14 +280,17 @@ export default function OrganizationSettings({
             disabled={uploadingLogo}
             className={styles.uploadButton}
           >
-            <Icon name={uploadingLogo ? "spinner" : "upload"} />
+            <Icon
+              name={uploadingLogo ? "spinner" : "upload"}
+              spin={uploadingLogo}
+            />
             {uploadingLogo
               ? "Uploading..."
-              : logoUrl
+              : organization.logo_url
                 ? "Change Logo"
                 : "Upload Logo"}
           </button>
-          <small>PNG, JPEG, or SVG. Max 5MB.</small>
+          <small>PNG, JPEG, or WebP. Max 5MB.</small>
         </div>
 
         <div className={styles.colorRow}>
@@ -333,15 +300,11 @@ export default function OrganizationSettings({
               <input
                 id="primaryColor"
                 type="color"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                disabled={saving}
+                {...field("primary_color")}
               />
               <input
                 type="text"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                disabled={saving}
+                {...field("primary_color")}
                 placeholder="#3B82F6"
               />
             </div>
@@ -353,15 +316,11 @@ export default function OrganizationSettings({
               <input
                 id="secondaryColor"
                 type="color"
-                value={secondaryColor}
-                onChange={(e) => setSecondaryColor(e.target.value)}
-                disabled={saving}
+                {...field("secondary_color")}
               />
               <input
                 type="text"
-                value={secondaryColor}
-                onChange={(e) => setSecondaryColor(e.target.value)}
-                disabled={saving}
+                {...field("secondary_color")}
                 placeholder="#1E40AF"
               />
             </div>

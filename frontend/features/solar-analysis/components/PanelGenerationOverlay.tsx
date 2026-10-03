@@ -20,7 +20,7 @@ export default function PanelGenerationOverlay({
   return (
     <div className={styles.overlay}>
       <div className={styles.card}>
-        <div className={styles.spinner} />
+        <div className={`spinner ${styles.spinner}`} />
         <span className={styles.text}>
           {progress
             ? `Generating panels... ${progress.current}/${progress.total}`

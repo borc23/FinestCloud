@@ -1,39 +1,25 @@
 import { useCallback } from "react";
-import {
-  generateSolarReport,
-  downloadPDF,
-} from "@/features/reports/utils/pdfGenerator";
+import { generateSolarReport } from "@/features/reports/utils/pdfGenerator";
 import {
   calculateFinancials,
   estimateSystemCost,
+  FINANCIAL_DEFAULTS,
 } from "@/features/financial/utils/financialCalculations";
-import {
-  generateMonthlyEstimate,
-  generate25YearProjection,
-} from "@/features/solar-analysis/utils/solarCalculations";
+import { generateMonthlyEstimate } from "@/features/solar-analysis/utils/solarCalculations";
 import { calculateGermanFeedInTariff } from "@/features/financial/utils/germanFeedInTariff";
 import { useOrganization } from "@/features/organization/hooks/useOrganization";
 import type { ReportData } from "@/features/reports/types/report";
-
-interface PanelData {
-  totalPanels: number;
-  systemSize: number;
-  panelWattage: number;
-  avgPitch: number;
-  avgAzimuth: number;
-}
-
-interface Location {
-  lat: number;
-  lng: number;
-}
+import type { PVWattsResponse } from "@/features/solar-analysis/types/pvwatts";
+import type {
+  Location,
+  PanelData,
+} from "@/features/solar-analysis/types/dashboard";
 
 interface UseSolarReportGeneratorProps {
   panelData: PanelData;
   annualProduction?: number;
   location?: Location;
-  costEstimate?: number;
-  capacityFactor?: number;
+  pvwatts?: PVWattsResponse | null;
 }
 
 /**
@@ -43,8 +29,7 @@ export function useSolarReportGenerator({
   panelData,
   annualProduction,
   location,
-  costEstimate,
-  capacityFactor,
+  pvwatts,
 }: UseSolarReportGeneratorProps) {
   const { organization } = useOrganization();
 
@@ -54,41 +39,22 @@ export function useSolarReportGenerator({
       return;
     }
 
-    const systemCost = costEstimate || estimateSystemCost(panelData.systemSize);
-    const feedInTariff = calculateGermanFeedInTariff(
-      panelData.systemSize,
-      true,
-      false,
-    );
-
     const financials = calculateFinancials({
       annualProduction,
       systemSize: panelData.systemSize,
       utilityRates: {
-        costPerKwh: 0.37,
-        feedInTariff: feedInTariff,
-        escalationRate: 0.03,
+        costPerKwh: FINANCIAL_DEFAULTS.costPerKwh,
+        feedInTariff: calculateGermanFeedInTariff(panelData.systemSize),
+        escalationRate: FINANCIAL_DEFAULTS.escalationRate,
       },
-      systemCost: {
-        totalCost: systemCost,
-        pricePerWatt: systemCost / (panelData.systemSize * 1000),
-      },
-      selfConsumptionRate: 0.3,
+      systemCost: estimateSystemCost(panelData.systemSize),
+      selfConsumptionRate: FINANCIAL_DEFAULTS.selfConsumptionRate,
     });
 
     const reportData: ReportData = {
-      customer: {
-        name: "Customer Name",
-        address: "Customer Address",
-        propertyType: "residential",
-      },
-      site: {
-        address: location
-          ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
-          : "Installation Address",
+      site: location && {
+        address: `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
         location: location,
-        roofType: "Pitched",
-        roofCondition: "good",
       },
       systemSpecs: {
         panelCount: panelData.totalPanels,
@@ -97,22 +63,20 @@ export function useSolarReportGenerator({
         annualProduction: annualProduction,
         avgPitch: panelData.avgPitch,
         avgAzimuth: panelData.avgAzimuth,
-        location: location,
       },
       energyProduction: {
-        monthlyYield: generateMonthlyEstimate(annualProduction),
+        monthlyYield:
+          pvwatts?.monthly_production ??
+          generateMonthlyEstimate(annualProduction),
         annualYield: annualProduction,
-        performanceRatio: capacityFactor || 85,
-        solarIrradiance: 1100,
+        capacityFactor: pvwatts?.capacity_factor,
+        // PVWatts reports kWh/m²/day
+        solarIrradiance: pvwatts
+          ? Math.round(pvwatts.annual_solar_radiation * 365)
+          : undefined,
         degradationRate: 0.5,
-        estimatedOutput25Years: generate25YearProjection(annualProduction, 0.5),
       },
       financials: financials,
-      electricityRate: 0.37,
-      monthlyBill: financials.avgMonthlySavings,
-      feedInTariff: feedInTariff,
-      selfConsumptionRate: 0.3,
-      systemCost: systemCost,
       monitoring: {
         monitoringSystem: "Web Portal & Mobile App",
         appAccess: true,
@@ -140,23 +104,13 @@ export function useSolarReportGenerator({
       companyEmail: organization?.company_email || undefined,
       companyPhone: organization?.company_phone || undefined,
       companyWebsite: organization?.company_website || undefined,
-      companyAddress: organization?.company_address || undefined,
       organizationPrimaryColor: organization?.primary_color || undefined,
-      organizationSecondaryColor: organization?.secondary_color || undefined,
       projectDate: new Date(),
-      proposalValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     };
 
     const doc = generateSolarReport(reportData);
-    downloadPDF(doc, `solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`);
-  }, [
-    annualProduction,
-    panelData,
-    location,
-    costEstimate,
-    capacityFactor,
-    organization,
-  ]);
+    doc.save(`solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`);
+  }, [annualProduction, panelData, location, pvwatts, organization]);
 
   return { handleGeneratePDF };
 }

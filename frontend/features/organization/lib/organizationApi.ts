@@ -7,35 +7,44 @@ import type { ProfileRow } from "@/features/auth/types/database";
 import type {
   OrganizationRow,
   InvitationRow,
-  ActivityLogRow,
   UserRole,
 } from "../types/organization";
 
-// Get user's organization
-export async function getUserOrganization(
+// One shared fetch per user; membership changes reload the page, which resets it
+let orgCache: {
+  userId: string;
+  promise: Promise<OrganizationRow | null>;
+} | null = null;
+
+async function fetchUserOrganization(
   userId: string,
 ): Promise<OrganizationRow | null> {
-  const supabase = createClient();
-
-  const { data: profile } = await supabase
+  const { data, error } = await createClient()
     .from("profiles")
-    .select("organization_id")
+    .select("organizations(*)")
     .eq("id", userId)
     .single();
 
-  if (!profile?.organization_id) return null;
-
-  const { data } = await supabase
-    .from("organizations")
-    .select("*")
-    .eq("id", profile.organization_id)
-    .single();
-
-  return data;
+  if (error) throw error;
+  return data.organizations;
 }
 
-// Create organization
-export async function createOrganization(userId: string, name: string) {
+// Get user's organization
+export function getUserOrganization(
+  userId: string,
+): Promise<OrganizationRow | null> {
+  if (orgCache?.userId !== userId) {
+    const entry = { userId, promise: fetchUserOrganization(userId) };
+    entry.promise.catch(() => {
+      if (orgCache === entry) orgCache = null;
+    });
+    orgCache = entry;
+  }
+  return orgCache.promise;
+}
+
+// Create organization (caller becomes owner, enforced server-side)
+export async function createOrganization(name: string) {
   const supabase = createClient();
 
   // Generate subdomain from organization name (lowercase, no spaces, alphanumeric only)
@@ -46,36 +55,20 @@ export async function createOrganization(userId: string, name: string) {
     .replace(/^-|-$/g, "")
     .substring(0, 63); // Max subdomain length
 
-  // Create organization
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({
-      name,
-      subdomain,
-      tier: "small",
-      max_users: 5,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("create_organization", {
+    p_name: name,
+    p_subdomain: subdomain,
+  });
 
-  if (orgError) throw orgError;
-
-  // Update user's profile to be owner of this organization
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      organization_id: org.id,
-      role: "owner",
-    })
-    .eq("id", userId);
-
-  if (profileError) throw profileError;
-
-  return org;
+  if (error) throw error;
+  return data;
 }
 
 // Update organization
-export async function updateOrganization(orgId: string, updates: any) {
+export async function updateOrganization(
+  orgId: string,
+  updates: Partial<OrganizationRow>,
+) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("organizations")
@@ -85,6 +78,7 @@ export async function updateOrganization(orgId: string, updates: any) {
     .single();
 
   if (error) throw error;
+  orgCache = null;
   return data;
 }
 
@@ -105,21 +99,20 @@ export async function getOrganizationMembers(
 // Update member role
 export async function updateMemberRole(userId: string, role: UserRole) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ role })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("set_member_role", {
+    p_member_id: userId,
+    p_role: role,
+  });
 
   if (error) throw error;
 }
 
-// Remove member
+// Remove member, or leave when userId is the current user
 export async function removeMember(userId: string) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ organization_id: null, role: "designer" })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("remove_member", {
+    p_member_id: userId,
+  });
 
   if (error) throw error;
 }
@@ -143,62 +136,35 @@ export async function getInvitations(orgId: string): Promise<InvitationRow[]> {
   return data || [];
 }
 
-// Get invitations for current user (received invitations)
-export async function getMyInvitations(): Promise<InvitationRow[]> {
+// Get pending invitations addressed to the current user's email
+export async function getMyInvitations(email: string) {
   const supabase = createClient();
+  const { data, error } = await supabase
+    .from("invitations")
+    .select("*, organizations(name)")
+    .eq("email", email)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
 
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.id) return [];
-
-    // Get user's email from profiles table instead of auth.users
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.email) return [];
-
-    const { data, error } = await supabase
-      .from("invitations")
-      .select("*, organizations(name)")
-      .eq("email", profile.email)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching my invitations:", error);
-      return []; // Return empty array instead of throwing
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error("Error in getMyInvitations:", err);
-    return []; // Return empty array on any error
+  if (error) {
+    console.error("Error fetching my invitations:", error);
+    return []; // Incoming invitations are optional; don't block the team view
   }
+
+  return data;
 }
 
-// Create invitation
+// Create invitation (invitedBy must be the current user, enforced by RLS)
 export async function createInvitation(
   orgId: string,
   email: string,
   role: UserRole,
+  invitedBy: string,
 ) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const token = crypto.randomUUID();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
-
-  console.log("Creating invitation:", { orgId, email, role, userId: user.id });
 
   const { data, error } = await supabase
     .from("invitations")
@@ -206,8 +172,8 @@ export async function createInvitation(
       organization_id: orgId,
       email,
       role,
-      invited_by: user.id,
-      token,
+      invited_by: invitedBy,
+      token: crypto.randomUUID(),
       expires_at: expiresAt.toISOString(),
     })
     .select()
@@ -231,76 +197,22 @@ export async function cancelInvitation(invitationId: string) {
   if (error) throw error;
 }
 
-// Get invitation by token
+// Get invitation by token (works before sign-in; token is the secret)
 export async function getInvitationByToken(token: string) {
   const supabase = createClient();
-  const { data } = await supabase
-    .from("invitations")
-    .select("*, organizations(name)")
-    .eq("token", token)
-    .single();
-
-  return data;
+  const { data } = await supabase.rpc("get_invitation", { p_token: token });
+  return data as {
+    email: string;
+    role: UserRole;
+    status: InvitationRow["status"];
+    expires_at: string;
+    organizations: { name: string };
+  } | null;
 }
 
-// Accept invitation
-export async function acceptInvitation(token: string, userId: string) {
+// Accept invitation (email match, expiry and member limit checked server-side)
+export async function acceptInvitation(token: string) {
   const supabase = createClient();
-
-  const { data: invitation, error: fetchError } = await supabase
-    .from("invitations")
-    .select("*")
-    .eq("token", token)
-    .single();
-
-  if (fetchError) throw fetchError;
-  if (!invitation) throw new Error("Invalid invitation");
-  if (new Date(invitation.expires_at) < new Date())
-    throw new Error("Invitation expired");
-  if (invitation.status === "accepted") throw new Error("Already accepted");
-
-  console.log("Accepting invitation:", invitation);
-
-  // Update profile
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      organization_id: invitation.organization_id,
-      role: invitation.role,
-    })
-    .eq("id", userId);
-
-  if (profileError) {
-    console.error("Error updating profile:", profileError);
-    throw profileError;
-  }
-
-  // Mark as accepted
-  const { error: inviteError } = await supabase
-    .from("invitations")
-    .update({ status: "accepted" })
-    .eq("id", invitation.id);
-
-  if (inviteError) {
-    console.error("Error updating invitation status:", inviteError);
-    throw inviteError;
-  }
-
-  console.log("Invitation accepted successfully");
-}
-
-// Get activity log
-export async function getActivityLog(
-  orgId: string,
-  limit = 50,
-): Promise<ActivityLogRow[]> {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("activity_log")
-    .select("*")
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  return data || [];
+  const { error } = await supabase.rpc("accept_invitation", { p_token: token });
+  if (error) throw error;
 }

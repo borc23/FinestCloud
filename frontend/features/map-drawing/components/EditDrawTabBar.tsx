@@ -3,8 +3,8 @@
 import styles from "./EditDrawTabBar.module.css";
 import type { DrawingMode } from "../types/drawing";
 
-export type EditTab = "edit" | "draw";
-export type DrawingSubMode = DrawingMode | "panel";
+type EditTab = "edit" | "draw";
+type DrawingSubMode = DrawingMode | "panel";
 
 interface EditDrawTabBarProps {
   activeTab: EditTab;

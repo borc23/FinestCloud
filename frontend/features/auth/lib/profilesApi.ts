@@ -1,13 +1,18 @@
-import { createClient } from "../../../shared/lib/supabase/client";
+import { createClient } from "@/shared/lib/supabase/client";
 import type { Database } from "@/features/auth/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+
+// Columns users may change on their own profile (enforced by column grants)
+type ProfileUpdate = Partial<
+  Pick<
+    Profile,
+    "display_name" | "default_latitude" | "default_longitude" | "show_tutorial"
+  >
+>;
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
+  const { data, error } = await createClient()
     .from("profiles")
     .select("*")
     .eq("id", userId)
@@ -21,74 +26,24 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data;
 }
 
+// The profile row always exists: the handle_new_user trigger creates it on sign-up
 export async function updateProfile(
   userId: string,
   updates: ProfileUpdate,
-): Promise<Profile | null> {
-  const supabase = createClient() as any;
-
-  const { data: existingProfile } = await supabase
+): Promise<Profile> {
+  const { data, error } = await createClient()
     .from("profiles")
-    .select("email")
+    .update(updates)
     .eq("id", userId)
-    .maybeSingle();
+    .select()
+    .single();
 
-  if (existingProfile) {
-    const { data, error } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", userId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating profile:", error);
-      throw error;
-    }
-
-    return data;
-  } else {
-    const { data: userData } = await supabase.auth.getUser();
-    const email = userData.user?.email;
-
-    if (!email) {
-      throw new Error("User email not found");
-    }
-
-    const insertData = {
-      id: userId,
-      email,
-      display_name: updates.display_name,
-      default_latitude: updates.default_latitude,
-      default_longitude: updates.default_longitude,
-      show_tutorial:
-        updates.show_tutorial !== undefined ? updates.show_tutorial : true,
-    };
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .insert(insertData as any)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating profile:", error);
-      throw error;
-    }
-
-    return data;
+  if (error) {
+    console.error("Error updating profile:", error);
+    throw error;
   }
-}
 
-export async function setDefaultLocation(
-  userId: string,
-  latitude: number,
-  longitude: number,
-): Promise<void> {
-  await updateProfile(userId, {
-    default_latitude: latitude,
-    default_longitude: longitude,
-  });
+  return data;
 }
 
 export async function getDefaultLocation(
@@ -108,13 +63,4 @@ export async function getDefaultLocation(
   }
 
   return null;
-}
-
-export async function setShowTutorial(
-  userId: string,
-  showTutorial: boolean,
-): Promise<void> {
-  await updateProfile(userId, {
-    show_tutorial: showTutorial,
-  });
 }

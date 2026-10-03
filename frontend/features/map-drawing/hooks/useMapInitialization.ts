@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface UseMapInitializationOptions {
   onMapReady?: (map: google.maps.Map) => void;
@@ -14,6 +14,9 @@ interface UseMapInitializationOptions {
  * - Automatic cleanup
  * - 10 second timeout for initialization
  */
+const isMapsApiLoaded = () =>
+  typeof google !== "undefined" && !!google.maps?.Map;
+
 export function useMapInitialization(
   mapRef: React.RefObject<HTMLDivElement>,
   options: UseMapInitializationOptions = {},
@@ -26,7 +29,7 @@ export function useMapInitialization(
     let timeoutId: NodeJS.Timeout | null = null;
 
     const initializeMap = () => {
-      if (mapRef.current && window.google?.maps?.Map) {
+      if (mapRef.current && isMapsApiLoaded()) {
         // Use user's default location or fall back to San Francisco
         const center = defaultCenter || { lat: 37.7749, lng: -122.4194 };
 
@@ -56,22 +59,19 @@ export function useMapInitialization(
           ],
         };
 
-        const googleMap = new window.google.maps.Map(
-          mapRef.current,
-          mapOptions,
-        );
+        const googleMap = new google.maps.Map(mapRef.current, mapOptions);
         setMap(googleMap);
         onMapReady?.(googleMap);
       }
     };
 
     // Try immediate initialization if API is already loaded
-    if (window.google?.maps?.Map) {
+    if (isMapsApiLoaded()) {
       initializeMap();
     } else {
       // Poll for API availability
       checkInterval = setInterval(() => {
-        if (window.google?.maps?.Map) {
+        if (isMapsApiLoaded()) {
           if (checkInterval) clearInterval(checkInterval);
           if (timeoutId) clearTimeout(timeoutId);
           initializeMap();

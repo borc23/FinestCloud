@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@/shared/components/ui/Icon";
 import { toast } from "sonner";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   getUserOrganization,
   getOrganizationMembers,
@@ -28,16 +29,21 @@ interface TeamManagementProps {
   userRole: UserRole;
 }
 
+const reloadPage = () => window.location.reload();
+
 export default function TeamManagement({
   userId,
   userRole,
 }: TeamManagementProps) {
+  const { user } = useAuth();
   const [organization, setOrganization] = useState<OrganizationRow | null>(
     null,
   );
   const [members, setMembers] = useState<ProfileRow[]>([]);
   const [invitations, setInvitations] = useState<InvitationRow[]>([]);
-  const [myInvitations, setMyInvitations] = useState<InvitationRow[]>([]);
+  const [myInvitations, setMyInvitations] = useState<
+    Awaited<ReturnType<typeof getMyInvitations>>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,11 +69,13 @@ export default function TeamManagement({
     setError(null);
 
     try {
-      // Always load incoming invitations for the current user
-      const myInvitationsData = await getMyInvitations();
+      // Incoming invitations are shown with or without an organization
+      const [myInvitationsData, org] = await Promise.all([
+        user?.email ? getMyInvitations(user.email) : [],
+        getUserOrganization(userId),
+      ]);
       setMyInvitations(myInvitationsData);
 
-      const org = await getUserOrganization(userId);
       if (org) {
         setOrganization(org);
         const [membersData, invitationsData] = await Promise.all([
@@ -85,93 +93,82 @@ export default function TeamManagement({
     }
   };
 
+  // Run a membership/invitation change, report the outcome, then refresh
+  const mutate = async (
+    action: () => Promise<unknown>,
+    done: string,
+    failed: string,
+    then: () => unknown = loadData,
+  ) => {
+    try {
+      await action();
+      toast.success(done);
+      await then();
+    } catch {
+      setError(failed);
+      toast.error(failed);
+    }
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organization) return;
 
     setInviting(true);
     setError(null);
-
-    try {
-      await createInvitation(organization.id, inviteEmail, inviteRole);
-
-      setInviteEmail("");
-      setInviteRole("designer");
-      setShowInviteForm(false);
-      toast.success(
-        `Invitation sent! The user will see it when they open their profile.`,
-      );
-      await loadData();
-    } catch (err: any) {
-      setError("Failed to send invitation");
-      toast.error("Failed to send invitation");
-    } finally {
-      setInviting(false);
-    }
+    await mutate(
+      () => createInvitation(organization.id, inviteEmail, inviteRole, userId),
+      "Invitation sent! The user will see it when they open their profile.",
+      "Failed to send invitation",
+      () => {
+        setInviteEmail("");
+        setInviteRole("designer");
+        setShowInviteForm(false);
+        return loadData();
+      },
+    );
+    setInviting(false);
   };
 
-  const handleCancelInvitation = async (invitationId: string) => {
-    if (!confirm("Cancel this invitation?")) return;
+  const handleCancelInvitation = (invitationId: string) =>
+    confirm("Cancel this invitation?") &&
+    mutate(
+      () => cancelInvitation(invitationId),
+      "Invitation cancelled",
+      "Failed to cancel invitation",
+    );
 
-    try {
-      await cancelInvitation(invitationId);
-      toast.success("Invitation cancelled");
-      await loadData();
-    } catch (err: any) {
-      setError("Failed to cancel invitation");
-      toast.error("Failed to cancel invitation");
-    }
-  };
+  const handleRoleChange = (memberId: string, newRole: UserRole) =>
+    mutate(
+      () => updateMemberRole(memberId, newRole),
+      "Role updated successfully",
+      "Failed to update role",
+    );
 
-  const handleRoleChange = async (memberId: string, newRole: UserRole) => {
-    try {
-      await updateMemberRole(memberId, newRole);
-      toast.success("Role updated successfully");
-      await loadData();
-    } catch (err: any) {
-      setError("Failed to update role");
-      toast.error("Failed to update role");
-    }
-  };
+  const handleRemoveMember = (memberId: string) =>
+    confirm("Remove this member from the organization?") &&
+    mutate(
+      () => removeMember(memberId),
+      "Member removed from organization",
+      "Failed to remove member",
+    );
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!confirm("Remove this member from the organization?")) return;
+  // Membership changes reload the page to update the organization context
+  const handleAcceptInvitation = (token: string) =>
+    mutate(
+      () => acceptInvitation(token),
+      "Invitation accepted! You have joined the organization.",
+      "Failed to accept invitation",
+      reloadPage,
+    );
 
-    try {
-      await removeMember(memberId);
-      toast.success("Member removed from organization");
-      await loadData();
-    } catch (err: any) {
-      setError("Failed to remove member");
-      toast.error("Failed to remove member");
-    }
-  };
-
-  const handleAcceptInvitation = async (token: string) => {
-    try {
-      await acceptInvitation(token, userId);
-      toast.success("Invitation accepted! You have joined the organization.");
-      await loadData();
-      // Reload the page to update the organization context
-      window.location.reload();
-    } catch (err: any) {
-      setError("Failed to accept invitation");
-      toast.error("Failed to accept invitation");
-    }
-  };
-
-  const handleDeclineInvitation = async (invitationId: string) => {
-    if (!confirm("Decline this invitation?")) return;
-
-    try {
-      await cancelInvitation(invitationId);
-      toast.success("Invitation declined");
-      await loadData();
-    } catch (err: any) {
-      setError("Failed to decline invitation");
-      toast.error("Failed to decline invitation");
-    }
-  };
+  const handleDeclineInvitation = (invitationId: string) =>
+    confirm("Decline this invitation?") &&
+    mutate(
+      () => cancelInvitation(invitationId),
+      "Invitation declined",
+      "Failed to decline invitation",
+    );
 
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,12 +178,11 @@ export default function TeamManagement({
     setError(null);
 
     try {
-      await createOrganization(userId, orgName);
+      await createOrganization(orgName);
       toast.success("Organization created successfully!");
       setOrgName("");
       setShowCreateForm(false);
-      // Reload the page to update the organization context
-      window.location.reload();
+      reloadPage();
     } catch (err: any) {
       console.error("Error creating organization:", err);
       setError(`Failed to create organization: ${err.message}`);
@@ -196,29 +192,73 @@ export default function TeamManagement({
     }
   };
 
-  const handleLeaveOrganization = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to leave this organization? You will need to be re-invited to join again.",
-      )
-    )
-      return;
+  const handleLeaveOrganization = () =>
+    confirm(
+      "Are you sure you want to leave this organization? You will need to be re-invited to join again.",
+    ) &&
+    mutate(
+      () => removeMember(userId),
+      "You have left the organization",
+      "Failed to leave organization",
+      reloadPage,
+    );
 
-    try {
-      await removeMember(userId);
-      toast.success("You have left the organization");
-      // Reload the page to update the organization context
-      window.location.reload();
-    } catch (err: any) {
-      setError("Failed to leave organization");
-      toast.error("Failed to leave organization");
-    }
-  };
+  const errorBanner = error && (
+    <div className={styles.error}>
+      <Icon name="warning" />
+      <span>{error}</span>
+    </div>
+  );
+
+  // Incoming invitations - shown with or without an organization
+  const incomingInvitations = myInvitations.length > 0 && (
+    <div className={styles.incomingSection}>
+      <h3>Incoming Invitations</h3>
+      <p className={styles.incomingSectionSubtitle}>
+        You have been invited to join{" "}
+        {myInvitations.length === 1 ? "an organization" : "organizations"}
+      </p>
+      <div className={styles.list}>
+        {myInvitations.map((invitation) => (
+          <div key={invitation.id} className={styles.incomingInvitationCard}>
+            <div className={styles.invitationInfo}>
+              <Icon name="building" />
+              <div>
+                <div className={styles.invitationOrgName}>
+                  {invitation.organizations?.name || "Organization"}
+                </div>
+                <div className={styles.invitationDetails}>
+                  As {invitation.role} · Expires{" "}
+                  {new Date(invitation.expires_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+            <div className={styles.incomingActions}>
+              <button
+                onClick={() => handleAcceptInvitation(invitation.token)}
+                className={styles.acceptButton}
+              >
+                <Icon name="check-circle" />
+                Accept
+              </button>
+              <button
+                onClick={() => handleDeclineInvitation(invitation.id)}
+                className={styles.declineButton}
+              >
+                <Icon name="times" />
+                Decline
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
       <div className={styles.loading}>
-        <div className={styles.spinner}></div>
+        <div className="spinner"></div>
         <p>Loading team...</p>
       </div>
     );
@@ -227,60 +267,8 @@ export default function TeamManagement({
   if (!organization) {
     return (
       <div className={styles.container}>
-        {error && (
-          <div className={styles.error}>
-            <Icon name="warning" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Incoming Invitations - Show even without organization */}
-        {myInvitations.length > 0 && (
-          <div className={styles.incomingSection}>
-            <h3>Incoming Invitations</h3>
-            <p className={styles.incomingSectionSubtitle}>
-              You have been invited to join{" "}
-              {myInvitations.length === 1 ? "an organization" : "organizations"}
-            </p>
-            <div className={styles.list}>
-              {myInvitations.map((invitation: any) => (
-                <div
-                  key={invitation.id}
-                  className={styles.incomingInvitationCard}
-                >
-                  <div className={styles.invitationInfo}>
-                    <Icon name="building" />
-                    <div>
-                      <div className={styles.invitationOrgName}>
-                        {invitation.organizations?.name || "Organization"}
-                      </div>
-                      <div className={styles.invitationDetails}>
-                        As {invitation.role} · Expires{" "}
-                        {new Date(invitation.expires_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.incomingActions}>
-                    <button
-                      onClick={() => handleAcceptInvitation(invitation.token)}
-                      className={styles.acceptButton}
-                    >
-                      <Icon name="check-circle" />
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleDeclineInvitation(invitation.id)}
-                      className={styles.declineButton}
-                    >
-                      <Icon name="times" />
-                      Decline
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {errorBanner}
+        {incomingInvitations}
 
         {/* No Organization - Create one */}
         <div className={styles.empty}>
@@ -334,60 +322,8 @@ export default function TeamManagement({
 
   return (
     <div className={styles.container}>
-      {error && (
-        <div className={styles.error}>
-          <Icon name="warning" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Incoming Invitations - Show at top if user has any */}
-      {myInvitations.length > 0 && (
-        <div className={styles.incomingSection}>
-          <h3>Incoming Invitations</h3>
-          <p className={styles.incomingSectionSubtitle}>
-            You have been invited to join{" "}
-            {myInvitations.length === 1 ? "an organization" : "organizations"}
-          </p>
-          <div className={styles.list}>
-            {myInvitations.map((invitation: any) => (
-              <div
-                key={invitation.id}
-                className={styles.incomingInvitationCard}
-              >
-                <div className={styles.invitationInfo}>
-                  <Icon name="building" />
-                  <div>
-                    <div className={styles.invitationOrgName}>
-                      {invitation.organizations?.name || "Organization"}
-                    </div>
-                    <div className={styles.invitationDetails}>
-                      As {invitation.role} · Expires{" "}
-                      {new Date(invitation.expires_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.incomingActions}>
-                  <button
-                    onClick={() => handleAcceptInvitation(invitation.token)}
-                    className={styles.acceptButton}
-                  >
-                    <Icon name="check-circle" />
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleDeclineInvitation(invitation.id)}
-                    className={styles.declineButton}
-                  >
-                    <Icon name="times" />
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {errorBanner}
+      {incomingInvitations}
 
       {/* Header */}
       <div className={styles.header}>

@@ -5,6 +5,7 @@
 
 import React from "react";
 import styles from "./FinancialCalculator.module.css";
+import panel from "@/shared/styles/panel.module.css";
 import type { FinancialResults } from "@/features/financial/types/financial";
 
 interface EnergyOffsetDisplayProps {
@@ -23,8 +24,8 @@ export default function EnergyOffsetDisplay({
   selfConsumptionRate,
 }: EnergyOffsetDisplayProps) {
   return (
-    <div className={styles.section}>
-      <h4 className={styles.sectionTitle}>Energy Offset & Usage</h4>
+    <div className={panel.section}>
+      <h4 className={panel.sectionTitle}>Energy Offset & Usage</h4>
       <div className={styles.energyOffset}>
         <div className={styles.offsetCircle}>
           <svg className={styles.offsetSvg} viewBox="0 0 200 200">

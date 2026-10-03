@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+type DashboardModal = "monthly" | "financials" | "electrical";
+
 interface UseDashboardModalsProps {
   isEditMode?: boolean;
   onMinimizeChange?: (minimized: boolean) => void;
@@ -12,24 +14,14 @@ export function useDashboardModals({
   isEditMode,
   onMinimizeChange,
 }: UseDashboardModalsProps = {}) {
-  const [showMonthlyChart, setShowMonthlyChart] = useState(false);
-  const [showFinancials, setShowFinancials] = useState(false);
-  const [showElectrical, setShowElectrical] = useState(false);
+  const [openModal, setOpenModal] = useState<DashboardModal | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
 
   // Notify parent when minimize state or modal visibility changes
   useEffect(() => {
     // Dashboard is considered "not minimized" if any modal is open
-    onMinimizeChange?.(
-      isMinimized && !showMonthlyChart && !showFinancials && !showElectrical,
-    );
-  }, [
-    isMinimized,
-    showMonthlyChart,
-    showFinancials,
-    showElectrical,
-    onMinimizeChange,
-  ]);
+    onMinimizeChange?.(isMinimized && !openModal);
+  }, [isMinimized, openModal, onMinimizeChange]);
 
   // Auto-minimize when edit/draw/select modes are active
   useEffect(() => {
@@ -38,21 +30,16 @@ export function useDashboardModals({
     }
   }, [isEditMode]);
 
-  // Hide dashboard when monthly chart or financials open
-  useEffect(() => {
-    if (showMonthlyChart || showFinancials) {
-      setIsMinimized(true);
-    }
-  }, [showMonthlyChart, showFinancials]);
-
-  return {
-    showMonthlyChart,
-    setShowMonthlyChart,
-    showFinancials,
-    setShowFinancials,
-    showElectrical,
-    setShowElectrical,
-    isMinimized,
-    setIsMinimized,
+  const open = (modal: DashboardModal) => {
+    setOpenModal(modal);
+    // Hide dashboard behind the monthly chart and financials
+    if (modal !== "electrical") setIsMinimized(true);
   };
+
+  const close = () => {
+    setOpenModal(null);
+    setIsMinimized(false);
+  };
+
+  return { openModal, open, close, isMinimized, setIsMinimized };
 }

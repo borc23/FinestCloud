@@ -23,22 +23,14 @@ export default function DashboardActions({
   return (
     <div className={styles.monthlyButtonContainer}>
       {isAuthenticated && onSaveProject && (
-        <button
-          className={styles.saveButton}
-          onClick={onSaveProject}
-          data-tutorial="save-button"
-        >
+        <button className={styles.saveButton} onClick={onSaveProject}>
           Save Project
         </button>
       )}
       <button className={styles.monthlyButton} onClick={onViewMonthly}>
         View Monthly Breakdown
       </button>
-      <button
-        className={styles.financialButton}
-        onClick={onViewFinancials}
-        data-tutorial="financial-button"
-      >
+      <button className={styles.financialButton} onClick={onViewFinancials}>
         Financial Analysis
       </button>
       <button className={styles.electricalButton} onClick={onViewElectrical}>

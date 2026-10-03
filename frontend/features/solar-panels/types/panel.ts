@@ -8,10 +8,8 @@ export interface Coordinate {
   lng: number;
 }
 
-export interface PanelCoordinate extends Coordinate {}
-
 export interface Panel {
-  coords: PanelCoordinate[];
+  coords: Coordinate[];
   lat: number;
   lng: number;
   annualSunshineKwh?: number; // Annual sunshine flux in kWh/m²/year from GeoTIFF
@@ -46,7 +44,7 @@ export interface PanelGenerationResponse {
   module: string;
 }
 
-export interface SolarPanelStats {
+interface SolarPanelStats {
   yearlyEnergyDcKwh?: number;
 }
 
@@ -60,7 +58,7 @@ export interface SolarDataSegment {
   center: Coordinate;
   solarData: {
     solarPotential?: SolarPotential;
-  };
+  } | null; // null when the Solar API has no coverage
 }
 
 export interface AngleConfirmData {
@@ -68,16 +66,6 @@ export interface AngleConfirmData {
   edgePadding: number;
   panelData?: PanelGenerationResponse;
   _requestBody?: unknown;
-}
-
-export interface RoofPolygonRequest {
-  coords: Coordinate[];
-  pitch: number;
-  azimuth: number;
-}
-
-export interface ObjectPolygonRequest {
-  coords: Coordinate[];
 }
 
 export interface PanelGenerationRequest {
@@ -99,9 +87,4 @@ export interface PanelGenerationRequest {
   max_panels?: number | null;
   edgePadding?: number;
   panelOrientation?: string;
-}
-
-export interface SystemResults {
-  systemSize: number;
-  annualProduction?: number;
 }

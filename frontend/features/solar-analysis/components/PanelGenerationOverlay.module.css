@@ -30,12 +30,7 @@
 }
 
 .spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(0, 122, 255, 0.2);
-  border-top: 3px solid rgba(0, 122, 255, 0.9);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+  --spinner-size: 48px;
 }
 
 .text {
@@ -53,14 +48,5 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }

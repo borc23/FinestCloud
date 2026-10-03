@@ -75,12 +75,6 @@
   letter-spacing: -0.02em;
 }
 
-.header h2 i {
-  color: var(--accent-primary);
-  font-size: 24px;
-  opacity: 0.9;
-}
-
 .closeButton {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -164,12 +158,6 @@
 
 .tab.active::before {
   opacity: 0;
-}
-
-.tab i {
-  font-size: 14px;
-  position: relative;
-  z-index: 1;
 }
 
 .tab span {
@@ -275,12 +263,7 @@
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.12);
-  border-top-color: var(--accent-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  --spinner-size: 40px;
 }
 
 .loading p {
@@ -320,23 +303,11 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
 }
 
-.error i {
-  color: rgba(248, 113, 113, 0.95);
-  flex-shrink: 0;
-  font-size: 16px;
-}
-
 .success {
   background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.35);
   color: rgba(187, 247, 208, 0.95);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
-}
-
-.success i {
-  color: rgba(74, 222, 128, 0.95);
-  flex-shrink: 0;
-  font-size: 16px;
 }
 
 /* Form */
@@ -430,12 +401,6 @@
   letter-spacing: -0.01em;
 }
 
-.coordsGroup {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
 .locationInputWrapper {
   position: relative;
 }
@@ -512,14 +477,6 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.locationSuggestion i {
-  color: rgba(255, 128, 0, 0.9);
-  font-size: 14px;
-  width: 16px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
 .locationSuggestion span {
   flex: 1;
   overflow: hidden;
@@ -560,10 +517,6 @@
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
-}
-
-.locationButton i {
-  font-size: 13px;
 }
 
 .actions {
@@ -693,13 +646,6 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
-.empty i {
-  font-size: 56px;
-  color: rgba(255, 255, 255, 0.3);
-  margin-bottom: 20px;
-  opacity: 0.8;
-}
-
 .empty h3 {
   font-size: 18px;
   font-weight: 600;
@@ -775,10 +721,6 @@
   .form,
   .projectsTab {
     padding: 20px;
-  }
-
-  .coordsGroup {
-    grid-template-columns: 1fr;
   }
 
   .actions {

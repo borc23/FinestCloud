@@ -58,7 +58,15 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       projects: {
         Row: {
@@ -142,7 +150,15 @@ export interface Database {
           shade_stats?: Json | null;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "roof_analysis_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       object_polygons: {
         Row: {
@@ -163,7 +179,15 @@ export interface Database {
           polygon_coords?: Json;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "object_polygons_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       panel_configurations: {
         Row: {
@@ -190,7 +214,15 @@ export interface Database {
           module_specs?: Json;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "panel_configurations_roof_analysis_id_fkey";
+            columns: ["roof_analysis_id"];
+            isOneToOne: false;
+            referencedRelation: "roof_analysis";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       organizations: {
         Row: OrganizationRow;
@@ -231,27 +263,25 @@ export interface Database {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      create_organization: {
+        Args: { p_name: string; p_subdomain: string };
+        Returns: OrganizationRow;
+      };
+      get_invitation: { Args: { p_token: string }; Returns: Json };
+      accept_invitation: { Args: { p_token: string }; Returns: undefined };
+      set_member_role: {
+        Args: { p_member_id: string; p_role: string };
+        Returns: undefined;
+      };
+      remove_member: { Args: { p_member_id: string }; Returns: undefined };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };
 }
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-
-// Typed helper interfaces for application use
-export interface Profile {
-  id: string;
-  email: string;
-  displayName: string | null;
-  defaultLatitude: number | null;
-  defaultLongitude: number | null;
-  showTutorial: boolean;
-  organizationId: string | null;
-  role: "owner" | "admin" | "designer" | "viewer";
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface Project {
   id: string;

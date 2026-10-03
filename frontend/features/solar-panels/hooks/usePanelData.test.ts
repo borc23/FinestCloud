@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { usePanelData } from "./usePanelData";
-import type { PanelGenerationData } from "@/features/solar-analysis/types/result_dashboard";
+import type { PanelGenerationData } from "../../solar-analysis/types/dashboard";
 
 describe("usePanelData", () => {
   // Test 1: Null/Empty inputs

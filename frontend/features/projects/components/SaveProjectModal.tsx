@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { createProject } from "@/features/projects/lib/projectsApi";
 import type { CreateProjectData } from "@/features/auth/types/database";
+import { Icon } from "@/shared/components/ui/Icon";
 import styles from "./ProjectModal.module.css";
 
 interface SaveProjectModalProps {
@@ -73,7 +74,7 @@ export default function SaveProjectModal({
         <div className={styles.header}>
           <h2>Save Project</h2>
           <button className={styles.closeButton} onClick={onClose}>
-            <i className="fas fa-times"></i>
+            <Icon name="times" />
           </button>
         </div>
 
@@ -82,14 +83,14 @@ export default function SaveProjectModal({
 
           <div className={styles.projectSummary}>
             <div className={styles.summaryItem}>
-              <i className="fas fa-home"></i>
+              <Icon name="home" />
               <span>
                 {projectData.roofs.length} roof
                 {projectData.roofs.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div className={styles.summaryItem}>
-              <i className="fas fa-solar-panel"></i>
+              <Icon name="solar-panel" />
               <span>
                 {projectData.roofs.reduce(
                   (sum, roof) => sum + roof.panelCount,
@@ -100,7 +101,7 @@ export default function SaveProjectModal({
             </div>
             {projectData.objects && projectData.objects.length > 0 && (
               <div className={styles.summaryItem}>
-                <i className="fas fa-circle-exclamation"></i>
+                <Icon name="circle-exclamation" />
                 <span>
                   {projectData.objects.length} obstacle
                   {projectData.objects.length !== 1 ? "s" : ""}

@@ -1,267 +1,208 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { StyleConfig } from "../../../shared/utils/styleConfig";
-import { usePanelGridDrag, handleNonPanelDrag } from "./usePanelGridDrag";
-
-interface ExtendedPolygon extends google.maps.Polygon {
-  isPanelElement?: boolean;
-}
+import {
+  getGrid,
+  getPolygonGridId,
+  snapPolygonToGrid,
+} from "@/features/solar-panels/utils/gridSnapping";
 
 interface PolygonManagerProps {
-  map: google.maps.Map | null;
+  roofPolygons: google.maps.Polygon[];
+  objectPolygons: google.maps.Polygon[];
+  panels: google.maps.Polygon[];
   isEditMode: boolean;
+  isDrawing: boolean;
   selectedPolygons: Set<google.maps.Polygon>;
-  isCtrlPressed: boolean;
-  isDrawing?: boolean;
-  onSelectPolygon: (polygon: google.maps.Polygon, ctrlKey: boolean) => void;
-  removeClickListener: (polygon: google.maps.Polygon) => void;
+  onSelectPolygon: (polygon: google.maps.Polygon) => void;
 }
 
-export function usePolygonManager({
-  map,
-  isEditMode,
-  selectedPolygons,
-  isCtrlPressed,
-  isDrawing = false,
-  onSelectPolygon,
-  removeClickListener: removePolygonClickListener,
-}: PolygonManagerProps) {
-  const polygonListenersRef = useRef<
-    Map<google.maps.Polygon, google.maps.MapsEventListener[]>
-  >(new Map());
-  const selectedPolygonsRef = useRef(selectedPolygons);
-  const isCtrlPressedRef = useRef(isCtrlPressed);
+type Selection = Set<google.maps.Polygon>;
 
-  // Keep refs in sync without triggering re-renders
-  useEffect(() => {
-    selectedPolygonsRef.current = selectedPolygons;
-  }, [selectedPolygons]);
+const isPanel = (polygon: google.maps.Polygon) =>
+  (polygon as google.maps.Polygon & { isPanelElement?: boolean })
+    .isPanelElement === true;
 
-  useEffect(() => {
-    isCtrlPressedRef.current = isCtrlPressed;
-  }, [isCtrlPressed]);
+const toLiteral = (ll: google.maps.LatLng) => ({
+  lat: ll.lat(),
+  lng: ll.lng(),
+});
 
-  // Use the extracted panel grid drag hook for clean separation of concerns
-  const { handleDragStart, handleDrag, handleDragEnd } = usePanelGridDrag({
-    selectedPolygonsRef,
+const offsetPath = (path: google.maps.LatLng[], dLat: number, dLng: number) =>
+  path.map((ll) => new google.maps.LatLng(ll.lat() + dLat, ll.lng() + dLng));
+
+// Path of every selected polygon at drag start
+const dragStartPaths = new WeakMap<google.maps.Polygon, google.maps.LatLng[]>();
+
+/** Record start paths; panels that are off their grid are snapped first */
+function handleDragStart(selected: Selection) {
+  selected.forEach((p) => {
+    let path = p.getPath().getArray();
+    const gridId = getPolygonGridId(p);
+    const grid = gridId === undefined ? null : getGrid(gridId);
+    if (isPanel(p) && grid) {
+      const { x, y } = grid.worldToGrid(toLiteral(path[0]));
+      if (
+        Math.abs(x - Math.round(x)) > 0.01 ||
+        Math.abs(y - Math.round(y)) > 0.01
+      ) {
+        path = snapPolygonToGrid(path, p);
+        p.setPath(path);
+      }
+    }
+    dragStartPaths.set(p, path.slice());
   });
+}
 
-  const updatePolygonState = useCallback(
-    (polygon: google.maps.Polygon, isRoof: boolean) => {
-      const isSelected = selectedPolygonsRef.current.has(polygon);
-      const extendedPolygon = polygon as ExtendedPolygon;
-      const isPanelElement = extendedPolygon.isPanelElement;
+/**
+ * Panels snap to their grid and move the other selected panels by the same
+ * number of grid steps; other polygons move the other selected non-panels by
+ * the same lat/lng delta.
+ */
+function handleDrag(polygon: google.maps.Polygon, selected: Selection) {
+  let current = polygon.getPath().getArray();
+  if (isPanel(polygon)) {
+    const snapped = snapPolygonToGrid(current, polygon);
+    if (
+      current[0].lat() !== snapped[0].lat() ||
+      current[0].lng() !== snapped[0].lng()
+    ) {
+      polygon.setPath(snapped);
+    }
+    current = snapped;
+  }
 
-      if (isPanelElement) {
-        const state = isSelected ? "selected" : "default";
-        const options = StyleConfig.getPanelOptions(state);
+  const start = dragStartPaths.get(polygon);
+  if (selected.size <= 1 || !start) return;
 
-        polygon.setOptions({
-          ...options,
-          clickable: isEditMode && !isDrawing,
-          draggable: isSelected && isEditMode && !isDrawing,
-          editable: false,
-        });
-      } else {
-        const options = StyleConfig.getOptionsForType(isRoof, isSelected);
-
-        polygon.setOptions({
-          ...options,
-          editable: isSelected && isEditMode && !isDrawing,
-          draggable: isSelected && isEditMode && !isDrawing,
-          clickable: isEditMode && !isDrawing,
-        });
+  if (!isPanel(polygon)) {
+    const dLat = current[0].lat() - start[0].lat();
+    const dLng = current[0].lng() - start[0].lng();
+    selected.forEach((p) => {
+      const pStart = dragStartPaths.get(p);
+      if (p !== polygon && !isPanel(p) && pStart) {
+        p.setPath(offsetPath(pStart, dLat, dLng));
       }
-    },
-    [isEditMode, isDrawing],
-  );
-
-  const removePolygonListeners = useCallback((polygon: google.maps.Polygon) => {
-    // Remove listeners added by this manager
-    const listeners = polygonListenersRef.current.get(polygon);
-    if (!listeners) return;
-
-    listeners.forEach((listener) => {
-      google.maps.event.removeListener(listener);
     });
-    polygonListenersRef.current.delete(polygon);
-  }, []);
+    return;
+  }
 
-  const addPolygonListeners = useCallback(
-    (polygon: google.maps.Polygon, isRoof: boolean) => {
-      if (!isEditMode || isDrawing) return;
-
-      const listeners: google.maps.MapsEventListener[] = [];
-
-      // Map change listener - cleanup when polygon is removed from map
-      listeners.push(
-        polygon.addListener("map_changed", () => {
-          if (polygon.getMap() === null) {
-            removePolygonListeners(polygon);
-          }
-        }),
-      );
-
-      // Click listener - prevent event propagation to stop map from moving
-      listeners.push(
-        polygon.addListener("click", (e: google.maps.MapMouseEvent) => {
-          // Only handle click if polygon is clickable
-          if (!polygon.get("clickable")) {
-            return;
-          }
-          e.stop?.();
-          // Use ref to get current value instead of closure capture
-          onSelectPolygon(polygon, isCtrlPressedRef.current);
-        }),
-      );
-
-      // Multi-polygon drag support with grid snapping
-      // Extracted to usePanelGridDrag hook for better maintainability
-      const dragStartPositions = new WeakMap<
-        google.maps.Polygon,
-        google.maps.LatLng[]
-      >();
-
-      // Dragstart: Store initial positions and snap panels to grid
-      listeners.push(
-        polygon.addListener("dragstart", () => {
-          // Use extracted hook for panel logic
-          handleDragStart();
-
-          // Also store positions for non-panel polygons
-          selectedPolygonsRef.current.forEach((p) => {
-            if (!(p as ExtendedPolygon).isPanelElement) {
-              const path = p.getPath().getArray();
-              dragStartPositions.set(
-                p,
-                path.map((ll) => new google.maps.LatLng(ll.lat(), ll.lng())),
-              );
-            }
-          });
-        }),
-      );
-
-      // Drag: Apply grid snapping for panels, simple translation for non-panels
-      listeners.push(
-        polygon.addListener("drag", () => {
-          const extendedPolygon = polygon as ExtendedPolygon;
-
-          if (extendedPolygon.isPanelElement) {
-            // Use extracted hook for complex panel grid snapping logic
-            handleDrag(polygon);
-          } else {
-            // Simple lat/lng delta for non-panel polygons
-            handleNonPanelDrag(
-              polygon,
-              selectedPolygonsRef,
-              dragStartPositions,
-            );
-          }
-        }),
-      );
-
-      // Dragend: Cleanup (snapping already handled during drag)
-      listeners.push(
-        polygon.addListener("dragend", () => {
-          handleDragEnd();
-        }),
-      );
-
-      // Right-click for vertex removal
-      listeners.push(
-        polygon.addListener("rightclick", (e: any) => {
-          if (
-            selectedPolygonsRef.current.has(polygon) &&
-            e.vertex !== undefined
-          ) {
-            const path = polygon.getPath();
-            if (path.getLength() > 3) {
-              path.removeAt(e.vertex);
-            } else {
-              polygon.setMap(null);
-            }
-          }
-        }),
-      );
-
-      // Double-click for vertex addition
-      listeners.push(
-        polygon.addListener("dblclick", (e: any) => {
-          e.stop?.();
-          if (
-            selectedPolygonsRef.current.has(polygon) &&
-            e.vertex !== undefined
-          ) {
-            const path = polygon.getPath();
-            path.insertAt(e.vertex + 1, e.latLng);
-          }
-        }),
-      );
-
-      // Panel hover effects
-      const extendedPolygon = polygon as ExtendedPolygon;
-      if (extendedPolygon.isPanelElement) {
-        listeners.push(
-          polygon.addListener("mouseover", () => {
-            if (!selectedPolygonsRef.current.has(polygon)) {
-              const options = StyleConfig.getPanelOptions("hover");
-              polygon.setOptions(options);
-            }
-          }),
-        );
-
-        listeners.push(
-          polygon.addListener("mouseout", () => {
-            if (!selectedPolygonsRef.current.has(polygon)) {
-              const options = StyleConfig.getPanelOptions("default");
-              polygon.setOptions(options);
-            }
-          }),
-        );
-      }
-
-      polygonListenersRef.current.set(polygon, listeners);
-    },
-    [isEditMode, isDrawing, onSelectPolygon, removePolygonListeners],
+  const gridId = getPolygonGridId(polygon);
+  const grid = gridId === undefined ? null : getGrid(gridId);
+  if (!grid) return;
+  const delta = grid.calculateGridDelta(
+    toLiteral(start[0]),
+    toLiteral(current[0]),
   );
 
-  const updateAllPolygons = useCallback(
-    (polygons: google.maps.Polygon[], isRoof: boolean) => {
-      polygons.forEach((polygon) => {
-        removePolygonListeners(polygon);
-        updatePolygonState(polygon, isRoof);
-        if (isEditMode && !isDrawing) {
-          // Remove the click listener from usePolygons (keeps hover effects)
-          removePolygonClickListener(polygon);
-          // Add edit mode listeners
-          addPolygonListeners(polygon, isRoof);
+  selected.forEach((p) => {
+    const pGridId = getPolygonGridId(p);
+    const pGrid = pGridId === undefined ? null : getGrid(pGridId);
+    const pStart = dragStartPaths.get(p);
+    if (p === polygon || !pGrid || !pStart) return;
+
+    const startPos = toLiteral(pStart[0]);
+    const newPos = pGrid.applyGridDelta(startPos, delta);
+    p.setPath(
+      offsetPath(pStart, newPos.lat - startPos.lat, newPos.lng - startPos.lng),
+    );
+  });
+}
+
+/**
+ * Edit-mode behavior for roofs, objects and panels: selection styling,
+ * click-to-select, multi-drag with grid snapping, vertex editing and panel
+ * hover. Listeners are attached once per polygon and only act in edit mode.
+ */
+export function usePolygonManager({
+  roofPolygons,
+  objectPolygons,
+  panels,
+  isEditMode,
+  isDrawing,
+  selectedPolygons,
+  onSelectPolygon,
+}: PolygonManagerProps) {
+  const enabled = isEditMode && !isDrawing;
+  const stateRef = useRef({
+    enabled,
+    selectedPolygons,
+    roofPolygons,
+    objectPolygons,
+  });
+  stateRef.current = {
+    enabled,
+    selectedPolygons,
+    roofPolygons,
+    objectPolygons,
+  };
+  const attachedRef = useRef(new WeakSet<google.maps.Polygon>());
+
+  useEffect(() => {
+    [...roofPolygons, ...objectPolygons, ...panels].forEach((polygon) => {
+      if (attachedRef.current.has(polygon)) return;
+      attachedRef.current.add(polygon);
+
+      const on = (event: string, handler: (e: any) => void) =>
+        polygon.addListener(event, (e: any) => {
+          if (stateRef.current.enabled) handler(e);
+        });
+      const selected = () => stateRef.current.selectedPolygons;
+
+      on("click", (e: google.maps.MapMouseEvent) => {
+        e.stop?.(); // keep the map from handling the click
+        onSelectPolygon(polygon);
+      });
+      on("dragstart", () => handleDragStart(selected()));
+      on("drag", () => handleDrag(polygon, selected()));
+
+      // Right-click a vertex to remove it (removes the polygon below 3 vertices)
+      on("rightclick", (e) => {
+        if (!selected().has(polygon) || e.vertex === undefined) return;
+        const path = polygon.getPath();
+        if (path.getLength() > 3) path.removeAt(e.vertex);
+        else polygon.setMap(null);
+      });
+
+      // Double-click a vertex to insert one after it
+      on("dblclick", (e) => {
+        e.stop?.();
+        if (selected().has(polygon) && e.vertex !== undefined) {
+          polygon.getPath().insertAt(e.vertex + 1, e.latLng);
         }
       });
-    },
-    [
-      isEditMode,
-      isDrawing,
-      addPolygonListeners,
-      removePolygonListeners,
-      updatePolygonState,
-      removePolygonClickListener,
-    ],
-  );
 
-  // Cleanup on unmount
+      if (isPanel(polygon)) {
+        const hover = (state: "hover" | "default") => () => {
+          if (!selected().has(polygon)) {
+            polygon.setOptions(StyleConfig.getPanelOptions(state));
+          }
+        };
+        on("mouseover", hover("hover"));
+        on("mouseout", hover("default"));
+      }
+    });
+  }, [roofPolygons, objectPolygons, panels, onSelectPolygon]);
+
+  // Apply selection/edit styling. Roofs and objects are read from the ref so
+  // newly rendered ones keep their initial (hoverable) style until the next
+  // mode or selection change.
   useEffect(() => {
-    return () => {
-      polygonListenersRef.current.forEach((listeners) => {
-        listeners.forEach((listener) => {
-          google.maps.event.removeListener(listener);
-        });
+    const { roofPolygons, objectPolygons } = stateRef.current;
+    const style = (polygon: google.maps.Polygon, isRoof: boolean) => {
+      const isSelected = selectedPolygons.has(polygon);
+      const base = isPanel(polygon)
+        ? StyleConfig.getPanelOptions(isSelected ? "selected" : "default")
+        : {
+            ...StyleConfig.getOptionsForType(isRoof, isSelected),
+            editable: isSelected && enabled,
+          };
+      polygon.setOptions({
+        ...base,
+        clickable: enabled,
+        draggable: isSelected && enabled,
       });
-      polygonListenersRef.current.clear();
     };
-  }, []);
-
-  return {
-    updateAllPolygons,
-    addPolygonListeners,
-    removePolygonListeners,
-  };
+    roofPolygons.forEach((p) => style(p, true));
+    [...objectPolygons, ...panels].forEach((p) => style(p, false));
+  }, [enabled, selectedPolygons, panels]);
 }

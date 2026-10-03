@@ -15,11 +15,6 @@
   transition: height var(--transition-slow);
 }
 
-.toolStrip.expanded {
-  height: 62px;
-  padding: 4px;
-}
-
 /* Profile Button - Static */
 .profileButton {
   position: relative;
@@ -278,13 +273,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 122px;
+  flex: 1;
   height: 36px;
   cursor: pointer;
-}
-
-.toolStrip[data-has-generate="true"] .iconWrapper {
-  width: 91.5px;
 }
 
 .iconWrapper:active .tool {
@@ -314,31 +305,16 @@
   padding: 0;
 }
 
-.tool.inactive {
-  opacity: 0.3;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.tabButton:hover .tool,
 .searchButton:hover .tool,
 .iconWrapper:hover .tool {
   color: rgba(255, 255, 255, 1);
 }
 
-.toolLabel {
-  font-size: 10px;
-  font-weight: var(--font-semibold);
-  letter-spacing: -0.1px;
-  text-align: center;
-  line-height: 12px;
-  color: inherit;
-}
-
-/* Frosted Overlay - Only inside middle strip */
+/* Frosted Overlay - Only inside middle strip; --tool-count/--tool-index set inline */
 .frostedOverlay {
   position: absolute;
-  width: 122px;
+  width: calc(100% / var(--tool-count));
+  transform: translateX(calc(100% * var(--tool-index)));
   height: 36px;
   border-radius: var(--radius-full);
   background: rgba(120, 120, 128, 0.32);
@@ -353,45 +329,7 @@
   will-change: transform;
 }
 
-.toolStrip[data-has-generate="true"] .frostedOverlay {
-  width: 91.5px;
-}
-
-.toolStrip.expanded .frostedOverlay {
-  height: 54px;
-  top: -9px;
-}
-
-.frostedOverlay[data-tool-index="0"] {
-  transform: translateX(0);
-}
-
-.frostedOverlay[data-tool-index="1"] {
-  transform: translateX(122px);
-}
-
-.toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="1"] {
-  transform: translateX(91.5px);
-}
-
-.frostedOverlay[data-tool-index="2"] {
-  transform: translateX(244px);
-}
-
-.toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="2"] {
-  transform: translateX(183px);
-}
-
-.frostedOverlay[data-tool-index="3"] {
-  transform: translateX(366px);
-}
-
-.toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="3"] {
-  transform: translateX(274.5px);
-}
-
 @media (max-width: 500px) {
-  .tabButton,
   .searchButton {
     width: clamp(40px, 11vw, 52px);
   }
@@ -402,50 +340,8 @@
   }
 
   .iconWrapper {
-    flex: 1;
-    width: auto;
     padding: calc(var(--tool-gap) / 1.5);
     margin: calc(-1 * var(--tool-gap) / 1.5);
-  }
-
-  .toolStrip[data-has-generate="true"] .iconWrapper {
-    width: auto;
-  }
-
-  .frostedOverlay {
-    width: calc(100% / 3);
-  }
-
-  .frostedOverlay[data-tool-index="0"] {
-    transform: translateX(0);
-  }
-
-  .frostedOverlay[data-tool-index="1"] {
-    transform: translateX(100%);
-  }
-
-  .frostedOverlay[data-tool-index="2"] {
-    transform: translateX(200%);
-  }
-
-  .toolStrip[data-has-generate="true"] .frostedOverlay {
-    width: 25%;
-  }
-
-  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="0"] {
-    transform: translateX(0);
-  }
-
-  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="1"] {
-    transform: translateX(100%);
-  }
-
-  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="2"] {
-    transform: translateX(200%);
-  }
-
-  .toolStrip[data-has-generate="true"] .frostedOverlay[data-tool-index="3"] {
-    transform: translateX(300%);
   }
 }
 

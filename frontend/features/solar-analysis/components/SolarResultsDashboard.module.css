@@ -33,19 +33,6 @@
     transform: none;
   }
 
-  .summary {
-    padding: 10px 12px;
-    gap: 8px;
-  }
-
-  .metric {
-    font-size: 13px;
-  }
-
-  .separator {
-    font-size: 13px;
-  }
-
   .details {
     padding: 0;
   }
