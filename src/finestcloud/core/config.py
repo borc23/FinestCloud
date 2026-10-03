@@ -37,6 +37,10 @@ class Settings(BaseSettings):
         ...,
         description="NREL API key for PVWatts (Get free key at https://developer.nrel.gov/signup/)",
     )
+    hugging_face_token: SecretStr | None = Field(
+        default=None, description="Token for the private model repo on HF Hub"
+    )
+    force_model_download: bool = Field(default=False)
 
     # ML Model Configuration
     enable_gpu: bool = Field(default=True, description="Enable GPU acceleration")

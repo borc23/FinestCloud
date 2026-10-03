@@ -1,13 +1,10 @@
 import math
 
-import cv2
 import numpy as np
 
-from finestcloud.dataclasses.config import PanelConfig, RoofData
 from finestcloud.utils.gps_utils import GPSCoordinateSystem
 
 from .genetic_algorithm import PanelGeneticOptimizer
-from .string_calculator import StringCalculator
 
 
 class PanelService:
@@ -26,7 +23,6 @@ class PanelService:
         self.edge_padding_cm = edge_padding_cm
         self.spacing_cm = spacing_cm
         self.panel_orientation = panel_orientation
-        self.config = PanelConfig()
 
         # Always use panel_specs from frontend
         self.module_dict = {
@@ -44,16 +40,10 @@ class PanelService:
         self.all_panels = []
         self.max_panels = 0
         self.genetic_optimizer = PanelGeneticOptimizer()
-        self.string_calculator = StringCalculator()
 
         center_lat = (bounds["north"] + bounds["south"]) / 2
         center_lng = (bounds["east"] + bounds["west"]) / 2
         self.gps_system = GPSCoordinateSystem(center_lat, center_lng)
-
-        cv2.setUseOptimized(True)
-        cv2.setNumThreads(cv2.getNumberOfCPUs())
-
-        self._mask_cache = {}
 
     def generate_panels(
         self,
@@ -68,14 +58,11 @@ class PanelService:
         ]
         total_max_panels = sum(roof["panel_count"] for roof in all_roof_panels)
 
-        electrical_system = None
-
         self.all_panels, self.max_panels = all_roof_panels, total_max_panels
         return {
             "roofs": all_roof_panels,
             "max_panels": total_max_panels,
             "module": self.module_dict["id"],
-            "electrical_system": electrical_system,
         }
 
     def _generate_roof_panels(
@@ -86,13 +73,15 @@ class PanelService:
         tune_params: bool = False,
     ) -> dict:
         """Generate panels for a single roof."""
-        roof_data = RoofData(
-            coords=roof["coords"],
-            bounds=self.bounds,
-            pitch=roof.get("pitch", 0),
-            azimuth=roof.get("azimuth", 180),
+        # Keys may be present with None (optional request fields), so .get() defaults
+        # don't apply; azimuth 0 (north) is valid, hence the explicit None check
+        pitch = roof.get("pitch") or 0
+        azimuth = roof.get("azimuth")
+        azimuth = 180 if azimuth is None else azimuth
+
+        roof_panels = self._generate_panels_on_roof(
+            roof["coords"], pitch, objects, tune_params
         )
-        roof_panels = self._generate_panels_on_roof(roof_data, objects, tune_params)
         formatted_panels = [
             {"coords": panel, "roof_id": roof_id, "panel_id": i}
             for i, panel in enumerate(roof_panels)
@@ -104,8 +93,8 @@ class PanelService:
             "module_type": self.module_dict["id"],
             "module_specs": self.module_dict,
             "coords": roof["coords"],
-            "pitch": roof.get("pitch", 0),
-            "azimuth": roof.get("azimuth", 180),
+            "pitch": pitch,
+            "azimuth": azimuth,
         }
 
     def get_visible_panels(self, panel_count: int) -> dict:
@@ -138,115 +127,52 @@ class PanelService:
             )
             remaining_count -= panels_to_show
 
-        electrical_system = None
-        if panel_count > 0:
-            electrical_system = self.string_calculator.calculate_system_design(
-                panel_count, self.module_dict["id"]
-            )
-
         return {
             "roofs": visible_roofs,
             "total_panels": panel_count,
             "total_power_w": panel_count * module_power,
-            "electrical_system": electrical_system.__dict__
-            if electrical_system
-            else None,
         }
 
     def _generate_panels_on_roof(
         self,
-        roof_data: RoofData,
-        objects: dict,
+        coords: list[dict[str, float]],
+        pitch: float,
+        objects: list[dict],
         tune_params: bool = False,
     ) -> list[list[dict[str, float]]]:
-        """Generate panels on a roof in cm coordinates."""
-        roof_coords_cm = self.gps_system.gps_array_to_cm(roof_data.coords)
+        """Generate panels on a roof, optimizing in cm and returning GPS coords."""
+        roof_coords_cm = self.gps_system.gps_array_to_cm(coords)
 
         # Calculate dimensions for both orientations with pitch adjustment
         base_width = self.module_dict["width_cm"]
         base_height = self.module_dict["height_cm"]
 
-        if roof_data.pitch is not None and roof_data.pitch > 0:
+        if pitch > 0:
             vertical_dims, horizontal_dims = self._resize_dimensions_due_pitch(
-                base_width, base_height, roof_data.pitch
+                base_width, base_height, pitch
             )
         else:
             vertical_dims = (base_width, base_height)
             horizontal_dims = (base_width, base_height)
 
-        panels_cm = self._generate_panel_grid_cm(
+        panels_cm = self.genetic_optimizer.optimize_panel_placement(
             roof_polygon=roof_coords_cm,
             objects=objects,
             vertical_dims=vertical_dims,
             horizontal_dims=horizontal_dims,
-            spacing=self.spacing_cm,
-            padding=self.edge_padding_cm,
-            tune_params=tune_params,
-        )
-
-        return self._cm_to_gps(panels_cm)
-
-    def _cm_to_gps(
-        self, panel_coords_cm: list[np.ndarray]
-    ) -> list[list[dict[str, float]]]:
-        """Convert cm coordinates back to GPS coordinates."""
-        result = []
-        for panel in panel_coords_cm:
-            if len(panel) == 0:
-                result.append([])
-                continue
-
-            panel_gps = self.gps_system.cm_array_to_gps(panel)
-            result.append(panel_gps)
-
-        return result
-
-    def _generate_panel_grid_cm(
-        self,
-        roof_polygon: np.ndarray,
-        objects: list[dict],
-        vertical_dims: tuple[float, float],
-        horizontal_dims: tuple[float, float],
-        spacing: float,
-        padding: float,
-        tune_params: bool = True,
-    ) -> list[np.ndarray]:
-        """
-        Generate panel grid in cm coordinates with support for both orientations.
-        All dimensions are in cm.
-
-        Args:
-            roof_polygon: Roof polygon in cm coordinates (N x 2)
-            objects: List of obstacle objects in GPS coordinates
-            vertical_dims: (width, height) for vertical orientation with pitch adjustment
-            horizontal_dims: (width, height) for horizontal orientation with pitch adjustment
-            spacing: Base spacing between panels in cm
-            padding: Edge padding in cm
-            tune_params: Whether to use genetic algorithm optimization
-
-        Returns:
-            List of panels, each panel is a (4 x 2) array with corners in cm
-        """
-
-        angle = self._find_longest_edge(roof_polygon)
-
-        panels = self.genetic_optimizer.optimize_panel_placement(
-            roof_polygon=roof_polygon,
-            objects=objects,
-            vertical_dims=vertical_dims,
-            horizontal_dims=horizontal_dims,
-            spacing_cm=spacing,
-            angle=angle,
-            padding_cm=padding,
+            spacing_cm=self.spacing_cm,
+            angle=self._find_longest_edge(roof_coords_cm),
+            padding_cm=self.edge_padding_cm,
             gps_system=self.gps_system,
             tune_parameters=tune_params,
             panel_orientation=self.panel_orientation,
         )
 
-        return panels
+        return [self.gps_system.cm_array_to_gps(panel) for panel in panels_cm]
 
-    def _find_longest_edge(self, points: np.ndarray) -> tuple[dict, float]:
-        """Find the longest edge and its angle from horizontal."""
+    @staticmethod
+    def _find_longest_edge(points: np.ndarray) -> float:
+        """Return the angle (radians) of the polygon's longest edge from horizontal."""
         rolled = np.roll(points, -1, axis=0)
         distances = np.linalg.norm(rolled - points, axis=1)
         max_idx = np.argmax(distances)

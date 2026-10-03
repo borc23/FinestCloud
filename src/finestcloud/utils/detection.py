@@ -1,20 +1,18 @@
-from finestcloud.services.service_factory import ServiceFactory
+from finestcloud.services.detection_service import get_detection_service
+from finestcloud.services.image_service import ImageService
 
 
 def process_detection(image_data, is_url=True, bounds=None, conf=0.5, epsilon=0.0075):
     """Common detection logic for both detection routes"""
-    image_service = ServiceFactory.get_image_service()
-    detection_service = ServiceFactory.get_detection_service()
-
     image, shape, transform = (
-        image_service.load_image_from_url(image_data)
+        ImageService.load_image_from_url(image_data)
         if is_url
-        else image_service.load_image_from_upload(image_data)
+        else ImageService.load_image_from_upload(image_data)
     )
 
     return (
-        detection_service.detect_roofs(
-            image, bounds or None, conf=conf, epsilon=epsilon, transform=transform
+        get_detection_service().detect_roofs(
+            image, bounds, conf=conf, epsilon=epsilon, transform=transform
         ),
         shape,
     )

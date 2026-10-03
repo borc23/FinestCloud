@@ -5,17 +5,18 @@ A modern, high-performance API for detecting and positioning solar panels on roo
 """
 
 import logging
-import os
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 
 from finestcloud.api.routes import detection, panels, pvwatts, utilities
 from finestcloud.core.config import get_settings
-from finestcloud.utils.model_loader import initialize_models
+from finestcloud.services.detection_service import get_detection_service
+from finestcloud.utils.exceptions import SessionDataError
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -23,15 +24,13 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan event handler."""
     # Startup
     logger.info("Starting FastAPI Solar Panel API...")
-    initialize_models()
+    get_detection_service()  # Load YOLO now so the first request isn't slow
     logger.info("Models initialized successfully")
 
     yield
@@ -77,38 +76,33 @@ def create_app() -> FastAPI:
     app.include_router(pvwatts.router, prefix="/api/pvwatts", tags=["pvwatts"])
     app.include_router(utilities.router, prefix="/api", tags=["utilities"])
 
+    @app.exception_handler(SessionDataError)
+    async def session_data_error(_: Request, exc: SessionDataError):
+        return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    # Starlette re-raises after this, so uvicorn still logs the traceback;
+    # the client only gets a generic message, never internals
+    @app.exception_handler(Exception)
+    async def unhandled_error(_: Request, __: Exception):
+        return JSONResponse(
+            status_code=500, content={"detail": "Internal server error"}
+        )
+
     # Add a simple health check endpoint
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
         return {"status": "healthy", "version": "2.0.0"}
 
-    # Serve static files and templates (if they exist)
-    if os.path.exists(os.path.join(_PACKAGE_DIR, "templates")) and os.path.exists(
-        os.path.join(_PACKAGE_DIR, "static")
-    ):
-
-        @app.get("/")
-        async def root():
-            """API root endpoint."""
-            return {
-                "message": "Solar Panel Detection API",
-                "version": "2.0.0",
-                "docs": "/api/docs",
-                "health": "/health",
-            }
-
-    else:
-
-        @app.get("/")
-        async def root():
-            """API root endpoint."""
-            return {
-                "message": "Solar Panel Detection API",
-                "version": "2.0.0",
-                "docs": "/api/docs",
-                "health": "/health",
-            }
+    @app.get("/")
+    async def root():
+        """API root endpoint."""
+        return {
+            "message": "Solar Panel Detection API",
+            "version": "2.0.0",
+            "docs": "/api/docs",
+            "health": "/health",
+        }
 
     return app
 

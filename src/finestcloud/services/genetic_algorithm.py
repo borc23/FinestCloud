@@ -1,6 +1,5 @@
 import logging
 import time
-from dataclasses import dataclass
 
 import numpy as np
 from shapely import prepare
@@ -8,17 +7,7 @@ from shapely.affinity import rotate as shapely_rotate
 from shapely.geometry import Polygon, box
 from shapely.strtree import STRtree
 
-
-@dataclass
-class OptimizationMetrics:
-    total_time_seconds: float = 0.0
-    generations_completed: int = 0
-    early_stopped: bool = False
-    best_fitness: int = 0
-    cache_hits: int = 0
-    cache_misses: int = 0
-    average_population_similarity: float = 0.0
-    convergence_rate: float = 0.0
+logger = logging.getLogger(__name__)
 
 
 class PanelGeneticOptimizer:
@@ -41,21 +30,9 @@ class PanelGeneticOptimizer:
         self.early_stop_threshold = early_stop_threshold
         self.fitness_cache: dict[tuple, tuple[int, list]] = {}
         self.previous_best_fitness = 0
-        self.metrics = OptimizationMetrics()
 
         self.fitness_history: list[float] = []
         self.convergence_window = 5
-
-        self.logger = logging.getLogger(__name__)
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-            self.logger.propagate = False
 
     def _quantize_chromosome(
         self, chromosome: tuple[float, float, int, float, float, float]
@@ -91,7 +68,6 @@ class PanelGeneticOptimizer:
         panel_orientation: str = "best",
     ) -> list[np.ndarray]:
         start_time = time.time()
-        self.metrics = OptimizationMetrics()
 
         global_best_solution: list[np.ndarray] | None = None
         global_best_fitness = 0
@@ -173,7 +149,6 @@ class PanelGeneticOptimizer:
 
                         if cache_key in self.fitness_cache:
                             fitness, panels = self.fitness_cache[cache_key]
-                            self.metrics.cache_hits += 1
                         else:
                             try:
                                 is_vertical = chromosome[2] == 0
@@ -188,9 +163,8 @@ class PanelGeneticOptimizer:
 
                                 fitness = len(panels)
                                 self.fitness_cache[cache_key] = (fitness, panels)
-                                self.metrics.cache_misses += 1
                             except Exception as e:  # noqa: BLE001 - fall back to zero fitness
-                                self.logger.error(f"Error generating grid: {e}")
+                                logger.error(f"Error generating grid: {e}")
                                 fitness = 0
                                 panels = []
 
@@ -211,7 +185,6 @@ class PanelGeneticOptimizer:
                         if current_max_fitness == self.previous_best_fitness:
                             stagnation_counter += 1
                             if stagnation_counter >= self.early_stop_threshold:
-                                self.metrics.early_stopped = True
                                 break
                         else:
                             stagnation_counter = 0
@@ -222,20 +195,15 @@ class PanelGeneticOptimizer:
                         population, fitness_scores, spacing_cm, panel_orientation
                     )
 
-            self.metrics.generations_completed = generation + 1
-            self.metrics.best_fitness = global_best_fitness
-            self.metrics.total_time_seconds = time.time() - start_time
-
-            self.logger.info(
-                f"Optimization completed in {self.metrics.total_time_seconds:.2f}s. "
+            logger.info(
+                f"Optimization completed in {time.time() - start_time:.2f}s. "
                 f"Best solution: {global_best_fitness} panels"
             )
 
             return global_best_solution or []
 
         except Exception:
-            self.logger.exception("Error in optimization")
-            self.metrics.total_time_seconds = time.time() - start_time
+            logger.exception("Error in optimization")
             return []
 
     def _generate_grid_optimized(
@@ -387,9 +355,6 @@ class PanelGeneticOptimizer:
         # Calculate diversity using sampling (already O(sample^2))
         diversity_score = self._calculate_population_diversity_fast(population)
         convergence_rate = self._calculate_convergence_rate()
-
-        self.metrics.average_population_similarity = diversity_score
-        self.metrics.convergence_rate = convergence_rate
 
         diversity_factor = 1.0 - diversity_score
         stagnation_factor = 1.0 - convergence_rate
@@ -602,7 +567,7 @@ class PanelGeneticOptimizer:
 
     def _tune_genetic_parameters(self) -> None:
         """Tune genetic algorithm parameters for optimal performance."""
-        self.logger.info("Starting genetic algorithm parameter tuning...")
+        logger.info("Starting genetic algorithm parameter tuning...")
 
         self.population_size = 26
         self.generations = 12
@@ -611,6 +576,6 @@ class PanelGeneticOptimizer:
         self.mutation_rate = 0.2
         self.elitism_count = 2
 
-        self.logger.info(
+        logger.info(
             f"Using tuned parameters: pop={self.population_size}, gen={self.generations}"
         )

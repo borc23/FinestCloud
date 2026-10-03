@@ -1,12 +1,16 @@
 import hashlib
 import logging
+import threading
 from collections import OrderedDict
+from functools import lru_cache
 from typing import Any
 
 import numpy as np
 import torch
 from rdp import rdp  # type: ignore
 from ultralytics import YOLO  # type: ignore
+
+from finestcloud.utils.model_loader import initialize_models
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +29,8 @@ class DetectionService:
 
         self.cache: OrderedDict[str, Any] = OrderedDict()
         self.cache_size = cache_size
+        # Routes run in a threadpool; YOLO predictors and the LRU cache aren't thread-safe
+        self._lock = threading.Lock()
 
         self.device = self._get_optimal_device(enable_gpu)
         logger.info(f"Using device: {self.device}")
@@ -50,20 +56,23 @@ class DetectionService:
     ):
         cache_key = self._generate_cache_key(image, bounds, conf, epsilon)
 
-        if cache_key in self.cache:
-            self.cache.move_to_end(cache_key)
-            return self.cache[cache_key]
+        with self._lock:
+            if cache_key in self.cache:
+                self.cache.move_to_end(cache_key)
+                return self.cache[cache_key]
 
-        results = self.model(
-            image,
-            conf=conf,
-            verbose=False,
-            device=self.device,
-        )
-        processed_results = self._process_results(results, bounds, epsilon, transform)
+            results = self.model(
+                image,
+                conf=conf,
+                verbose=False,
+                device=self.device,
+            )
+            processed_results = self._process_results(
+                results, bounds, epsilon, transform
+            )
 
-        self._cache_put(cache_key, processed_results)
-        return processed_results
+            self._cache_put(cache_key, processed_results)
+            return processed_results
 
     def _generate_cache_key(self, image, bounds, conf: float, epsilon: float) -> str:
         """Generate efficient cache key using image shape and metadata."""
@@ -207,3 +216,9 @@ class DetectionService:
         simplified = rdp(closed_points, epsilon=epsilon)
         corners = simplified[:-1]
         return corners.astype(np.float32)
+
+
+@lru_cache
+def get_detection_service() -> DetectionService:
+    """Shared DetectionService; first called from the app lifespan at startup."""
+    return DetectionService(initialize_models())
