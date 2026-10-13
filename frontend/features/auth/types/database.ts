@@ -24,7 +24,7 @@ export interface Database {
       profiles: {
         Row: {
           id: string;
-          email: string;
+          email: string | null; // null for guest (anonymous) users
           display_name: string | null;
           default_latitude: number | null;
           default_longitude: number | null;
@@ -36,7 +36,7 @@ export interface Database {
         };
         Insert: {
           id: string;
-          email: string;
+          email?: string | null;
           display_name?: string | null;
           default_latitude?: number | null;
           default_longitude?: number | null;
@@ -275,6 +275,7 @@ export interface Database {
         Returns: undefined;
       };
       remove_member: { Args: { p_member_id: string }; Returns: undefined };
+      consume_api_call: { Args: Record<PropertyKey, never>; Returns: boolean };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
