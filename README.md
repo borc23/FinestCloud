@@ -4,8 +4,10 @@
 
 **Rooftop solar design in the browser.** A fine-tuned YOLOv8 model finds each roof plane in satellite imagery, a deterministic layout engine fills the planes with panels, and Google Solar API and NREL PVWatts data turn the layout into a production, financing and wiring plan for an installer.
 
-<!-- TODO: replace with your production URL (see docs/DEPLOYMENT.md#live-demo-link) -->
 **Live demo:** https://finest-cloud.vercel.app (click **Try the demo**, no sign-up needed)
+
+![83 panels laid out on two detected roof planes over the annual sunshine heat map, with the analytics panel showing 26,819 kWh per year, build cost, yearly return and an 11-year payback](docs/images/05-layout-and-analytics.webp)
+<sub>83 panels on two detected roof planes, drawn over the Solar API sunshine heat map: 26,819 kWh/year, 11-year payback at the local Eurostat electricity price.</sub>
 
 <!-- TODO: record a 20-30 s GIF (search address → detect roofs → generate panels → open the report),
      save it as docs/images/demo.gif and uncomment:
@@ -24,6 +26,14 @@
    - cash vs. loan financing
    - inverter and string sizing
 6. **Deliver:** export a branded PDF report and save the project. Teams share projects inside an organization, with roles, invitations and their own logo and colours.
+
+### Walkthrough
+
+| 1. Frame the building and capture | 2. Roof planes detected, obstacles marked |
+|---|---|
+| ![Capture frame placed over a house on the satellite map, with Cancel and Capture buttons](docs/images/01-capture.webp) | ![Two detected roof planes outlined in green, with skylights and a chimney marked as red obstacles](docs/images/02-roof-planes-and-obstacles.webp) |
+| **3. Choose a panel model** | **4. Confirm pitch, setbacks and orientation** |
+| ![Panel catalogue listing SunPower, LG, Canadian Solar and JinkoSolar modules with size, power and efficiency](docs/images/03-panel-selection.webp) | ![Roof configuration panel with per-plane pitch from the Solar API, 20 cm edge padding and best orientation selected](docs/images/04-roof-configuration.webp) |
 
 ## Engineering highlights
 
