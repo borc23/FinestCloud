@@ -119,6 +119,39 @@
   box-shadow: 0 4px 16px rgba(255, 128, 0, 0.35);
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.demoButton {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.demoButton:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+}
+
+.demoButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .content {

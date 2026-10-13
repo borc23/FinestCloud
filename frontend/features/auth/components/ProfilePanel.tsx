@@ -596,15 +596,18 @@ export default function ProfilePanel({
             <Icon name="folder" />
             <span>Projects</span>
           </button>
-          <button
-            className={`${styles.tab} ${
-              activeTab === "organization" ? styles.active : ""
-            }`}
-            onClick={() => setActiveTab("organization")}
-          >
-            <Icon name="building" />
-            <span>Organization</span>
-          </button>
+          {/* Guests can't create or join organizations (enforced in the database) */}
+          {!user?.is_anonymous && (
+            <button
+              className={`${styles.tab} ${
+                activeTab === "organization" ? styles.active : ""
+              }`}
+              onClick={() => setActiveTab("organization")}
+            >
+              <Icon name="building" />
+              <span>Organization</span>
+            </button>
+          )}
         </div>
 
         {/* Profile Tab */}
@@ -638,11 +641,17 @@ export default function ProfilePanel({
                   <input
                     id="email"
                     type="email"
-                    value={user?.email || ""}
+                    value={
+                      user?.is_anonymous ? "Guest (demo)" : user?.email || ""
+                    }
                     disabled
                     className={styles.disabled}
                   />
-                  <small>Email cannot be changed</small>
+                  <small>
+                    {user?.is_anonymous
+                      ? "Guest sessions are temporary and have a smaller daily limit. Create an account to keep projects long-term."
+                      : "Email cannot be changed"}
+                  </small>
                 </div>
 
                 <div className={styles.field}>
@@ -763,7 +772,7 @@ export default function ProfilePanel({
         )}
 
         {/* Organization Tab */}
-        {activeTab === "organization" && user && (
+        {activeTab === "organization" && user && !user.is_anonymous && (
           <div className={styles.organizationTab}>
             <div className={styles.orgSubTabs}>
               <button

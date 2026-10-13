@@ -14,27 +14,15 @@ dependencies = [
     "httpx==0.25.2",
     # Machine learning & computer vision
     "torch==2.8.0",
+    # Not imported directly (ultralytics needs it), but listed so the CPU-only
+    # wheel source below applies to it instead of the multi-GB CUDA build
     "torchvision==0.23.0",
     "ultralytics==8.3.208",
     "numpy<2.0",
     "opencv-python==4.11.0.86",
     "huggingface-hub",
-    # Data processing
-    "pandas==2.2.3",
-    "scipy==1.15.2",
-    "matplotlib==3.10.1",
-    "seaborn==0.13.2",
-    "networkx==3.4.2",
-    # Geospatial & utilities
-    "rtree==1.4.1",
+    # Geometry
     "shapely",
-    "psutil==7.0.0",
-    "tqdm==4.67.1",
-    # Configuration & environment
-    "python-dotenv==1.1.0",
-    "pyyaml==6.0.2",
-    # AWS
-    "boto3==1.38.9",
 ]
 
 [project.scripts]

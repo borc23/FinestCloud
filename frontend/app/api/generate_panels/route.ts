@@ -4,6 +4,7 @@ import type {
   PanelGenerationRequest,
   Coordinate,
 } from "@/features/solar-panels/types/panel";
+import { guardApiCall } from "@/shared/lib/apiGuard";
 
 // Mark this route as dynamic since GET handler uses searchParams
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ const toCoords = ({ coords }: { coords: Coordinate[] }) => ({
 });
 
 export async function POST(request: NextRequest) {
+  const denied = await guardApiCall(request);
+  if (denied) return denied;
+
   return proxyToPythonBackend(
     request,
     "/api/generate_panels",
@@ -35,6 +39,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await guardApiCall(request);
+  if (denied) return denied;
+
   const latitude = request.nextUrl.searchParams.get("latitude");
   const longitude = request.nextUrl.searchParams.get("longitude");
 

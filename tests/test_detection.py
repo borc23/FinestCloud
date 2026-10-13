@@ -2,9 +2,7 @@ import cv2
 import httpx
 import numpy as np
 import pytest
-from fastapi.testclient import TestClient
 
-from finestcloud.main import create_app
 from finestcloud.services import image_service
 from finestcloud.services.detection_service import _simplify, _to_geo
 
@@ -49,9 +47,9 @@ VIEW = {"lat": 46.05, "lng": 14.5, "zoom": 20, "width": 500, "height": 500}
         {"view": {**VIEW, "width": 4000}, "bounds": BOUNDS},  # beyond Static Maps max
     ],
 )
-def test_detect_rejects_invalid_requests(body):
+def test_detect_rejects_invalid_requests(client, body):
     # Validation runs before the handler, so no model is needed
-    response = TestClient(create_app()).post("/api/detect", json=body)
+    response = client.post("/api/detect", json=body)
     assert response.status_code == 422
 
 

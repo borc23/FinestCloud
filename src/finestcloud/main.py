@@ -5,12 +5,13 @@ from contextlib import asynccontextmanager
 from importlib.metadata import version
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 from finestcloud.api.routes import detection, panels, pvwatts, utilities
 from finestcloud.core.config import get_settings
+from finestcloud.core.security import require_backend_token
 from finestcloud.services.detection_service import get_detection_service
 
 logging.basicConfig(
@@ -38,14 +39,25 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # No CORS: only the Next.js server calls this API (server-side proxy)
+    # No CORS: only the Next.js server calls this API (server-side proxy),
+    # authenticated with the shared backend token
     if not settings.debug:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
-    app.include_router(detection.router, prefix="/api", tags=["detection"])
-    app.include_router(panels.router, prefix="/api", tags=["panels"])
-    app.include_router(pvwatts.router, prefix="/api/pvwatts", tags=["pvwatts"])
-    app.include_router(utilities.router, prefix="/api", tags=["utilities"])
+    # /health and / stay open for Render's health checks and demo warm-up pings
+    protected = [Depends(require_backend_token)]
+    app.include_router(
+        detection.router, prefix="/api", tags=["detection"], dependencies=protected
+    )
+    app.include_router(
+        panels.router, prefix="/api", tags=["panels"], dependencies=protected
+    )
+    app.include_router(
+        pvwatts.router, prefix="/api/pvwatts", tags=["pvwatts"], dependencies=protected
+    )
+    app.include_router(
+        utilities.router, prefix="/api", tags=["utilities"], dependencies=protected
+    )
 
     # Starlette re-raises after this, so uvicorn still logs the traceback;
     # the client only gets a generic message, never internals

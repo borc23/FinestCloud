@@ -20,16 +20,14 @@ repos:
         types: [css]
         args: ["--fix"]
 
-  # ESLint hook disabled - Next.js ESLint needs to be configured first
-  # Run: cd frontend && npm run lint to set up ESLint
-  # - repo: local
-  #   hooks:
-  #     - id: eslint
-  #       name: eslint (next lint)
-  #       entry: bash -c 'cd frontend && npx next lint --fix'
-  #       language: system
-  #       files: ^frontend/.*\.[jt]sx?$
-  #       pass_filenames: false
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (next lint)
+        entry: bash -c 'cd frontend && npx next lint --fix'
+        language: system
+        files: ^frontend/.*\.[jt]sx?$
+        pass_filenames: false
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.1.0

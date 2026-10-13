@@ -9,6 +9,7 @@ import type {
   DataLayersApiResponse,
   DataLayersRequest,
 } from "@/features/solar-analysis/types/solar-api";
+import { guardApiCall } from "@/shared/lib/apiGuard";
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const GOOGLE_SOLAR_DATA_LAYERS_URL =
@@ -18,6 +19,9 @@ const GOOGLE_SOLAR_DATA_LAYERS_URL =
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const denied = await guardApiCall(request);
+  if (denied) return denied;
+
   try {
     const body: DataLayersRequest = await request.json();
     const {

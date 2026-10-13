@@ -106,7 +106,7 @@ function AcceptInvitation() {
             <Icon name="check-circle" />
           </div>
           <h1>Welcome to the Team!</h1>
-          <p>You've successfully joined the organization.</p>
+          <p>You&apos;ve successfully joined the organization.</p>
           <p className={styles.redirectText}>Redirecting to home...</p>
         </div>
       </div>
@@ -119,8 +119,8 @@ function AcceptInvitation() {
         <div className={styles.icon}>
           <Icon name="envelope" />
         </div>
-        <h1>You're Invited!</h1>
-        <p>You've been invited to join:</p>
+        <h1>You&apos;re Invited!</h1>
+        <p>You&apos;ve been invited to join:</p>
 
         <div className={styles.orgInfo}>
           <h2>{invitation?.organizations?.name || "Organization"}</h2>
@@ -152,7 +152,7 @@ function AcceptInvitation() {
           <div className={styles.actions}>
             <p className={styles.warningText}>
               This invitation was sent to <strong>{invitation?.email}</strong>,
-              but you're logged in as <strong>{user.email}</strong>.
+              but you&apos;re logged in as <strong>{user.email}</strong>.
             </p>
             <p>Please sign in with the correct account.</p>
           </div>
