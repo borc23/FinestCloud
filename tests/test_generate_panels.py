@@ -1,7 +1,4 @@
 import pytest
-from fastapi.testclient import TestClient
-
-from finestcloud.main import create_app
 
 BOUNDS = {"north": 46.0505, "south": 46.0495, "east": 14.5007, "west": 14.4993}
 # ~6.5 x 4.5 m rectangle around the map center
@@ -22,9 +19,9 @@ SPECS = {"width": 1.134, "height": 1.722, "power": 430, "efficiency": 22}
         ({"pitch": 30, "azimuth": 0}, 30, 0),  # north-facing must stay 0
     ],
 )
-def test_generate_panels_roof_defaults(roof_extra, expected_pitch, expected_azimuth):
-    # No context manager: skips lifespan, panel generation doesn't need the model
-    client = TestClient(create_app())
+def test_generate_panels_roof_defaults(
+    client, roof_extra, expected_pitch, expected_azimuth
+):
     response = client.post(
         "/api/generate_panels",
         json={
