@@ -15,6 +15,8 @@ app/models/*.pt
 *.png
 *.jpg
 *.jpeg
+# ...except figures used by the docs
+!docs/images/*.png
 
 # Saved capture images
 saved_images/
