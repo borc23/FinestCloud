@@ -10,6 +10,7 @@ import SaveProjectModal from "@/features/projects/components/SaveProjectModal";
 import ProfilePanel from "@/features/auth/components/ProfilePanel";
 import AuthRequiredOverlay from "@/features/auth/components/AuthRequiredOverlay";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useBackendWarmup } from "@/shared/hooks/useBackendWarmup";
 import type { CreateProjectData } from "@/features/auth/types/database";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ const MapContainer = dynamic(
 
 export default function HomePage() {
   const { user } = useAuth();
+  useBackendWarmup();
 
   const [activeTool, setActiveTool] = useState("");
   const [showPanelsTool, setShowPanelsTool] = useState(false);
