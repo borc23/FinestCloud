@@ -49,10 +49,8 @@ Vertical flips are off and rotation is almost zero on purpose. Tiles are always 
 
 ### Dataset
 
-> **TODO (author):** fill in what only you know:
-> - Source of the imagery and where it was taken (cities or regions, number of distinct areas)
-> - Number of images and of labeled roof planes; train/val split, and whether it was split by area (spatial leakage matters: neighbouring tiles look alike)
-> - Labeling tool and guidelines (e.g. how dormers, flat roofs and partial occlusion by trees were handled)
+> privately obtained data and hand labelled and verified.
+> This demo has not production model as it is in prod therefore result is not optimal.
 
 ### Results
 
