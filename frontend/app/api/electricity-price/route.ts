@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/shared/lib/apiProxy";
 import type { ElectricityPrice } from "@/features/financial/types/financial";
+import { guardApiCall } from "@/shared/lib/apiGuard";
 
 const GISCO_REVERSE_URL = "https://gisco-services.ec.europa.eu/reverse";
 const EUROSTAT_PRICES_URL =
@@ -15,6 +16,9 @@ const EUROSTAT_PRICES_URL =
 const FETCH_OPTIONS = { next: { revalidate: 86400 } };
 
 export async function GET(request: NextRequest) {
+  const denied = await guardApiCall(request, { metered: false });
+  if (denied) return denied;
+
   const params = request.nextUrl.searchParams;
   const lat = parseFloat(params.get("lat") ?? "");
   const lng = parseFloat(params.get("lng") ?? "");
