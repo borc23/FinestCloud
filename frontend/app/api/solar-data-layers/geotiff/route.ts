@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { guardApiCall } from "@/shared/lib/apiGuard";
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
@@ -11,6 +12,9 @@ const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const denied = await guardApiCall(request);
+  if (denied) return denied;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const url = searchParams.get("url");
@@ -73,7 +77,8 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": "image/tiff",
         "Content-Length": buffer.byteLength.toString(),
-        "Cache-Control": "public, max-age=604800", // Cache for 7 days
+        // Browser-only: a shared cache would serve it past the auth and quota check
+        "Cache-Control": "private, max-age=604800", // 7 days
       },
     });
   } catch (error) {
