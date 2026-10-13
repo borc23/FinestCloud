@@ -1,8 +1,6 @@
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 
-from finestcloud.main import create_app
 from finestcloud.services import pvwatts_service
 
 REQUEST = {
@@ -37,10 +35,10 @@ def nrel(monkeypatch):
     return reply
 
 
-def test_calculate_maps_pvwatts_outputs(nrel):
+def test_calculate_maps_pvwatts_outputs(client, nrel):
     nrel.update(status=200, json={"outputs": OUTPUTS, "station_info": {"city": "X"}})
 
-    response = TestClient(create_app()).post("/api/pvwatts/calculate", json=REQUEST)
+    response = client.post("/api/pvwatts/calculate", json=REQUEST)
 
     assert response.status_code == 200
     body = response.json()
@@ -57,10 +55,10 @@ def test_calculate_maps_pvwatts_outputs(nrel):
         (200, {"errors": ["lat out of range"]}),
     ],
 )
-def test_calculate_failure_is_502_without_details(nrel, status, json):
+def test_calculate_failure_is_502_without_details(client, nrel, status, json):
     nrel.update(status=status, json=json)
 
-    response = TestClient(create_app()).post("/api/pvwatts/calculate", json=REQUEST)
+    response = client.post("/api/pvwatts/calculate", json=REQUEST)
 
     assert response.status_code == 502
     assert response.json() == {"detail": "Solar production calculation failed"}
