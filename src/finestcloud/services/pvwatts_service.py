@@ -2,7 +2,7 @@
 
 import httpx
 
-PVWATTS_URL = "https://developer.nrel.gov/api/pvwatts/v8.json"
+PVWATTS_URL = "https://developer.nlr.gov/api/pvwatts/v8.json"
 # Standard modules on a fixed roof mount, with PVWatts' default losses and inverter
 SYSTEM_DEFAULTS = {
     "module_type": 0,

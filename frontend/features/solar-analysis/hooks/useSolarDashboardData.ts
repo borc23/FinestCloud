@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { usePanelData } from "@/features/solar-panels/hooks/usePanelData";
 import { usePVWatts } from "@/features/solar-analysis/hooks/usePVWatts";
+import { useElectricityPrice } from "@/features/financial/hooks/useElectricityPrice";
+import { estimateProductionFromPanels } from "@/features/solar-analysis/utils/solarCalculations";
+import { calculateRegionalFinancials } from "@/features/financial/utils/financialCalculations";
 import type {
   PanelData,
   SolarResultsDashboardProps,
@@ -39,12 +42,37 @@ export function useSolarDashboardData({
     azimuth: panelData?.avgAzimuth,
   });
 
+  const electricityPrice = useElectricityPrice(mapCenter?.lat, mapCenter?.lng);
+
+  // Per-panel sunshine (includes shading); PVWatts where there is no Solar API data
+  const annualProduction =
+    (panelData &&
+      estimateProductionFromPanels(
+        panelGenerationData.roofs,
+        panelData.totalPanels,
+      )) ||
+    pvwattsData?.annual_production ||
+    undefined;
+
+  const financials = useMemo(
+    () =>
+      panelData && annualProduction
+        ? calculateRegionalFinancials(
+            annualProduction,
+            panelData.systemSize,
+            electricityPrice,
+          )
+        : null,
+    [panelData, annualProduction, electricityPrice],
+  );
+
   return {
     panelData,
     location: mapCenter,
     pvwattsData,
     isLoading,
-    // Use PVWatts production directly (no shade adjustment)
-    annualProduction: pvwattsData?.annual_production || undefined,
+    annualProduction,
+    electricityPrice,
+    financials,
   };
 }

@@ -371,7 +371,7 @@ export interface CreateProjectData {
     panelWattage: number;
     estimatedOutput?: number;
     shadeStats?: ShadeStats;
-    panelPositions?: Coordinate[][];
+    panelPositions?: PanelConfiguration["panelPositions"];
     moduleType?: string;
     moduleSpecs?: {
       power: number;

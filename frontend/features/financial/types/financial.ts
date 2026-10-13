@@ -10,7 +10,15 @@ export interface UtilityRates {
   feedInTariff: number; // €/kWh Einspeisevergütung for excess energy
 }
 
+/** Household electricity price for the installation's country (Eurostat, all taxes included) */
+export interface ElectricityPrice {
+  country: string; // ISO 3166-1 alpha-2, as used by Eurostat (EL for Greece)
+  costPerKwh: number | null; // €/kWh; null when Eurostat has no data for the country
+  period: string | null; // e.g. "2025-S2"
+}
+
 export interface FinancialInputs {
+  country?: string; // ISO 3166-1 alpha-2 (default DE)
   annualProduction: number; // kWh/year
   systemSize: number; // kW
   utilityRates: UtilityRates;

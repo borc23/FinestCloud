@@ -36,6 +36,11 @@ import {
   faClock,
   faHouse,
   faCircleExclamation,
+  faChartSimple,
+  faBolt,
+  faEuroSign,
+  faFilePdf,
+  faFloppyDisk,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -73,6 +78,11 @@ const iconMap: Record<string, IconDefinition> = {
   clock: faClock,
   home: faHouse,
   "circle-exclamation": faCircleExclamation,
+  chart: faChartSimple,
+  bolt: faBolt,
+  euro: faEuroSign,
+  "file-pdf": faFilePdf,
+  save: faFloppyDisk,
 };
 
 interface IconProps {

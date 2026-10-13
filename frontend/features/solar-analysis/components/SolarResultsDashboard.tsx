@@ -5,32 +5,39 @@ import styles from "./SolarResultsDashboard.module.css";
 import MonthlyProductionChart from "./MonthlyProductionChart";
 import FinancialCalculator from "@/features/financial/components/FinancialCalculator";
 import ElectricalDesignPanel from "@/features/electrical/components/ElectricalDesignPanel";
-import DashboardActions from "./DashboardActions";
+import { Icon } from "@/shared/components/ui/Icon";
 import { useSolarDashboardData } from "@/features/solar-analysis/hooks/useSolarDashboardData";
 import { useDashboardModals } from "@/features/solar-analysis/hooks/useDashboardModals";
 import { useSolarReportGenerator } from "@/features/solar-analysis/hooks/useSolarReportGenerator";
 import type { SolarResultsDashboardProps } from "@/features/solar-analysis/types/dashboard";
 
+const euro = (value: number) => `€${Math.round(value).toLocaleString()}`;
+
 export default function SolarResultsDashboard(
   props: SolarResultsDashboardProps,
 ) {
-  // Extract and prepare all dashboard data
-  const { panelData, location, pvwattsData, isLoading, annualProduction } =
-    useSolarDashboardData(props);
+  const {
+    panelData,
+    location,
+    pvwattsData,
+    isLoading,
+    annualProduction,
+    electricityPrice,
+    financials,
+  } = useSolarDashboardData(props);
 
-  // Manage modal states
   const { openModal, open, close, isMinimized, setIsMinimized } =
     useDashboardModals({
       isEditMode: props.isEditMode,
       onMinimizeChange: props.onMinimizeChange,
     });
 
-  // PDF report generation
   const { handleGeneratePDF } = useSolarReportGenerator({
     panelData: panelData!,
     annualProduction,
     location,
     pvwatts: pvwattsData,
+    financials,
   });
 
   // Expose minimize function to parent via ref
@@ -44,66 +51,130 @@ export default function SolarResultsDashboard(
     return null;
   }
 
+  const netSavings =
+    financials &&
+    financials.twentyFiveYearSavings +
+      financials.twentyFiveYearFeedInRevenue -
+      financials.netSystemCost;
+
+  const stats = financials && [
+    { label: "Build cost", value: euro(financials.netSystemCost) },
+    {
+      label: "Return / year",
+      value: euro(
+        financials.firstYearSavings + financials.firstYearFeedInRevenue,
+      ),
+      positive: true,
+    },
+    { label: "Payback", value: `${financials.paybackPeriod} yrs` },
+    {
+      label: "25-year net",
+      value: euro(netSavings!),
+      positive: netSavings! > 0,
+    },
+  ];
+
+  const actions = [
+    pvwattsData && {
+      label: "Monthly",
+      icon: "chart",
+      onClick: () => open("monthly"),
+    },
+    annualProduction && {
+      label: "Finance",
+      icon: "euro",
+      onClick: () => open("financials"),
+    },
+    { label: "Electrical", icon: "bolt", onClick: () => open("electrical") },
+    financials && {
+      label: "PDF",
+      icon: "file-pdf",
+      onClick: handleGeneratePDF,
+    },
+  ].filter(Boolean) as { label: string; icon: string; onClick: () => void }[];
+
   return (
     <>
-      <div
-        className={`${styles.dashboard} ${isMinimized ? styles.minimized : ""}`}
-      >
-        {isMinimized ? (
-          <button
-            className={styles.minimizedButton}
-            onClick={() => setIsMinimized(false)}
-            aria-label="Expand analytics"
-          >
-            📊
-          </button>
-        ) : (
-          <>
-            <div className={styles.header}>
-              <span className={styles.title}>Analytics</span>
-              <button
-                className={styles.closeButton}
-                onClick={() => setIsMinimized(true)}
-                aria-label="Minimize analytics"
-              >
-                ×
-              </button>
+      {isMinimized ? (
+        <button
+          className={styles.fab}
+          onClick={() => setIsMinimized(false)}
+          aria-label="Expand analytics"
+        >
+          <Icon name="chart" />
+        </button>
+      ) : (
+        <section className={styles.card} aria-label="Analytics">
+          <header className={styles.header}>
+            <span className={styles.title}>Analytics</span>
+            <button
+              className={styles.iconButton}
+              onClick={() => setIsMinimized(true)}
+              aria-label="Minimize analytics"
+            >
+              <Icon name="minus" />
+            </button>
+          </header>
+
+          <div className={styles.body}>
+            <div>
+              <div className={styles.hero}>
+                {annualProduction?.toLocaleString() ?? (isLoading ? "…" : "—")}
+                <span className={styles.unit}>kWh / year</span>
+              </div>
+              <div className={styles.meta}>
+                {panelData.totalPanels} panels ·{" "}
+                {panelData.systemSize.toFixed(1)} kW
+                {pvwattsData &&
+                  ` · ${pvwattsData.capacity_factor.toFixed(
+                    0,
+                  )}% capacity factor`}
+              </div>
             </div>
 
-            <div className={styles.details}>
-              <MetricItem label="Panel Count" value={panelData.totalPanels} />
-              <MetricItem
-                label="System Size"
-                value={`${panelData.systemSize.toFixed(3)} kW`}
-              />
-              {annualProduction && (
-                <MetricItem
-                  label="Annual Production"
-                  value={`${annualProduction.toLocaleString()} kWh/year`}
-                  isLoading={isLoading}
-                />
-              )}
-              {pvwattsData && (
-                <MetricItem
-                  label="Capacity Factor"
-                  value={`${pvwattsData.capacity_factor.toFixed(1)}%`}
-                />
-              )}
-            </div>
-
-            {pvwattsData && annualProduction && (
-              <DashboardActions
-                isAuthenticated={props.isAuthenticated}
-                onSaveProject={props.onSaveProject}
-                onViewMonthly={() => open("monthly")}
-                onViewFinancials={() => open("financials")}
-                onViewElectrical={() => open("electrical")}
-                onGeneratePDF={handleGeneratePDF}
-              />
+            {stats && (
+              <div className={styles.grid}>
+                {stats.map(({ label, value, positive }) => (
+                  <div key={label} className={styles.stat}>
+                    <span className={styles.label}>{label}</span>
+                    <span
+                      className={`${styles.value} ${
+                        positive ? styles.positive : ""
+                      }`}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
-          </>
-        )}
-      </div>
+
+            {electricityPrice?.costPerKwh && (
+              <p className={styles.meta}>
+                Electricity €{electricityPrice.costPerKwh.toFixed(3)}/kWh ·{" "}
+                {electricityPrice.country} · Eurostat {electricityPrice.period}
+              </p>
+            )}
+          </div>
+
+          <footer className={styles.actions}>
+            {props.isAuthenticated && props.onSaveProject && (
+              <button
+                className={`${styles.action} ${styles.primary}`}
+                onClick={props.onSaveProject}
+              >
+                <Icon name="save" /> Save project
+              </button>
+            )}
+            {actions.map(({ label, icon, onClick }) => (
+              <button key={label} className={styles.action} onClick={onClick}>
+                <Icon name={icon} />
+                {label}
+              </button>
+            ))}
+          </footer>
+        </section>
+      )}
 
       {openModal === "monthly" && pvwattsData && (
         <MonthlyProductionChart data={pvwattsData} onClose={close} />
@@ -113,6 +184,7 @@ export default function SolarResultsDashboard(
         <FinancialCalculator
           annualProduction={annualProduction}
           systemSize={panelData.systemSize}
+          electricityPrice={electricityPrice}
           onClose={close}
         />
       )}
@@ -126,28 +198,5 @@ export default function SolarResultsDashboard(
         />
       )}
     </>
-  );
-}
-
-function MetricItem({
-  label,
-  value,
-  isLoading = false,
-}: {
-  label: string;
-  value: string | number;
-  isLoading?: boolean;
-}) {
-  return (
-    <div className={styles.detailItem}>
-      <span className={styles.label}>{label}</span>
-      <span className={styles.value}>
-        {isLoading ? (
-          <span className={styles.loadingIndicator}>...</span>
-        ) : (
-          value
-        )}
-      </span>
-    </div>
   );
 }

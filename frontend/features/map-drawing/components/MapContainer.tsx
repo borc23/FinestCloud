@@ -274,7 +274,10 @@ export default function MapContainer({
           estimatedOutput:
             solarData?.[index]?.solarData?.solarPotential?.solarPanels
               ?.yearlyEnergyDcKwh,
-          panelPositions: roofPanelData?.panels?.map((p) => p.coords ?? []),
+          // Keep per-panel sunshine so reloaded projects estimate the same production
+          panelPositions: roofPanelData?.panels?.map(
+            ({ coords, annualSunshineKwh }) => ({ coords, annualSunshineKwh }),
+          ),
           moduleType: roofPanelData?.module_type,
           moduleSpecs: roofPanelData?.module_specs,
         };

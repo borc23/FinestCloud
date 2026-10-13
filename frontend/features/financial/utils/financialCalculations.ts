@@ -4,9 +4,15 @@
  */
 
 import type {
+  ElectricityPrice,
   FinancialInputs,
   FinancialResults,
 } from "@/features/financial/types/financial";
+import {
+  countryCosts,
+  DEFAULT_COUNTRY,
+} from "@/features/financial/config/countries";
+import { calculateGermanFeedInTariff } from "./germanFeedInTariff";
 import { safeDivide } from "./validation";
 
 /** German market defaults shared by the calculator UI and the PDF report. Rates are percentages. */
@@ -16,9 +22,52 @@ export const FINANCIAL_DEFAULTS = {
   selfConsumptionRate: 30,
 };
 
-/** VAT saved by the 0% rate (Nullsteuersatz, since Jan 2023) for systems ≤30kWp */
-export function calculateVatSavings(systemSize: number, grossCost: number) {
-  return systemSize <= 30 ? grossCost * 0.19 : 0;
+/** VAT saved by the German 0% rate (Nullsteuersatz, since Jan 2023) for systems ≤30kWp */
+export function calculateVatSavings(
+  systemSize: number,
+  grossCost: number,
+  country = DEFAULT_COUNTRY,
+) {
+  return country === "DE" && systemSize <= 30 ? grossCost * 0.19 : 0;
+}
+
+/** Default assumptions for the installation's country, using its electricity price when known */
+export function regionalDefaults(
+  systemSize: number,
+  price?: ElectricityPrice | null,
+) {
+  const country = price?.country;
+  return {
+    ...FINANCIAL_DEFAULTS,
+    costPerKwh: price?.costPerKwh ?? FINANCIAL_DEFAULTS.costPerKwh,
+    systemCost: estimateSystemCost(systemSize, country),
+    feedInTariff:
+      countryCosts(country).feedInTariff ??
+      calculateGermanFeedInTariff(systemSize),
+  };
+}
+
+/** Financial analysis with the regional default assumptions */
+export function calculateRegionalFinancials(
+  annualProduction: number,
+  systemSize: number,
+  price?: ElectricityPrice | null,
+): FinancialResults {
+  const {
+    costPerKwh,
+    escalationRate,
+    feedInTariff,
+    systemCost,
+    selfConsumptionRate,
+  } = regionalDefaults(systemSize, price);
+  return calculateFinancials({
+    country: price?.country,
+    annualProduction,
+    systemSize,
+    systemCost,
+    selfConsumptionRate,
+    utilityRates: { costPerKwh, escalationRate, feedInTariff },
+  });
 }
 
 /**
@@ -27,6 +76,7 @@ export function calculateVatSavings(systemSize: number, grossCost: number) {
  */
 export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
   const {
+    country,
     annualProduction,
     systemSize,
     utilityRates,
@@ -57,7 +107,7 @@ export function calculateFinancials(inputs: FinancialInputs): FinancialResults {
     throw new Error("Electricity cost must be a positive number");
   }
 
-  const vatSavings = calculateVatSavings(systemSize, grossSystemCost);
+  const vatSavings = calculateVatSavings(systemSize, grossSystemCost, country);
   const netSystemCost =
     grossSystemCost - (vatSavings + stateGrant + municipalGrant);
 
@@ -227,23 +277,19 @@ function calculateIRR(cashFlows: number[]): number {
   return 0;
 }
 
-/**
- * Estimate system cost based on size (€/W rates for German market)
- */
-export function estimateSystemCost(systemSizeKw: number): number {
-  // German market rates (2024) - larger systems have lower €/W
-  // Note: These are net prices (after 0% VAT)
-  let pricePerWatt: number;
+/** Price per watt relative to a ~10 kWp system: larger systems cost less per watt */
+const SIZE_FACTORS = [
+  { upToKw: 5, factor: 1.15 },
+  { upToKw: 10, factor: 1 },
+  { upToKw: 20, factor: 0.9 },
+  { upToKw: Infinity, factor: 0.8 },
+];
 
-  if (systemSizeKw <= 5) {
-    pricePerWatt = 1.6; // smaller residential systems (1,600€/kWp)
-  } else if (systemSizeKw <= 10) {
-    pricePerWatt = 1.4; // medium residential (1,400€/kWp)
-  } else if (systemSizeKw <= 20) {
-    pricePerWatt = 1.25; // large residential (1,250€/kWp)
-  } else {
-    pricePerWatt = 1.1; // small commercial (1,100€/kWp)
-  }
-
-  return systemSizeKw * 1000 * pricePerWatt;
+/** Estimate the turnkey system cost (€) from its size and the country's €/W price */
+export function estimateSystemCost(
+  systemSizeKw: number,
+  country?: string,
+): number {
+  const { factor } = SIZE_FACTORS.find(({ upToKw }) => systemSizeKw <= upToKw)!;
+  return systemSizeKw * 1000 * countryCosts(country).costPerWatt * factor;
 }

@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Secrets: set via environment or .env, never hardcode
     google_maps_api_key: SecretStr  # Solar API and Maps Static API
-    nrel_api_key: SecretStr  # PVWatts; free key at https://developer.nrel.gov/signup/
+    nrel_api_key: SecretStr  # PVWatts; free key at https://developer.nlr.gov/signup/
     hugging_face_token: SecretStr | None = None  # private model repo on HF Hub
 
 
