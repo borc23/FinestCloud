@@ -1,0 +1,31 @@
+name: Keep demo warm
+
+# Pings the backend's public health check so a free-tier host (Render sleeps
+# after 15 idle minutes) doesn't make demo visitors wait for a cold start.
+#
+# Off until you set the repository variable BACKEND_HEALTH_URL
+# (Settings > Secrets and variables > Actions > Variables), e.g.
+# https://your-service.onrender.com/health
+#
+# Cost: free on public repositories. On a private one each run bills a full
+# minute, about 4,300 minutes a month at this schedule, above the free tier.
+# Scheduled runs can also start late under GitHub load, so the occasional cold
+# start can still happen; the frontend's warm-up toast covers those.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: vars.BACKEND_HEALTH_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping health check
+        env:
+          URL: ${{ vars.BACKEND_HEALTH_URL }}
+        run: curl --fail --silent --show-error --max-time 120 "$URL"
