@@ -7,11 +7,8 @@ import { useState } from "react";
 import styles from "./FinancialCalculator.module.css";
 import panel from "@/shared/styles/panel.module.css";
 import { sanitizeNumericInput } from "@/features/financial/utils/validation";
-import {
-  estimateSystemCost,
-  FINANCIAL_DEFAULTS,
-} from "@/features/financial/utils/financialCalculations";
-import { calculateGermanFeedInTariff } from "@/features/financial/utils/germanFeedInTariff";
+import { regionalDefaults } from "@/features/financial/utils/financialCalculations";
+import type { ElectricityPrice } from "@/features/financial/types/financial";
 
 type FinancingType = "cash" | "kfw" | "loan";
 
@@ -33,12 +30,13 @@ interface CalculatorInputs {
 }
 
 /** Initial values; also the fallback when a field is cleared or invalid */
-export const defaultInputs = (systemSize: number): CalculatorInputs => ({
+export const defaultInputs = (
+  systemSize: number,
+  electricityPrice?: ElectricityPrice | null,
+): CalculatorInputs => ({
   financingType: "cash",
-  ...FINANCIAL_DEFAULTS,
+  ...regionalDefaults(systemSize, electricityPrice),
   avgMonthlyBill: 130,
-  systemCost: estimateSystemCost(systemSize),
-  feedInTariff: calculateGermanFeedInTariff(systemSize),
   stateGrant: 0,
   municipalGrant: 0,
   discountRate: 4,

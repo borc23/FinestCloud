@@ -27,10 +27,13 @@ import EnergyOffsetDisplay from "./EnergyOffsetDisplay";
 import FinancingComparisonTable from "./FinancingComparisonTable";
 import FinancialInputForm, { defaultInputs } from "./FinancialInputForm";
 import ValidationDisplay from "./ValidationDisplay";
+import { DEFAULT_COUNTRY } from "@/features/financial/config/countries";
+import type { ElectricityPrice } from "@/features/financial/types/financial";
 
 interface FinancialCalculatorProps {
   annualProduction: number; // kWh/year
   systemSize: number; // kW
+  electricityPrice?: ElectricityPrice | null;
   onClose?: () => void;
 }
 
@@ -64,10 +67,16 @@ function calculateLoan(
 export default function FinancialCalculator({
   annualProduction,
   systemSize,
+  electricityPrice,
   onClose,
 }: FinancialCalculatorProps) {
-  // User inputs with German market defaults (EEG 2025 feed-in tariff for this system size)
-  const defaults = useMemo(() => defaultInputs(systemSize), [systemSize]);
+  // User inputs with the installation country's defaults
+  const defaults = useMemo(
+    () => defaultInputs(systemSize, electricityPrice),
+    [systemSize, electricityPrice],
+  );
+  const country = electricityPrice?.country ?? DEFAULT_COUNTRY;
+  const isGermany = country === "DE";
   const [inputs, setInputs] = useState(defaults);
   const {
     financingType,
@@ -89,7 +98,7 @@ export default function FinancialCalculator({
   // Net system cost after incentives
   const netSystemCost =
     systemCost -
-    calculateVatSavings(systemSize, systemCost) -
+    calculateVatSavings(systemSize, systemCost, country) -
     stateGrant -
     municipalGrant;
 
@@ -117,6 +126,7 @@ export default function FinancialCalculator({
     () =>
       validation.isValid
         ? calculateFinancials({
+            country,
             annualProduction,
             systemSize,
             utilityRates: {
@@ -132,7 +142,7 @@ export default function FinancialCalculator({
             discountRate,
           })
         : null,
-    [inputs, systemSize, annualProduction, validation.isValid],
+    [inputs, country, systemSize, annualProduction, validation.isValid],
   );
 
   // Calculate financing comparison scenarios
@@ -306,19 +316,21 @@ export default function FinancialCalculator({
             <div className={panel.section}>
               <h4 className={panel.sectionTitle}>Feed-in Tariff Revenue</h4>
               <div className={styles.feedInInfo}>
-                <div className={styles.feedInRow}>
-                  <span className={styles.feedInLabel}>
-                    EEG 2025 Tiered Rates for {systemSize.toFixed(1)} kW
-                  </span>
-                  <span className={styles.feedInValue}>
-                    {getFeedInTariffBreakdown(systemSize).map((tier, idx) => (
-                      <div key={idx}>
-                        {tier.tier}: {tier.capacityKw.toFixed(2)} kW @{" "}
-                        {formatFeedInTariff(tier.rateEuroPerKwh)}
-                      </div>
-                    ))}
-                  </span>
-                </div>
+                {isGermany && (
+                  <div className={styles.feedInRow}>
+                    <span className={styles.feedInLabel}>
+                      EEG 2025 Tiered Rates for {systemSize.toFixed(1)} kW
+                    </span>
+                    <span className={styles.feedInValue}>
+                      {getFeedInTariffBreakdown(systemSize).map((tier, idx) => (
+                        <div key={idx}>
+                          {tier.tier}: {tier.capacityKw.toFixed(2)} kW @{" "}
+                          {formatFeedInTariff(tier.rateEuroPerKwh)}
+                        </div>
+                      ))}
+                    </span>
+                  </div>
+                )}
                 {[
                   [
                     "Weighted Average Rate",
@@ -346,10 +358,12 @@ export default function FinancialCalculator({
                   </div>
                 ))}
               </div>
-              <div className={styles.feedInNote}>
-                Note: Includes 0.6 ct/kWh bonus to compensate for exclusion
-                during negative-price hours (2025 regulation)
-              </div>
+              {isGermany && (
+                <div className={styles.feedInNote}>
+                  Note: Includes 0.6 ct/kWh bonus to compensate for exclusion
+                  during negative-price hours (2025 regulation)
+                </div>
+              )}
             </div>
           </>
         )}
@@ -395,7 +409,8 @@ export default function FinancialCalculator({
             * Estimates based on {systemSize.toFixed(1)}kW system producing{" "}
             {annualProduction.toLocaleString()} kWh/year. Actual savings may
             vary based on usage, utility rates, and system performance.{" "}
-            {systemSize <= 30 &&
+            {isGermany &&
+              systemSize <= 30 &&
               "0% VAT applies to systems ≤30kWp (since Jan 2023)."}{" "}
             Typical German solar systems achieve 850-1,050 full load hours
             annually (~10% capacity factor).

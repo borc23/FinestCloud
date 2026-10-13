@@ -1,14 +1,9 @@
 import { useCallback } from "react";
 import { generateSolarReport } from "@/features/reports/utils/pdfGenerator";
-import {
-  calculateFinancials,
-  estimateSystemCost,
-  FINANCIAL_DEFAULTS,
-} from "@/features/financial/utils/financialCalculations";
 import { generateMonthlyEstimate } from "@/features/solar-analysis/utils/solarCalculations";
-import { calculateGermanFeedInTariff } from "@/features/financial/utils/germanFeedInTariff";
 import { useOrganization } from "@/features/organization/hooks/useOrganization";
 import type { ReportData } from "@/features/reports/types/report";
+import type { FinancialResults } from "@/features/financial/types/financial";
 import type { PVWattsResponse } from "@/features/solar-analysis/types/pvwatts";
 import type {
   Location,
@@ -20,6 +15,7 @@ interface UseSolarReportGeneratorProps {
   annualProduction?: number;
   location?: Location;
   pvwatts?: PVWattsResponse | null;
+  financials: FinancialResults | null;
 }
 
 /**
@@ -30,26 +26,15 @@ export function useSolarReportGenerator({
   annualProduction,
   location,
   pvwatts,
+  financials,
 }: UseSolarReportGeneratorProps) {
   const { organization } = useOrganization();
 
   const handleGeneratePDF = useCallback(() => {
-    if (!annualProduction) {
+    if (!annualProduction || !financials) {
       alert("Please wait for production data to load");
       return;
     }
-
-    const financials = calculateFinancials({
-      annualProduction,
-      systemSize: panelData.systemSize,
-      utilityRates: {
-        costPerKwh: FINANCIAL_DEFAULTS.costPerKwh,
-        feedInTariff: calculateGermanFeedInTariff(panelData.systemSize),
-        escalationRate: FINANCIAL_DEFAULTS.escalationRate,
-      },
-      systemCost: estimateSystemCost(panelData.systemSize),
-      selfConsumptionRate: FINANCIAL_DEFAULTS.selfConsumptionRate,
-    });
 
     const reportData: ReportData = {
       site: location && {
@@ -65,9 +50,12 @@ export function useSolarReportGenerator({
         avgAzimuth: panelData.avgAzimuth,
       },
       energyProduction: {
-        monthlyYield:
-          pvwatts?.monthly_production ??
-          generateMonthlyEstimate(annualProduction),
+        // PVWatts' monthly profile, scaled to the per-panel annual estimate
+        monthlyYield: pvwatts
+          ? pvwatts.monthly_production.map((kwh) =>
+              Math.round((kwh * annualProduction) / pvwatts.annual_production),
+            )
+          : generateMonthlyEstimate(annualProduction),
         annualYield: annualProduction,
         capacityFactor: pvwatts?.capacity_factor,
         // PVWatts reports kWh/m²/day
@@ -110,7 +98,14 @@ export function useSolarReportGenerator({
 
     const doc = generateSolarReport(reportData);
     doc.save(`solar-proposal-${panelData.systemSize.toFixed(1)}kW.pdf`);
-  }, [annualProduction, panelData, location, pvwatts, organization]);
+  }, [
+    annualProduction,
+    panelData,
+    location,
+    pvwatts,
+    financials,
+    organization,
+  ]);
 
   return { handleGeneratePDF };
 }
