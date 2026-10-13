@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PYTHON_BACKEND_URL =
   process.env.PYTHON_BACKEND_URL || "http://127.0.0.1:8000";
+// Shared secret the backend requires on /api/* (see finestcloud/core/security.py)
+const BACKEND_API_TOKEN = process.env.BACKEND_API_TOKEN;
 
 /** Standard error shape: { success: false, error, details? } */
 export function errorResponse(error: string, status: number, details?: string) {
@@ -13,7 +15,8 @@ export function errorResponse(error: string, status: number, details?: string) {
 
 /**
  * Forward a request to the Python backend (POST bodies are JSON, optionally
- * transformed) and relay its body, status and content type.
+ * transformed) and relay its body, status and content type. Callers must run
+ * guardApiCall first: the backend trusts whatever this server sends it.
  */
 export async function proxyToPythonBackend(
   request: NextRequest,
@@ -21,6 +24,11 @@ export async function proxyToPythonBackend(
   transform: (body: any) => unknown = (body) => body,
   timeout = 30000,
 ): Promise<NextResponse> {
+  if (!BACKEND_API_TOKEN) {
+    console.error("BACKEND_API_TOKEN is not set");
+    return errorResponse("Backend not configured", 500);
+  }
+
   let body: string | undefined;
   if (request.method === "POST") {
     try {
@@ -33,7 +41,10 @@ export async function proxyToPythonBackend(
   try {
     const response = await fetch(`${PYTHON_BACKEND_URL}${path}`, {
       method: request.method,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Backend-Token": BACKEND_API_TOKEN,
+      },
       body,
       signal: AbortSignal.timeout(timeout),
     });
@@ -58,5 +69,18 @@ export async function proxyToPythonBackend(
     return (error as Error)?.name === "TimeoutError"
       ? errorResponse("Request timeout", 504)
       : errorResponse("Failed to connect to backend service", 502);
+  }
+}
+
+/** Whether the backend answers its (public) health check within the timeout. */
+export async function isBackendUp(timeout = 5000): Promise<boolean> {
+  try {
+    const response = await fetch(`${PYTHON_BACKEND_URL}/health`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(timeout),
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }
