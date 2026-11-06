@@ -4,7 +4,6 @@
 
 **Rooftop solar design in the browser.** A fine-tuned YOLOv8 model finds each roof plane in satellite imagery, a deterministic layout engine fills the planes with panels, and Google Solar API and NREL PVWatts data turn the layout into a production, financing and wiring plan for an installer.
 
-**Live demo:** https://finest-cloud.vercel.app (click **Try the demo**, no sign-up needed)
 
 ![83 panels laid out on two detected roof planes over the annual sunshine heat map, with the analytics panel showing 26,819 kWh per year, build cost, yearly return and an 11-year payback](docs/images/05-layout-and-analytics.webp)
 <sub>83 panels on two detected roof planes, drawn over the Solar API sunshine heat map: 26,819 kWh/year, 11-year payback at the local Eurostat electricity price.</sub>
